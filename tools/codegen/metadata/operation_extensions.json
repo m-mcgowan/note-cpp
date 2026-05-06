@@ -153,6 +153,9 @@
       ]
     }
   },
+  "card.usage.get": {
+    "get": {"x-intent-name": "read"}
+  },
   "card.voltage": {
     "get": {"x-intent-name": "read"},
     "put": {"x-intent-name": "configure"},

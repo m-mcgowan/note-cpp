@@ -73,8 +73,8 @@ void test_group_accessors(TestApi& api) {
     use(api.card.trace());
     use(api.card.transport());
     use(api.card.triangulate());
-    use(api.card.usageGet());
-    use(api.card.usageTest());
+    use(api.card.usage.read());
+    use(api.card.usage.test());
     use(api.card.version());
     use(api.card.voltage().read());
     use(api.card.voltage().configure());
@@ -83,6 +83,7 @@ void test_group_accessors(TestApi& api) {
     use(api.card.wireless.penalty.check());
     use(api.card.wireless.penalty.set());
     use(api.card.wireless.penalty.clear());
+    // card.usage is a virtual parent — exercised through its children below.
 
     // dfu
     use(api.dfu.get());
@@ -249,4 +250,5 @@ void test_direct_types() {
     use(note::api::WebGet{});
     use(note::api::WebPost{});
     use(note::api::WebPut{});
+    // card.usage is a virtual parent — no own request type.
 }

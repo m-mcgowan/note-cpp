@@ -2448,7 +2448,7 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
     SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes_received":42,"bytes_sent":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
-    auto req = sh.api.card.usageGet();
+    auto req = sh.api.card.usage.read();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
@@ -2463,7 +2463,7 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
     }
     SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
-    auto req = sh.api.card.usageGet();
+    auto req = sh.api.card.usage.read();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
@@ -2471,7 +2471,7 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
     SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
-    auto req = sh.api.card.usageGet();
+    auto req = sh.api.card.usage.read();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
@@ -2479,7 +2479,7 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
     }
     SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes_received":42,"bytes_sent":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
-    auto req = bh.api.card.usageGet();
+    auto req = bh.api.card.usage.read();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
@@ -2500,7 +2500,7 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
     SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes_per_day":42,"bytes_received":42,"bytes_sent":42,"days":42,"max":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
-    auto req = sh.api.card.usageTest();
+    auto req = sh.api.card.usage.test();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
@@ -2518,7 +2518,7 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
     }
     SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
-    auto req = sh.api.card.usageTest();
+    auto req = sh.api.card.usage.test();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
@@ -2526,7 +2526,7 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
     SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
-    auto req = sh.api.card.usageTest();
+    auto req = sh.api.card.usage.test();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
@@ -2534,7 +2534,7 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
     }
     SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes_per_day":42,"bytes_received":42,"bytes_sent":42,"days":42,"max":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
-    auto req = bh.api.card.usageTest();
+    auto req = bh.api.card.usage.test();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());

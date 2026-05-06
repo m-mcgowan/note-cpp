@@ -1549,6 +1549,64 @@ public:
         auto status() { return create_<api::HubSyncStatus>(); }
     };
 
+    struct CardUsageFactory {
+#if !NOTE_SINGLETON
+        NcT* nc_;
+#endif
+    private:
+        template<typename T> T create_() {
+            T r;
+#if NOTE_SINGLETON
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
+            if constexpr (std::is_void_v<typename T::Response>) {
+                meta_::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
+            } else {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<NcT*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+            }
+            if constexpr (T::supports_cmd) {
+                meta_::send_fn_ = &Api::send_thunk_;
+            }
+#else
+            r.nc_ = nc_;
+            r.execute_fn_ = [](void* p_, const T& req_) {
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
+            }
+#endif
+            return r;
+        }
+    public:
+        /// Returns the Notecard's network usage statistics for cellular and
+        /// WiFi transmissions.
+        auto read() { return create_<api::CardUsageGet>(); }
+        /// Calculates a projection of how long the available cellular data
+        /// quota will last based on the observed usage patterns.
+        auto test() { return create_<api::CardUsageTest>(); }
+    };
+
     // =====================================================================
     // Resource groups (api.card, api.hub, api.note, etc.)
     //
@@ -1661,6 +1719,12 @@ public:
         CardWirelessFactory wireless;
 #else
         CardWirelessFactory wireless{nc_};
+#endif
+        /// card.usage
+#if NOTE_SINGLETON
+        CardUsageFactory usage;
+#else
+        CardUsageFactory usage{nc_};
 #endif
 
         /// Configure hardware notifications from a Notecard to a host MCU.
@@ -2058,44 +2122,6 @@ public:
         /// information about surrounding cell towers and/or WiFi access points
         /// with each new Notehub session.
         auto triangulate() { return create_<api::CardTriangulate>(); }
-#endif
-
-#if __cplusplus >= 202002L
-        /// Returns the Notecard's network usage statistics for cellular and
-        /// WiFi transmissions.
-        template<typename T_ = TargetT_>
-        requires (target_supports<T_, api::CardUsageGet>())
-        auto usageGet() { return create_<api::CardUsageGet>(); }
-
-        /// Returns the Notecard's network usage statistics for cellular and
-        /// WiFi transmissions.
-        template<typename T_ = TargetT_>
-        requires (!target_supports<T_, api::CardUsageGet>() && !T_::strict)
-        [[deprecated("card.usage.get is not available on this target")]]
-        auto usageGet() { return create_<api::CardUsageGet>(); }
-#else
-        /// Returns the Notecard's network usage statistics for cellular and
-        /// WiFi transmissions.
-        auto usageGet() { return create_<api::CardUsageGet>(); }
-#endif
-
-#if __cplusplus >= 202002L
-        /// Calculates a projection of how long the available cellular data
-        /// quota will last based on the observed usage patterns.
-        template<typename T_ = TargetT_>
-        requires (target_supports<T_, api::CardUsageTest>())
-        auto usageTest() { return create_<api::CardUsageTest>(); }
-
-        /// Calculates a projection of how long the available cellular data
-        /// quota will last based on the observed usage patterns.
-        template<typename T_ = TargetT_>
-        requires (!target_supports<T_, api::CardUsageTest>() && !T_::strict)
-        [[deprecated("card.usage.test is not available on this target")]]
-        auto usageTest() { return create_<api::CardUsageTest>(); }
-#else
-        /// Calculates a projection of how long the available cellular data
-        /// quota will last based on the observed usage patterns.
-        auto usageTest() { return create_<api::CardUsageTest>(); }
 #endif
 
         /// Returns firmware version information for the Notecard.

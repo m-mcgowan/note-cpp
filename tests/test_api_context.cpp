@@ -223,11 +223,11 @@ TEST_CASE("Api::card resource group") {
         REQUIRE(h.last_req.find("card.triangulate") != std::string::npos);
     }
     SUBCASE("card.usage.get") {
-        h.api.execute(h.api.card.usageGet());
+        h.api.execute(h.api.card.usage.read());
         REQUIRE(h.last_req.find("card.usage.get") != std::string::npos);
     }
     SUBCASE("card.usage.test") {
-        h.api.execute(h.api.card.usageTest());
+        h.api.execute(h.api.card.usage.test());
         REQUIRE(h.last_req.find("card.usage.test") != std::string::npos);
     }
     SUBCASE("card.version") {

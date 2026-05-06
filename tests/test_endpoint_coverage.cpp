@@ -4969,7 +4969,7 @@ TEST_CASE("note::api::CardTriangulate sink field coverage") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageGet request builder") {
     Harness h;
-    auto req = h.api.card.usageGet();
+    auto req = h.api.card.usage.read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("total"));
@@ -5000,7 +5000,7 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     {
         StreamingHarness sh;
         sh.hal.queue_response("{}");
-        auto sreq = sh.api.card.usageGet();
+        auto sreq = sh.api.card.usage.read();
         sreq.execute();
     }
 }
@@ -5078,7 +5078,7 @@ TEST_CASE("note::api::CardUsageGet sink field coverage") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageTest request builder") {
     Harness h;
-    auto req = h.api.card.usageTest();
+    auto req = h.api.card.usage.test();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.days(note::json_int_t(42));
@@ -5112,7 +5112,7 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     {
         StreamingHarness sh;
         sh.hal.queue_response("{}");
-        auto sreq = sh.api.card.usageTest();
+        auto sreq = sh.api.card.usage.test();
         sreq.execute();
     }
 }

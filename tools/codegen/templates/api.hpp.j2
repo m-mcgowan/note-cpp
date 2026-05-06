@@ -5,7 +5,9 @@
 #include <note/target.hpp>
 #include <note/units.hpp>
 {% for endpoint in endpoints %}
+{% if not endpoint.is_virtual %}
 #include <note/api/{{ endpoint.header_filename }}>
+{% endif %}
 {% endfor %}
 
 namespace note {
@@ -292,8 +294,9 @@ public:
         auto {{ op.factory_method }}(note::string_view flags) { auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
 {% endif %}
 {% endfor %}
-{% elif not endpoint.is_polymorphic %}
-{# Non-polymorphic parent: callable to create its own request type #}
+{% elif not endpoint.is_polymorphic and not endpoint.is_virtual %}
+{# Non-polymorphic parent: callable to create its own request type. Virtual #}
+{# parents have no own wire request, so they're not callable.               #}
 {{ accessor_doc(endpoint) }}
         auto operator()() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
@@ -391,8 +394,9 @@ public:
         auto {{ op.factory_method }}(note::string_view flags) { auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
 {% endif %}
 {% endfor %}
-{% elif not endpoint.is_polymorphic %}
-{# Non-polymorphic parent: callable to create its own request type #}
+{% elif not endpoint.is_polymorphic and not endpoint.is_virtual %}
+{# Non-polymorphic parent: callable to create its own request type. Virtual #}
+{# parents have no own wire request, so they're not callable.               #}
 {{ accessor_doc(endpoint) }}
         auto operator()() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}

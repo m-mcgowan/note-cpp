@@ -84,7 +84,9 @@ After the per-group overviews, the [Request API details](#request-api-details) s
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 {% for endpoint in group.endpoints %}
-{% if endpoint.is_polymorphic %}
+{% if endpoint.is_virtual %}
+{# Virtual parents have no own row — their children appear individually below. #}
+{% elif endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
 {% set acc = endpoint.api_accessor %}
 {% set rsp_summary %}{% if op.response.properties %}{% for p in op.response.properties %}`.{{ p.accessor_name }}`{% if not loop.last %}, {% endif %}{% endfor %}{% else %}void{% endif %}{% endset %}
@@ -138,8 +140,12 @@ After the per-group overviews, the [Request API details](#request-api-details) s
 ## Request API details
 
 {% for endpoint in endpoints %}
+{% if endpoint.is_virtual %}
+{# Virtual parents have no own request type, so no detail section. Their #}
+{# children are documented individually below.                           #}
+{% else %}
 {% set anchor = endpoint.wire_name | replace(".", "") %}
-### {{ endpoint.wire_name }} 
+### {{ endpoint.wire_name }}
 {% if endpoint.is_polymorphic %}
 This endpoint has multiple intents:
 
@@ -242,5 +248,6 @@ This endpoint has multiple intents:
 {% endfor %}
 {% endif %}
 
+{% endif %}
 {% endif %}
 {% endfor %}

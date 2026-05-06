@@ -441,6 +441,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         legacy_struct_name=legacy_struct_name,
         toggle_pairs=toggle_pairs,
         action_methods=action_methods,
+        intent_name=intent_name,
     )
 
 

@@ -15,6 +15,7 @@ import jinja2
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from codegen.model import EndpointGroup
 from codegen.spec_parser import parse_spec
 
 
@@ -596,6 +597,50 @@ def main() -> None:
         if ep.children:
             ep.children.sort(key=lambda c: c.wire_name)
 
+    # Synthesize virtual parents for orphan wire-name prefixes.
+    # An "orphan prefix" is a wire-name prefix shared by 2+ endpoints that
+    # is not itself a real endpoint, so without synthesis those endpoints
+    # would emit as flat camelCase methods on the resource group (e.g.
+    # `card.usageGet()` and `card.usageTest()`). With a virtual parent the
+    # children become reachable as `api.card.usage.read()` / `.test()`.
+    from collections import defaultdict
+    prefix_orphans: dict[str, list[EndpointGroup]] = defaultdict(list)
+    for ep in endpoints:
+        if ep.parent is not None:
+            continue
+        prefix = ep.wire_name.rsplit(".", 1)[0]
+        # Need a 2+ segment prefix: 1-segment prefixes are resource groups
+        # (e.g. `card`), not endpoint parents — children there belong on the
+        # group struct (`api.card.usageGet()` style), not under a virtual.
+        if "." not in prefix:
+            continue
+        if prefix in ep_by_wire:
+            continue  # parent exists as a real endpoint — covered above
+        prefix_orphans[prefix].append(ep)
+
+    virtual_eps: list[EndpointGroup] = []
+    for prefix, orphans in prefix_orphans.items():
+        if len(orphans) < 2:
+            continue
+        struct_name = "".join(seg[:1].upper() + seg[1:] for seg in prefix.split("."))
+        virtual = EndpointGroup(
+            wire_name=prefix,
+            struct_name=struct_name,
+            header_filename="",  # no header — virtual parent has no own request
+            is_polymorphic=False,
+            is_virtual=True,
+            children=sorted(orphans, key=lambda c: c.wire_name),
+        )
+        for child in orphans:
+            child.parent = virtual
+        virtual_eps.append(virtual)
+
+    if virtual_eps:
+        endpoints.extend(virtual_eps)
+        ep_by_wire.update({v.wire_name: v for v in virtual_eps})
+        print(f"Synthesized {len(virtual_eps)} virtual parent(s): "
+              f"{', '.join(v.wire_name for v in virtual_eps)}")
+
     # Build resource groups (card, hub, note, etc.)
     from collections import OrderedDict
     group_map: OrderedDict[str, ResourceGroup] = OrderedDict()
@@ -723,7 +768,7 @@ def main() -> None:
         return os.path.relpath(str(Path(p).absolute()), project_root)
 
     generated_headers = sorted(
-        [_rel_to_root(output_dir / ep.header_filename) for ep in endpoints]
+        [_rel_to_root(output_dir / ep.header_filename) for ep in endpoints if not ep.is_virtual]
         + [_rel_to_root(api_path), _rel_to_root(sku_out_path), _rel_to_root(fw_out_path)]
     )
     generated_tests = sorted([

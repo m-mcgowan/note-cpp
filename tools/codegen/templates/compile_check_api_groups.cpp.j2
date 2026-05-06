@@ -20,6 +20,9 @@ void test_group_accessors(TestApi& api) {
 {% for group in resource_groups %}
     // {{ group.name }}
 {% for endpoint in group.endpoints %}
+{% if endpoint.is_virtual %}
+    // {{ endpoint.wire_name }} is a virtual parent — exercised through its children below.
+{% else %}
 {% set accessor = endpoint.api_accessor %}
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
@@ -36,6 +39,7 @@ void test_group_accessors(TestApi& api) {
 {% else %}
     use(api.{{ group.name }}.{{ accessor }}());
 {% endif %}
+{% endif %}
 {% endfor %}
 
 {% endfor %}
@@ -44,7 +48,9 @@ void test_group_accessors(TestApi& api) {
 void test_direct_types() {
     // Verify that every request type can be default-constructed by name.
 {% for endpoint in endpoints %}
-{% if endpoint.is_polymorphic %}
+{% if endpoint.is_virtual %}
+    // {{ endpoint.wire_name }} is a virtual parent — no own request type.
+{% elif endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
     use(note::api::{{ endpoint.struct_name }}::{{ op.struct_name }}{});
 {% endfor %}

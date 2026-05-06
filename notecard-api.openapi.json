@@ -6282,7 +6282,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "read"
       }
     },
     "/card/usage/test": {

@@ -103,8 +103,8 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 | `card.trace` | `card.trace()` | [`CardTrace`](#cardtrace) | void |
 | `card.transport` | `card.transport()` | [`CardTransport`](#cardtransport) | `.method` |
 | `card.triangulate` | `card.triangulate()` | [`CardTriangulate`](#cardtriangulate) | `.length`, `.mode`, `.motion`, `.on`, `.time`, `.usb` |
-| `card.usage.get` | `card.usageGet()` | [`CardUsageGet`](#cardusageget) | `.bytesReceived`, `.bytesSent`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
-| `card.usage.test` | `card.usageTest()` | [`CardUsageTest`](#cardusagetest) | `.bytesPerDay`, `.bytesReceived`, `.bytesSent`, `.days`, `.max`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
+| `card.usage.get` | `card.usage.read()` | [`CardUsageGet`](#cardusageget) | `.bytesReceived`, `.bytesSent`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
+| `card.usage.test` | `card.usage.test()` | [`CardUsageTest`](#cardusagetest) | `.bytesPerDay`, `.bytesReceived`, `.bytesSent`, `.days`, `.max`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
 | `card.version` | `card.version()` | [`CardVersion`](#cardversion) | `.board`, `.cell`, `.device`, `.gps`, `.name`, `.sku`, `.version`, `.wifi` |
 | `card.voltage` | `card.voltage().read()` | [`CardVoltage::Read`](#cardvoltage) | `.daily`, `.hours`, `.minutes`, `.mode`, `.monthly`, `.usb`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly` |
 |  | `card.voltage().configure()` | [`CardVoltage::Configure`](#cardvoltage) | `.daily`, `.hours`, `.minutes`, `.mode`, `.monthly`, `.usb`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly` |
@@ -249,7 +249,7 @@ Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE.
 
 ## Request API details
 
-### card.attn 
+### card.attn
 This endpoint has multiple intents:
 
 #### card.attn — request()
@@ -616,7 +616,7 @@ auto rsp = nc.execute(req);
 | `.set` | `bool` | Reflects the state of the attention pin. The `set` field is `true` when the... |
 
 
-### card.aux 
+### card.aux
 
 | | Type |
 |---|---|
@@ -673,7 +673,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_time_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the time... |
 
 
-### card.aux.serial 
+### card.aux.serial
 This endpoint has multiple intents:
 
 #### card.aux.serial — request()
@@ -861,7 +861,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.binary 
+### card.binary
 This endpoint has multiple intents:
 
 #### card.binary — status()
@@ -954,7 +954,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | The MD5 checksum calculated for the entire unencoded buffer. |
 
 
-### card.binary.get 
+### card.binary.get
 
 | | Type |
 |---|---|
@@ -997,7 +997,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | The MD5 checksum of the data returned, after it has been decoded |
 
 
-### card.binary.put 
+### card.binary.put
 
 | | Type |
 |---|---|
@@ -1039,7 +1039,7 @@ auto rsp = nc.execute(req);
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission |
 
 
-### card.carrier 
+### card.carrier
 
 | | Type |
 |---|---|
@@ -1080,7 +1080,7 @@ auto rsp = nc.execute(req);
 | `.mode` | `note::string_view` | The current `AUXCHARGING` `mode`, or `off` if not set. |
 
 
-### card.contact 
+### card.contact
 This endpoint has multiple intents:
 
 #### card.contact — get()
@@ -1175,7 +1175,7 @@ auto rsp = nc.execute(req);
 | `.role` | `note::string_view` | Role of the Notecard maintainer. |
 
 
-### card.dfu 
+### card.dfu
 
 | | Type |
 |---|---|
@@ -1221,7 +1221,7 @@ auto rsp = nc.execute(req);
 | `.name` | `note::string_view` | The class of MCU that the Notecard is currently configured to support for... |
 
 
-### card.illumination 
+### card.illumination
 
 | | Type |
 |---|---|
@@ -1253,7 +1253,7 @@ auto rsp = nc.execute(req);
 | `.value` | `double` | An illumination reading (in lux) from the attached OPT3001 sensor. |
 
 
-### card.io 
+### card.io
 
 | | Type |
 |---|---|
@@ -1289,7 +1289,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.led 
+### card.led
 
 | | Type |
 |---|---|
@@ -1326,7 +1326,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.location 
+### card.location
 
 | | Type |
 |---|---|
@@ -1365,7 +1365,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | The time of the location capture. |
 
 
-### card.location.mode 
+### card.location.mode
 This endpoint has multiple intents:
 
 #### card.location.mode — get()
@@ -1672,7 +1672,7 @@ auto rsp = nc.execute(req);
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
 
-### card.location.track 
+### card.location.track
 
 | | Type |
 |---|---|
@@ -1723,7 +1723,7 @@ auto rsp = nc.execute(req);
 | `.stop` | `bool` | `true` if tracking is disabled. |
 
 
-### card.monitor 
+### card.monitor
 
 | | Type |
 |---|---|
@@ -1760,7 +1760,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.motion 
+### card.motion
 
 | | Type |
 |---|---|
@@ -1806,7 +1806,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | Comma-separated list of accelerometer orientation events that ocurred since... |
 
 
-### card.motion.mode 
+### card.motion.mode
 
 | | Type |
 |---|---|
@@ -1845,7 +1845,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.motion.sync 
+### card.motion.sync
 
 | | Type |
 |---|---|
@@ -1884,7 +1884,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.motion.track 
+### card.motion.track
 
 | | Type |
 |---|---|
@@ -1925,7 +1925,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.power 
+### card.power
 This endpoint has multiple intents:
 
 #### card.power — read()
@@ -2057,7 +2057,7 @@ auto rsp = nc.execute(req);
 | `.voltage` | `double` | The current voltage. |
 
 
-### card.random 
+### card.random
 
 | | Type |
 |---|---|
@@ -2099,7 +2099,7 @@ auto rsp = nc.execute(req);
 | `.payload` | `note::string_view` | If using `"mode":"payload"`, a base64-encoded string with random values, the... |
 
 
-### card.restart 
+### card.restart
 
 | | Type |
 |---|---|
@@ -2126,7 +2126,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.restore 
+### card.restore
 
 | | Type |
 |---|---|
@@ -2162,7 +2162,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.sleep 
+### card.sleep
 
 | | Type |
 |---|---|
@@ -2208,7 +2208,7 @@ auto rsp = nc.execute(req);
 | `.seconds` | `note::json_int_t` | The number of seconds the Notecard will wait before entering sleep mode... |
 
 
-### card.status 
+### card.status
 
 | | Type |
 |---|---|
@@ -2250,7 +2250,7 @@ auto rsp = nc.execute(req);
 | `.wifi` | `bool` | `true` if the Notecard's WiFi radio is currently powered on. |
 
 
-### card.temp 
+### card.temp
 This endpoint has multiple intents:
 
 #### card.temp — read()
@@ -2400,7 +2400,7 @@ auto rsp = nc.execute(req);
 | `.voltage` | `double` | The current voltage. |
 
 
-### card.time 
+### card.time
 
 | | Type |
 |---|---|
@@ -2438,7 +2438,7 @@ auto rsp = nc.execute(req);
 | `.zone` | `note::string_view` | The time zone of the Notecard, if the cell tower is recognized. |
 
 
-### card.trace 
+### card.trace
 
 | | Type |
 |---|---|
@@ -2473,7 +2473,7 @@ auto rsp = nc.execute(req);
 
 
 
-### card.transport 
+### card.transport
 
 | | Type |
 |---|---|
@@ -2516,7 +2516,7 @@ auto rsp = nc.execute(req);
 | `.method` | `note::string_view` | The connectivity method currently enabled on the device. |
 
 
-### card.triangulate 
+### card.triangulate
 
 | | Type |
 |---|---|
@@ -2567,11 +2567,11 @@ auto rsp = nc.execute(req);
 | `.usb` | `bool` | `true` if triangulation scans will be performed only when the device is USB-powered. |
 
 
-### card.usage.get 
+### card.usage.get
 
 | | Type |
 |---|---|
-| **Group** | `api.card.usageGet()` |
+| **Group** | `api.card.usage.read()` |
 | **Direct** | `note::api::CardUsageGet` |
 | **Response** | `ApiResult<CardUsageGet::Response>` |
 | **Safety** | `ReadOnly` |
@@ -2581,7 +2581,7 @@ auto rsp = nc.execute(req);
 
 ```cpp
 // Intent-driven (group syntax)
-auto rsp = api.card.usageGet()
+auto rsp = api.card.usage.read()
     .mode(note::string_view("total"))
     .execute();
 // Direct type — designated init (C++20)
@@ -2615,11 +2615,11 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | Start time of the analyzed period or, if `mode="total"`, the time of activation. |
 
 
-### card.usage.test 
+### card.usage.test
 
 | | Type |
 |---|---|
-| **Group** | `api.card.usageTest()` |
+| **Group** | `api.card.usage.test()` |
 | **Direct** | `note::api::CardUsageTest` |
 | **Response** | `ApiResult<CardUsageTest::Response>` |
 | **Safety** | `ReadOnly` |
@@ -2629,7 +2629,7 @@ auto rsp = nc.execute(req);
 
 ```cpp
 // Intent-driven (group syntax)
-auto rsp = api.card.usageTest()
+auto rsp = api.card.usage.test()
     .days(note::json_int_t(42))
     .execute();
 // Direct type — designated init (C++20)
@@ -2667,7 +2667,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | Time of device activation. |
 
 
-### card.version 
+### card.version
 
 | | Type |
 |---|---|
@@ -2706,7 +2706,7 @@ auto rsp = nc.execute(req);
 | `.wifi` | `bool` | If `true`, indicates the Notecard supports WiFi connectivity. |
 
 
-### card.voltage 
+### card.voltage
 This endpoint has multiple intents:
 
 #### card.voltage — read()
@@ -2833,7 +2833,7 @@ auto rsp = nc.execute(req);
 | `.weekly` | `double` | Change of moving average in the last 7 days, if relevant to the time period analyzed. |
 
 
-### card.wifi 
+### card.wifi
 
 | | Type |
 |---|---|
@@ -2881,7 +2881,7 @@ auto rsp = nc.execute(req);
 | `.version` | `note::string_view` | The Silicon Labs WF200 WiFi Transceiver binary version. |
 
 
-### card.wireless 
+### card.wireless
 
 | | Type |
 |---|---|
@@ -2925,7 +2925,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | The current status of the wireless connection and modem. |
 
 
-### card.wireless.penalty 
+### card.wireless.penalty
 This endpoint has multiple intents:
 
 #### card.wireless.penalty — check()
@@ -3072,7 +3072,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
 
 
-### dfu.get 
+### dfu.get
 
 | | Type |
 |---|---|
@@ -3117,7 +3117,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | When `binary` is `true` in the request, this field contains a 32-character... |
 
 
-### dfu.status 
+### dfu.status
 
 | | Type |
 |---|---|
@@ -3168,7 +3168,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | The current status of the firmware download. |
 
 
-### env.default 
+### env.default
 This endpoint has multiple intents:
 
 #### env.default — set()
@@ -3250,7 +3250,7 @@ auto rsp = nc.execute(req);
 
 - `env.clearDefault(note::string_view name)`
 
-### env.get 
+### env.get
 
 | | Type |
 |---|---|
@@ -3293,7 +3293,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | The time of the Notecard variable or variables change. |
 
 
-### env.modified 
+### env.modified
 
 | | Type |
 |---|---|
@@ -3333,7 +3333,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | Timestamp indicating the last time any environment variable was changed on... |
 
 
-### env.set 
+### env.set
 
 | | Type |
 |---|---|
@@ -3374,7 +3374,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | The logged time of the variable change. |
 
 
-### env.template 
+### env.template
 
 | | Type |
 |---|---|
@@ -3414,7 +3414,7 @@ auto rsp = nc.execute(req);
 | `.bytes` | `note::json_int_t` | The maximum number of bytes that will be used when environment variables are... |
 
 
-### file.changes 
+### file.changes
 
 | | Type |
 |---|---|
@@ -3457,7 +3457,7 @@ auto rsp = nc.execute(req);
 | `.total` | `note::json_int_t` | The total of local Notes across all Notefiles. This includes Inbound Notes... |
 
 
-### file.changes.pending 
+### file.changes.pending
 
 | | Type |
 |---|---|
@@ -3491,7 +3491,7 @@ auto rsp = nc.execute(req);
 | `.total` | `note::json_int_t` | The total of unsynced notes across all Notefiles. |
 
 
-### file.clear 
+### file.clear
 
 | | Type |
 |---|---|
@@ -3526,7 +3526,7 @@ auto rsp = nc.execute(req);
 
 
 
-### file.delete 
+### file.delete
 
 | | Type |
 |---|---|
@@ -3565,7 +3565,7 @@ auto rsp = nc.execute(req);
 - `file.remove()`
 - `file.remove(note::string_view files)`
 
-### file.stats 
+### file.stats
 
 | | Type |
 |---|---|
@@ -3607,7 +3607,7 @@ auto rsp = nc.execute(req);
 | `.total` | `note::json_int_t` | The total number of Notes across all Notefiles. |
 
 
-### hub.get 
+### hub.get
 
 | | Type |
 |---|---|
@@ -3648,7 +3648,7 @@ auto rsp = nc.execute(req);
 | `.voutbound` | `note::string_view` | If `outbound` is overridden with a voltage-variable value. |
 
 
-### hub.log 
+### hub.log
 
 | | Type |
 |---|---|
@@ -3685,7 +3685,7 @@ auto rsp = nc.execute(req);
 
 
 
-### hub.set 
+### hub.set
 
 | | Type |
 |---|---|
@@ -3738,7 +3738,7 @@ auto rsp = nc.execute(req);
 
 
 
-### hub.signal 
+### hub.signal
 
 | | Type |
 |---|---|
@@ -3779,7 +3779,7 @@ auto rsp = nc.execute(req);
 | `.signals` | `note::json_int_t` | The number of queued signals remaining. |
 
 
-### hub.status 
+### hub.status
 
 | | Type |
 |---|---|
@@ -3812,7 +3812,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | Details about the Notecard's transport (e.g. cellular, WiFi, LoRa)... |
 
 
-### hub.sync 
+### hub.sync
 
 | | Type |
 |---|---|
@@ -3849,7 +3849,7 @@ auto rsp = nc.execute(req);
 
 
 
-### hub.sync.status 
+### hub.sync.status
 
 | | Type |
 |---|---|
@@ -3897,7 +3897,7 @@ auto rsp = nc.execute(req);
 | `.time` | `note::json_int_t` | Time of the last sync completion. Will only populate if the Notecard has... |
 
 
-### note.add 
+### note.add
 
 | | Type |
 |---|---|
@@ -3950,7 +3950,7 @@ auto rsp = nc.execute(req);
 | `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
 
-### note.changes 
+### note.changes
 This endpoint has multiple intents:
 
 #### note.changes — peek()
@@ -4051,7 +4051,7 @@ auto rsp = nc.execute(req);
 
 - `note.popChanges(note::string_view file)`
 
-### note.delete 
+### note.delete
 
 | | Type |
 |---|---|
@@ -4093,7 +4093,7 @@ auto rsp = nc.execute(req);
 
 - `note.remove(note::string_view file, note::string_view noteId)`
 
-### note.get 
+### note.get
 This endpoint has multiple intents:
 
 #### note.get — read()
@@ -4191,7 +4191,7 @@ auto rsp = nc.execute(req);
 
 - `note.pop(note::string_view file)`
 
-### note.template 
+### note.template
 This endpoint has multiple intents:
 
 #### note.template — define()
@@ -4295,7 +4295,7 @@ auto rsp = nc.execute(req);
 
 - `note.clearTemplate(note::string_view file)`
 
-### note.update 
+### note.update
 
 | | Type |
 |---|---|
@@ -4336,7 +4336,7 @@ auto rsp = nc.execute(req);
 
 
 
-### ntn.gps 
+### ntn.gps
 
 | | Type |
 |---|---|
@@ -4378,7 +4378,7 @@ auto rsp = nc.execute(req);
 | `.on` | `bool` | Returned and `true` if a Starnote will use the GPS/GNSS location from its... |
 
 
-### ntn.reset 
+### ntn.reset
 
 | | Type |
 |---|---|
@@ -4405,7 +4405,7 @@ auto rsp = nc.execute(req);
 
 
 
-### ntn.status 
+### ntn.status
 
 | | Type |
 |---|---|
@@ -4438,7 +4438,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | Details about a Notecard's connection to a paired Starnote, for example:... |
 
 
-### var.delete 
+### var.delete
 
 | | Type |
 |---|---|
@@ -4477,7 +4477,7 @@ auto rsp = nc.execute(req);
 
 - `var.remove()`
 
-### var.get 
+### var.get
 
 | | Type |
 |---|---|
@@ -4520,7 +4520,7 @@ auto rsp = nc.execute(req);
 | `.value` | `double` | The numeric value stored in the DB Notefile. |
 
 
-### var.set 
+### var.set
 
 | | Type |
 |---|---|
@@ -4560,7 +4560,7 @@ auto rsp = nc.execute(req);
 
 
 
-### web 
+### web
 
 | | Type |
 |---|---|
@@ -4607,7 +4607,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | MD5 hash of the binary payload, if any. |
 
 
-### web.delete 
+### web.delete
 
 | | Type |
 |---|---|
@@ -4660,7 +4660,7 @@ auto rsp = nc.execute(req);
 
 - `web.remove()`
 
-### web.get 
+### web.get
 
 | | Type |
 |---|---|
@@ -4712,7 +4712,7 @@ auto rsp = nc.execute(req);
 | `.result` | `note::json_int_t` | The HTTP Status Code. |
 
 
-### web.post 
+### web.post
 
 | | Type |
 |---|---|
@@ -4770,7 +4770,7 @@ auto rsp = nc.execute(req);
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
 
 
-### web.put 
+### web.put
 
 | | Type |
 |---|---|

@@ -82,6 +82,7 @@ TEST_CASE("Api::command() overload") {
 TEST_CASE("Api::{{ group.name }} resource group") {
     Harness h;
 {% for endpoint in group.endpoints %}
+{% if not endpoint.is_virtual %}
 {% set op = endpoint.operations[0] %}
 {% set accessor = endpoint.api_accessor %}
     SUBCASE("{{ endpoint.wire_name }}") {
@@ -102,6 +103,7 @@ TEST_CASE("Api::{{ group.name }} resource group") {
 {% endif %}
         REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
     }
+{% endif %}
 {% endfor %}
 }
 

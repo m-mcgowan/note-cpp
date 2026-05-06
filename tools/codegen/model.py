@@ -276,6 +276,7 @@ class OperationDef:
     toggle_pairs: list['TogglePairDef'] = field(default_factory=list)
     action_methods: list['ActionMethodDef'] = field(default_factory=list)
     min_api_version: str | None = None  # Operation-level minimum firmware, e.g. "7.5.1"
+    intent_name: str | None = None  # Explicit x-intent-name from spec (e.g. "read", "configure"). None when not set.
 
     @property
     def legacy_factory_method(self) -> str | None:
@@ -371,6 +372,7 @@ class EndpointGroup:
     aliases: list[AliasDef] = field(default_factory=list)
     flat_alias: str | None = None  # Top-level Api member name (e.g. "binary" for card.binary)
     children: list[EndpointGroup] = field(default_factory=list)  # Nested endpoints (e.g. card.binary -> card.binary.put, card.binary.get)
+    is_virtual: bool = False  # Synthesized parent that has no own wire request — exists only to host children (e.g. card.usage parent over card.usage.get + card.usage.test)
 
     @property
     def factory_method(self) -> str:
@@ -473,8 +475,16 @@ class EndpointGroup:
         e.g. 'card.binary.put' as child of 'card.binary' -> 'put'
              'card.location.track' as child of 'card.location' -> 'track'
              'web.delete' as child of 'web' -> 'delete_'
+
+        For non-polymorphic single-op endpoints with an explicit x-intent-name
+        (e.g. card.usage.get with intent "read"), use the intent name in place
+        of the wire-name leaf (-> 'read').
         """
-        name = self.wire_name.rsplit(".", 1)[-1]
+        if (not self.is_polymorphic and len(self.operations) == 1
+                and self.operations[0].intent_name):
+            name = self.operations[0].intent_name
+        else:
+            name = self.wire_name.rsplit(".", 1)[-1]
         if name in self._CPP_KEYWORDS:
             name += "_"
         return name

@@ -14,7 +14,9 @@ TEST_CASE("Request struct sizes") {
     struct Entry { const char* name; size_t size; };
     Entry entries[] = {
 {% for endpoint in endpoints %}
-{% if endpoint.is_polymorphic %}
+{% if endpoint.is_virtual %}
+{# virtual parents have no own request type — skip #}
+{% elif endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
         {"{{ endpoint.struct_name }}::{{ op.struct_name }}", sizeof(note::api::{{ endpoint.struct_name }}::{{ op.struct_name }})},
 {% endfor %}

@@ -87,6 +87,7 @@ public:
 #endif
 
 #if NOTE_SINGLETON
+private:
     // Static thunks — one copy each, shared by all endpoints via create_().
     // Eliminates per-type lambda instantiation in the factory methods.
     //
@@ -145,6 +146,7 @@ public:
     static Result<void> send_thunk_(void* p, BuildFn fn, void* ctx) {
         return static_cast<NcT*>(p)->send_command(fn, ctx);
     }
+public:
 #endif
 
     template<typename RequestT>
@@ -223,6 +225,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -267,6 +270,7 @@ public:
 #endif
             return r;
         }
+    public:
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
 {% if op.description %}
@@ -320,6 +324,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -364,6 +369,7 @@ public:
 #endif
             return r;
         }
+    public:
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
 {% if op.description %}
@@ -543,6 +549,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -587,6 +594,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 {# Collect parent wire names (only parents with factories) so we can skip their children #}
 {% set parent_wires = [] %}

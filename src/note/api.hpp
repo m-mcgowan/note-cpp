@@ -138,6 +138,7 @@ public:
 #endif
 
 #if NOTE_SINGLETON
+private:
     // Static thunks — one copy each, shared by all endpoints via create_().
     // Eliminates per-type lambda instantiation in the factory methods.
     //
@@ -196,6 +197,7 @@ public:
     static Result<void> send_thunk_(void* p, BuildFn fn, void* ctx) {
         return static_cast<NcT*>(p)->send_command(fn, ctx);
     }
+public:
 #endif
 
     template<typename RequestT>
@@ -270,6 +272,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -314,6 +317,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Configure hardware notifications from a Notecard to a host MCU.
         ///
         /// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO
@@ -351,6 +355,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -395,6 +400,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
         /// edge connector.
         auto request() { return create_<api::CardAuxSerial::Request>(); }
@@ -415,6 +421,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -459,6 +466,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
         auto get() { return create_<api::CardContact::Get>(); }
@@ -471,6 +479,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -515,6 +524,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
         auto get() { return create_<api::CardLocationMode::Get>(); }
@@ -536,6 +546,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -580,6 +591,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
         auto read() { return create_<api::CardPower::Read>(); }
@@ -595,6 +607,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -639,6 +652,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -672,6 +686,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -716,6 +731,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
         /// the mode argument, configures voltage thresholds based on how the
@@ -732,6 +748,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -776,6 +793,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto check() { return create_<api::CardWirelessPenalty::Check>(); }
@@ -791,6 +809,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -835,6 +854,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
@@ -857,6 +877,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -901,6 +922,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto peek() { return create_<api::NoteChanges::Peek>(); }
         /// Used to incrementally retrieve changes within a specific Notefile.
@@ -915,6 +937,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -959,6 +982,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
         ///
@@ -977,6 +1001,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1021,6 +1046,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
         /// developers can provide the Notecard with a schema of sorts to apply
         /// to future Notes added to the Notefile. This template acts as a hint
@@ -1058,6 +1084,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1102,6 +1129,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Configure various uses of the general-purpose I/O (GPIO) pins
         /// `AUX1`-`AUX4` on the Notecard edge connector for tracking
         /// applications and simple GPIO sensing and counting tasks.
@@ -1119,6 +1147,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1163,6 +1192,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
@@ -1193,6 +1223,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1237,6 +1268,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Retrieves the last known location of the Notecard and the time at
         /// which it was acquired. Use card.location.mode to configure location
         /// settings.
@@ -1276,6 +1308,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1320,6 +1353,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Returns information about the Notecard accelerometer's motion and
         /// orientation. Motion tracking must be enabled first with
         /// `card.motion.mode`. Otherwise, this request will return `{}`.
@@ -1338,6 +1372,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1382,6 +1417,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// View the last known network state, or customize the behavior of the
         /// modem. Note: Be careful when using this mode with hardware not on
         /// hand as a mistake may cause loss of network and Notehub access.
@@ -1399,6 +1435,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1443,6 +1480,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Used to perform queries on a single or multiple files to determine
         /// if new Notes are available to read, or if there are unsynced Notes
         /// in local Notefiles.
@@ -1459,6 +1497,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1503,6 +1542,7 @@ public:
 #endif
             return r;
         }
+    public:
         /// Manually initiates a sync with Notehub.
         auto operator()() { return create_<api::HubSync>(); }
         /// Check on the status of a recently triggered or previous sync.
@@ -1526,6 +1566,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -1570,6 +1611,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
         /// Configure various uses of the general-purpose I/O (GPIO) pins
@@ -2182,6 +2224,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -2226,6 +2269,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
 
@@ -2285,6 +2329,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -2329,6 +2374,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
 
@@ -2475,6 +2521,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -2519,6 +2566,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
         /// Used to perform queries on a single or multiple files to determine
@@ -2608,6 +2656,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -2652,6 +2701,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
         /// Manually initiates a sync with Notehub.
@@ -2739,6 +2789,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -2783,6 +2834,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
 
@@ -3050,6 +3102,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -3094,6 +3147,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
 
@@ -3187,6 +3241,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -3231,6 +3286,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
 
@@ -3300,6 +3356,7 @@ public:
 #if !NOTE_SINGLETON
         NcT* nc_;
 #endif
+    private:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
@@ -3344,6 +3401,7 @@ public:
 #endif
             return r;
         }
+    public:
 
 
 

@@ -220,16 +220,16 @@ The `Args` structs (`PopArgs`, `ReadArgs`, `RemoveArgs`, etc.) are also exported
 
 ### Verb vocabulary
 
-Intent verbs are chosen for clarity to Notecard users (who may not know HTTP methods):
+Intent verbs are chosen for clarity to Notecard users (who may not know HTTP methods). They appear as factory methods on the relevant nested factory; the no-param flat shortcuts on the resource group (`readTemp()`, `binaryClear()`, …) were removed because the nested form already conveys intent and adding flat duplicates only crowded autocomplete. The parameterized one-liners (`pop("file")`, `setDefault("name", "text")`) remain on the group as inline shorthand.
 
 | Verb | Meaning | Example |
 |---|---|---|
-| `read` | Query current state (no side effects) | `readTemp()`, `readLocationMode()` |
-| `pop` | Read and delete (queue consumption) | `pop("data.qi")`, `popChanges("data.qi")` |
-| `clear` | Remove/reset a configuration or buffer | `binaryClear()`, `clearDefault("name")` |
-| `stop` | Stop an ongoing process | `stopTemp()` |
-| `reset` | Restore to default state | `resetLocationMode()` |
-| `set` | Create or update a value | `setDefault("name", "text")` |
+| `read` | Query current state (no side effects) | `api.card.temp().read()`, `api.card.location.mode.get()` |
+| `pop` | Read and delete (queue consumption) | `api.note.pop("data.qi")`, `api.note.popChanges("data.qi")` |
+| `clear` | Remove/reset a configuration or buffer | `api.card.binary.clear()`, `api.env.clearDefault("name")` |
+| `stop` | Stop an ongoing process | `api.card.temp().stop()` |
+| `reset` | Restore to default state | `api.card.location.mode.remove()` |
+| `set` | Create or update a value | `api.env.setDefault("name", "text")` |
 
 These are paired intuitively: `set`/`clear`, `read`/`pop`, `start`/`stop`.
 
@@ -242,33 +242,31 @@ Layer 2 methods are generated from `x-intents` metadata in the OpenAPI spec:
   "x-intents": {
     "read": { "safety": "readonly", "excludes": ["delete", "stop"] },
     "pop": { "safety": "destructive", "requires": {"delete": true}, "label": "pop" },
-    "stop": { "safety": "destructive", "requires": {"stop": true}, "label": "stopTemp" }
+    "stop": { "safety": "destructive", "requires": {"stop": true}, "label": "stop" }
   }
 }
 ```
 
-Each intent becomes a method on the resource group that:
+Each intent becomes a method that:
 1. Creates the Layer 1 builder
 2. Pre-sets any `requires` fields
 3. Returns a constrained builder that hides `excludes` fields (or the full builder if no constraints)
 
+No-param intents land on the endpoint's nested factory (so `card.temp()` exposes `.read()` and `.stop()`); parameterized intents stay on the resource group as inline shorthand.
+
 ```cpp
-// Generated code (simplified)
-auto readTemp() {
-    return create<api::CardTemp>()  // Layer 1 builder, all fields available
-        ;  // no pre-set fields, but safety = ReadOnly
+// On CardTempFactory (returned from `api.card.temp()`):
+auto read() {
+    return create_<api::CardTemp::Read>();   // safety = ReadOnly
+}
+auto stop() {
+    return create_<api::CardTemp::Stop>();   // r.stop(true) is implicit; safety = Destructive
 }
 
-auto stopTemp() {
-    auto r = create<api::CardTemp>();
-    r.stop(true);  // pre-set the dispatch field
-    return r;       // safety = Destructive
-}
-
-auto pop(string_view file) {
-    auto r = create<api::NoteGet>();
-    r.file(file);
-    r.delete_(true);  // pre-set the dispatch field
+// On NoteGroup (`api.note`) — parameterized 1-liner:
+auto pop(string_view file_arg) {
+    auto r = create_<api::NoteGet::Pop>();
+    r.file = file_arg;                       // r.delete(true) is implicit on NoteGet::Pop
     return r;
 }
 ```
@@ -282,10 +280,10 @@ auto pop(string_view file) {
 | `card.attn()` | `card.attn` | `.arm()`, `.sleep()`, `.retrieve()`, `.disarm()`, `.query()`, `.watchdog()` |
 | `card.aux()` | `card.aux` | |
 | `card.aux.serial()` | `card.aux.serial` | |
-| `card.binary.status()` | `card.binary` | Also: `binary.status()` (top-level) |
-| `card.binary.clear()` | `card.binary` | Also: `binary.clear()` (top-level) |
-| `card.binary.get()` | `card.binary.get` | Also: `binary.get()` (top-level) |
-| `card.binary.put()` | `card.binary.put` | Also: `binary.put()` (top-level) |
+| `card.binary.status()` | `card.binary` | |
+| `card.binary.clear()` | `card.binary` | |
+| `card.binary.get()` | `card.binary.get` | |
+| `card.binary.put()` | `card.binary.put` | |
 | `card.carrier()` | `card.carrier` | |
 | `card.contact()` | `card.contact` | `.get()`, `.set()` |
 | `card.dfu()` | `card.dfu` | |

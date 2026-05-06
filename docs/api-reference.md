@@ -15,11 +15,17 @@ auto rsp = nc.execute(note::api::CardTemp::Read{});
 
 Both forms produce identical requests. The group syntax is more readable; the direct form is useful for generic code or when API groups are disabled (`NOTE_NO_API_GROUPS`).
 
+### Multi-intent Request APIs
+
+Some Notecard requests behave differently depending on which fields you send. For example, `card.attn` arms or disarms attention pins, configures sleep, queries state, or acts as a watchdog — all under the same `req` string. `note-cpp` splits these into named **intents** so each behavior is a distinct C++ type with only the fields and response shape that apply to it.
+
+In the Overview tables below, multi-intent requests occupy one row per intent and share the same wire name. The wire name is shown on the first row and left blank on the continuation rows to make the grouping easier to scan. See [Intent-focused APIs](intent-focused-apis.md) for the broader pattern, including safety levels, retry semantics, and the deprecated HTTP-verb names (`get()` / `set()` / `delete_()`).
+
 ## Contents
 
 The reference is organized by **resource group** — a logical collection of related endpoints. Each group below has an Overview table listing every endpoint with its group-syntax accessor, direct type, and response fields, followed by an Aliases table when the group exposes semantic shortcuts (e.g., `api.note.read("file.qi")` for `note.get`).
 
-After the per-group overviews, the [Endpoint details](#endpoint-details) section has a deep dive for every endpoint — request fields, response fields, safety classification, command support.
+After the per-group overviews, the [Request API details](#request-api-details) section has a deep dive for every request — fields, response, safety classification, command support.
 
 
 | Group | Description |
@@ -34,7 +40,7 @@ After the per-group overviews, the [Endpoint details](#endpoint-details) section
 | [`var`](#var) | Quick scalar accessors: shorthand for setting individual numeric or string values shared with Notehub. |
 | [`web`](#web) | Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE. |
 
-## Endpoint groups
+## Request APIs by group
 
 ### card
 
@@ -43,39 +49,39 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 | `card.attn` | `card.attn().request()` | [`CardAttn::Request`](#cardattn) | `.files`, `.off`, `.payload`, `.set`, `.time` |
-| `card.attn` | `card.attn().arm()` | [`CardAttn::Arm`](#cardattn) | `.set` |
-| `card.attn` | `card.attn().rearm()` | [`CardAttn::Rearm`](#cardattn) | `.set` |
-| `card.attn` | `card.attn().watchdog()` | [`CardAttn::Watchdog`](#cardattn) | void |
-| `card.attn` | `card.attn().sleep()` | [`CardAttn::Sleep`](#cardattn) | void |
-| `card.attn` | `card.attn().retrieve()` | [`CardAttn::Retrieve`](#cardattn) | `.payload`, `.time` |
-| `card.attn` | `card.attn().disarm()` | [`CardAttn::Disarm`](#cardattn) | void |
-| `card.attn` | `card.attn().off()` | [`CardAttn::Off`](#cardattn) | void |
-| `card.attn` | `card.attn().on()` | [`CardAttn::On`](#cardattn) | void |
-| `card.attn` | `card.attn().query()` | [`CardAttn::Query`](#cardattn) | `.files`, `.off`, `.set` |
+|  | `card.attn().arm()` | [`CardAttn::Arm`](#cardattn) | `.set` |
+|  | `card.attn().rearm()` | [`CardAttn::Rearm`](#cardattn) | `.set` |
+|  | `card.attn().watchdog()` | [`CardAttn::Watchdog`](#cardattn) | void |
+|  | `card.attn().sleep()` | [`CardAttn::Sleep`](#cardattn) | void |
+|  | `card.attn().retrieve()` | [`CardAttn::Retrieve`](#cardattn) | `.payload`, `.time` |
+|  | `card.attn().disarm()` | [`CardAttn::Disarm`](#cardattn) | void |
+|  | `card.attn().off()` | [`CardAttn::Off`](#cardattn) | void |
+|  | `card.attn().on()` | [`CardAttn::On`](#cardattn) | void |
+|  | `card.attn().query()` | [`CardAttn::Query`](#cardattn) | `.files`, `.off`, `.set` |
 | `card.aux` | `card.aux()` | [`CardAux`](#cardaux) | `.mode`, `.power`, `.seconds`, `.time` |
 | `card.aux.serial` | `card.aux.serial.request()` | [`CardAuxSerial::Request`](#cardauxserial) | `.mode`, `.rate` |
-| `card.aux.serial` | `card.aux.serial.notify()` | [`CardAuxSerial::Notify`](#cardauxserial) | void |
-| `card.aux.serial` | `card.aux.serial.gps()` | [`CardAuxSerial::Gps`](#cardauxserial) | void |
-| `card.aux.serial` | `card.aux.serial.configure()` | [`CardAuxSerial::Configure`](#cardauxserial) | void |
-| `card.aux.serial` | `card.aux.serial.off()` | [`CardAuxSerial::Off`](#cardauxserial) | void |
+|  | `card.aux.serial.notify()` | [`CardAuxSerial::Notify`](#cardauxserial) | void |
+|  | `card.aux.serial.gps()` | [`CardAuxSerial::Gps`](#cardauxserial) | void |
+|  | `card.aux.serial.configure()` | [`CardAuxSerial::Configure`](#cardauxserial) | void |
+|  | `card.aux.serial.off()` | [`CardAuxSerial::Off`](#cardauxserial) | void |
 | `card.binary` | `card.binary.status()` | [`CardBinary::Status`](#cardbinary) | `.cobs`, `.connected`, `.err`, `.length`, `.max`, `.status` |
-| `card.binary` | `card.binary.clear()` | [`CardBinary::Clear`](#cardbinary) | `.cobs`, `.connected`, `.err`, `.length`, `.max`, `.status` |
+|  | `card.binary.clear()` | [`CardBinary::Clear`](#cardbinary) | `.cobs`, `.connected`, `.err`, `.length`, `.max`, `.status` |
 | `card.binary.get` | `card.binary.get()` | [`CardBinaryGet`](#cardbinaryget) | `.err`, `.status` |
 | `card.binary.put` | `card.binary.put()` | [`CardBinaryPut`](#cardbinaryput) | `.err` |
 | `card.carrier` | `card.carrier()` | [`CardCarrier`](#cardcarrier) | `.charging`, `.mode` |
 | `card.contact` | `card.contact().get()` | [`CardContact::Get`](#cardcontact) | `.email`, `.name`, `.org`, `.role` |
-| `card.contact` | `card.contact().set()` | [`CardContact::Set`](#cardcontact) | `.email`, `.name`, `.org`, `.role` |
+|  | `card.contact().set()` | [`CardContact::Set`](#cardcontact) | `.email`, `.name`, `.org`, `.role` |
 | `card.dfu` | `card.dfu()` | [`CardDfu`](#carddfu) | `.name` |
 | `card.illumination` | `card.illumination()` | [`CardIllumination`](#cardillumination) | `.value` |
 | `card.io` | `card.io()` | [`CardIo`](#cardio) | void |
 | `card.led` | `card.led()` | [`CardLed`](#cardled) | void |
 | `card.location` | `card.location()` | [`CardLocation`](#cardlocation) | `.count`, `.dop`, `.lat`, `.lon`, `.max`, `.mode`, `.status`, `.time` |
 | `card.location.mode` | `card.location.mode.get()` | [`CardLocationMode::Get`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
-| `card.location.mode` | `card.location.mode.set()` | [`CardLocationMode::Set`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
-| `card.location.mode` | `card.location.mode.continuous()` | [`CardLocationMode::Continuous`](#cardlocationmode) | `.mode`, `.threshold`, `.vseconds` |
-| `card.location.mode` | `card.location.mode.periodic()` | [`CardLocationMode::Periodic`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
-| `card.location.mode` | `card.location.mode.fixed()` | [`CardLocationMode::Fixed`](#cardlocationmode) | `.lat`, `.lon`, `.mode` |
-| `card.location.mode` | `card.location.mode.remove()` | [`CardLocationMode::Remove`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
+|  | `card.location.mode.set()` | [`CardLocationMode::Set`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
+|  | `card.location.mode.continuous()` | [`CardLocationMode::Continuous`](#cardlocationmode) | `.mode`, `.threshold`, `.vseconds` |
+|  | `card.location.mode.periodic()` | [`CardLocationMode::Periodic`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
+|  | `card.location.mode.fixed()` | [`CardLocationMode::Fixed`](#cardlocationmode) | `.lat`, `.lon`, `.mode` |
+|  | `card.location.mode.remove()` | [`CardLocationMode::Remove`](#cardlocationmode) | `.lat`, `.lon`, `.max`, `.minutes`, `.mode`, `.seconds`, `.threshold`, `.vseconds` |
 | `card.location.track` | `card.location.track()` | [`CardLocationTrack`](#cardlocationtrack) | `.file`, `.heartbeat`, `.minutes`, `.seconds`, `.start`, `.stop` |
 | `card.monitor` | `card.monitor()` | [`CardMonitor`](#cardmonitor) | void |
 | `card.motion` | `card.motion()` | [`CardMotion`](#cardmotion) | `.alert`, `.count`, `.mode`, `.motion`, `.movements`, `.seconds`, `.status` |
@@ -83,16 +89,16 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 | `card.motion.sync` | `card.motion.sync()` | [`CardMotionSync`](#cardmotionsync) | void |
 | `card.motion.track` | `card.motion.track()` | [`CardMotionTrack`](#cardmotiontrack) | void |
 | `card.power` | `card.power().read()` | [`CardPower::Read`](#cardpower) | `.milliampHours`, `.temperature`, `.voltage` |
-| `card.power` | `card.power().configure()` | [`CardPower::Configure`](#cardpower) | `.milliampHours`, `.temperature`, `.voltage` |
-| `card.power` | `card.power().reset()` | [`CardPower::Reset`](#cardpower) | `.milliampHours`, `.temperature`, `.voltage` |
+|  | `card.power().configure()` | [`CardPower::Configure`](#cardpower) | `.milliampHours`, `.temperature`, `.voltage` |
+|  | `card.power().reset()` | [`CardPower::Reset`](#cardpower) | `.milliampHours`, `.temperature`, `.voltage` |
 | `card.random` | `card.random()` | [`CardRandom`](#cardrandom) | `.count`, `.payload` |
 | `card.restart` | `card.restart()` | [`CardRestart`](#cardrestart) | void |
 | `card.restore` | `card.restore()` | [`CardRestore`](#cardrestore) | void |
 | `card.sleep` | `card.sleep()` | [`CardSleep`](#cardsleep) | `.mode`, `.off`, `.on`, `.seconds` |
 | `card.status` | `card.status()` | [`CardStatus`](#cardstatus) | `.cell`, `.connected`, `.gps`, `.inbound`, `.outbound`, `.status`, `.storage`, `.sync`, `.time`, `.usb`, `.wifi` |
 | `card.temp` | `card.temp().read()` | [`CardTemp::Read`](#cardtemp) | `.calibration`, `.humidity`, `.pressure`, `.temperature`, `.usb`, `.value`, `.voltage` |
-| `card.temp` | `card.temp().configure()` | [`CardTemp::Configure`](#cardtemp) | `.calibration`, `.humidity`, `.pressure`, `.temperature`, `.usb`, `.value`, `.voltage` |
-| `card.temp` | `card.temp().stop()` | [`CardTemp::Stop`](#cardtemp) | `.calibration`, `.humidity`, `.pressure`, `.temperature`, `.usb`, `.value`, `.voltage` |
+|  | `card.temp().configure()` | [`CardTemp::Configure`](#cardtemp) | `.calibration`, `.humidity`, `.pressure`, `.temperature`, `.usb`, `.value`, `.voltage` |
+|  | `card.temp().stop()` | [`CardTemp::Stop`](#cardtemp) | `.calibration`, `.humidity`, `.pressure`, `.temperature`, `.usb`, `.value`, `.voltage` |
 | `card.time` | `card.time()` | [`CardTime`](#cardtime) | `.area`, `.country`, `.lat`, `.lon`, `.minutes`, `.time`, `.zone` |
 | `card.trace` | `card.trace()` | [`CardTrace`](#cardtrace) | void |
 | `card.transport` | `card.transport()` | [`CardTransport`](#cardtransport) | `.method` |
@@ -101,12 +107,12 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 | `card.usage.test` | `card.usageTest()` | [`CardUsageTest`](#cardusagetest) | `.bytesPerDay`, `.bytesReceived`, `.bytesSent`, `.days`, `.max`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
 | `card.version` | `card.version()` | [`CardVersion`](#cardversion) | `.board`, `.cell`, `.device`, `.gps`, `.name`, `.sku`, `.version`, `.wifi` |
 | `card.voltage` | `card.voltage().read()` | [`CardVoltage::Read`](#cardvoltage) | `.daily`, `.hours`, `.minutes`, `.mode`, `.monthly`, `.usb`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly` |
-| `card.voltage` | `card.voltage().configure()` | [`CardVoltage::Configure`](#cardvoltage) | `.daily`, `.hours`, `.minutes`, `.mode`, `.monthly`, `.usb`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly` |
+|  | `card.voltage().configure()` | [`CardVoltage::Configure`](#cardvoltage) | `.daily`, `.hours`, `.minutes`, `.mode`, `.monthly`, `.usb`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly` |
 | `card.wifi` | `card.wifi()` | [`CardWifi`](#cardwifi) | `.secure`, `.security`, `.ssid`, `.version` |
 | `card.wireless` | `card.wireless()` | [`CardWireless`](#cardwireless) | `.count`, `.status` |
 | `card.wireless.penalty` | `card.wireless.penalty.check()` | [`CardWirelessPenalty::Check`](#cardwirelesspenalty) | `.count`, `.minutes`, `.seconds`, `.status` |
-| `card.wireless.penalty` | `card.wireless.penalty.set()` | [`CardWirelessPenalty::Set`](#cardwirelesspenalty) | `.count`, `.minutes`, `.seconds`, `.status` |
-| `card.wireless.penalty` | `card.wireless.penalty.clear()` | [`CardWirelessPenalty::Clear`](#cardwirelesspenalty) | `.count`, `.minutes`, `.seconds`, `.status` |
+|  | `card.wireless.penalty.set()` | [`CardWirelessPenalty::Set`](#cardwirelesspenalty) | `.count`, `.minutes`, `.seconds`, `.status` |
+|  | `card.wireless.penalty.clear()` | [`CardWirelessPenalty::Clear`](#cardwirelesspenalty) | `.count`, `.minutes`, `.seconds`, `.status` |
 
 ### dfu
 
@@ -124,7 +130,7 @@ Environment variables: device-, fleet-, and project-scoped configuration shared 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 | `env.default` | `env.defaults().set(...)` | [`EnvDefault::Set`](#envdefault) | void |
-| `env.default` | `env.defaults().remove(...)` | [`EnvDefault::Remove`](#envdefault) | void |
+|  | `env.defaults().remove(...)` | [`EnvDefault::Remove`](#envdefault) | void |
 | `env.get` | `env.get()` | [`EnvGet`](#envget) | `.text`, `.time` |
 | `env.modified` | `env.modified()` | [`EnvModified`](#envmodified) | `.time` |
 | `env.set` | `env.(...)` | [`EnvSet`](#envset) | `.time` |
@@ -178,12 +184,12 @@ Note operations: add to outbound queues, read or pop from inbound queues, templa
 |-----------|-------------|-------------|-----------------|
 | `note.add` | `note.add()` | [`NoteAdd`](#noteadd) | `.noteId`, `.template_`, `.total` |
 | `note.changes` | `note.changes().peek()` | [`NoteChanges::Peek`](#notechanges) | `.changes`, `.total` |
-| `note.changes` | `note.changes().pop(...)` | [`NoteChanges::Pop`](#notechanges) | `.changes`, `.total` |
+|  | `note.changes().pop(...)` | [`NoteChanges::Pop`](#notechanges) | `.changes`, `.total` |
 | `note.delete` | `note.(...)` | [`NoteDelete`](#notedelete) | void |
 | `note.get` | `note.get().read()` | [`NoteGet::Read`](#noteget) | `.payload`, `.time` |
-| `note.get` | `note.get().pop()` | [`NoteGet::Pop`](#noteget) | `.payload`, `.time` |
+|  | `note.get().pop()` | [`NoteGet::Pop`](#noteget) | `.payload`, `.time` |
 | `note.template` | `note.templates().define(...)` | [`NoteTemplate::Define`](#notetemplate) | `.bytes`, `.format`, `.length`, `.template_` |
-| `note.template` | `note.templates().remove(...)` | [`NoteTemplate::Remove`](#notetemplate) | `.bytes`, `.format`, `.length`, `.template_` |
+|  | `note.templates().remove(...)` | [`NoteTemplate::Remove`](#notetemplate) | `.bytes`, `.format`, `.length`, `.template_` |
 | `note.update` | `note.(...)` | [`NoteUpdate`](#noteupdate) | void |
 
 **Aliases** — semantic shortcuts on `api.note`:
@@ -241,7 +247,7 @@ Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE.
 | `web.remove()` | `web.delete` | [`WebDelete`](#webdelete) |
 
 
-## Endpoint details
+## Request API details
 
 ### card.attn 
 This endpoint has multiple intents:

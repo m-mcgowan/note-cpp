@@ -262,6 +262,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().request()
+    .files(note::string_view("x-files-item"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Request{.files = note::string_view("x-files-item") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Request req;
+req.files = note::string_view("x-files-item");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -296,6 +313,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().arm()
+    .files(note::string_view("x-files-item"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Arm{.files = note::string_view("x-files-item") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Arm req;
+req.files = note::string_view("x-files-item");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -321,6 +355,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardAttn::Rearm::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().rearm()
+    .files(note::string_view("x-files-item"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Rearm{.files = note::string_view("x-files-item") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Rearm req;
+req.files = note::string_view("x-files-item");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -348,6 +399,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().watchdog()
+    .seconds(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Watchdog{.seconds = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Watchdog req;
+req.seconds = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -365,6 +433,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardAttn::Sleep::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().sleep()
+    .payload(note::string_view("x-payload"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Sleep{.payload = note::string_view("x-payload") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Sleep req;
+req.payload = note::string_view("x-payload");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -385,6 +470,20 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | no |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().retrieve().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Retrieve{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Retrieve req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 **Response fields:**
 
@@ -404,6 +503,20 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().disarm().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Disarm{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Disarm req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 
 
@@ -416,6 +529,20 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardAttn::Off::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().off().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Off{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Off req;
+auto rsp = nc.execute(req);
+```
+
+
 
 
 
@@ -430,6 +557,20 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().on().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::On{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::On req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 
 
@@ -442,6 +583,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardAttn::Query::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | no |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.attn().query()
+    .verify(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAttn::Query{.verify = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAttn::Query req;
+req.verify = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -467,6 +625,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardAux::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.aux()
+    .connected(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAux{.connected = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAux req;
+req.connected = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -511,6 +686,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.aux.serial.request()
+    .duration(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAuxSerial::Request{.duration = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAuxSerial::Request req;
+req.duration = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -541,6 +733,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.aux.serial.notify()
+    .duration(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAuxSerial::Notify{.duration = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAuxSerial::Notify req;
+req.duration = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -564,6 +773,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.aux.serial.gps()
+    .limit(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAuxSerial::Gps{.limit = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAuxSerial::Gps req;
+req.limit = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -583,6 +809,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.aux.serial.configure()
+    .rate(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAuxSerial::Configure{.rate = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAuxSerial::Configure req;
+req.rate = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -601,6 +844,20 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.aux.serial.off().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardAuxSerial::Off{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardAuxSerial::Off req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 
 
@@ -616,6 +873,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardBinary::Status::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.binary.status()
+    .delete_(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardBinary::Status{.delete_ = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardBinary::Status req;
+req.delete_ = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -645,6 +919,23 @@ This endpoint has multiple intents:
 | **Safety** | `Destructive` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.binary.clear()
+    .delete_(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardBinary::Clear{.delete_ = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardBinary::Clear req;
+req.delete_ = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -673,6 +964,23 @@ This endpoint has multiple intents:
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.binary.get()
+    .cobs(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardBinaryGet{.cobs = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardBinaryGet req;
+req.cobs = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -699,6 +1007,23 @@ This endpoint has multiple intents:
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.binary.put()
+    .cobs(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardBinaryPut{.cobs = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardBinaryPut req;
+req.cobs = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -723,6 +1048,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardCarrier::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.carrier()
+    .mode(note::string_view("charging"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardCarrier{.mode = note::string_view("charging") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardCarrier req;
+req.mode = note::string_view("charging");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -750,6 +1092,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardContact::Get::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.contact().get()
+    .email(note::string_view("x-email"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardContact::Get{.email = note::string_view("x-email") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardContact::Get req;
+req.email = note::string_view("x-email");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -780,6 +1139,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.contact().set()
+    .email(note::string_view("x-email"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardContact::Set{.email = note::string_view("x-email") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardContact::Set req;
+req.email = note::string_view("x-email");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -808,6 +1184,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardDfu::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.dfu()
+    .mode(note::string_view("altdfu"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardDfu{.mode = note::string_view("altdfu") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardDfu req;
+req.mode = note::string_view("altdfu");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -838,6 +1231,20 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.illumination().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardIllumination{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardIllumination req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 **Response fields:**
 
@@ -855,6 +1262,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.io()
+    .i2c(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardIo{.i2c = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardIo req;
+req.i2c = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -875,6 +1299,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.led()
+    .mode(note::string_view("red"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLed{.mode = note::string_view("red") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLed req;
+req.mode = note::string_view("red");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -894,6 +1335,20 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardLocation::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocation{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocation req;
+auto rsp = nc.execute(req);
+```
+
+
 
 
 **Response fields:**
@@ -922,6 +1377,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardLocationMode::Get::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.mode.get()
+    .delete_(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationMode::Get{.delete_ = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationMode::Get req;
+req.delete_ = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -961,6 +1433,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.mode.set()
+    .delete_(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationMode::Set{.delete_ = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationMode::Set req;
+req.delete_ = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -999,6 +1488,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.mode.continuous()
+    .threshold(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationMode::Continuous{.threshold = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationMode::Continuous req;
+req.threshold = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1024,6 +1530,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardLocationMode::Periodic::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.mode.periodic()
+    .lat(1.5)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationMode::Periodic{.lat = 1.5 });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationMode::Periodic req;
+req.lat = 1.5;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1061,6 +1584,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.mode.fixed()
+    .lat(1.5)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationMode::Fixed{.lat = 1.5 });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationMode::Fixed req;
+req.lat = 1.5;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1086,6 +1626,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardLocationMode::Remove::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.mode.remove()
+    .delete_(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationMode::Remove{.delete_ = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationMode::Remove req;
+req.delete_ = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1125,6 +1682,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.location.track()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardLocationTrack{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardLocationTrack req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1159,6 +1733,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.monitor()
+    .count(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardMonitor{.count = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardMonitor req;
+req.count = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1178,6 +1769,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardMotion::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.motion()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardMotion{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardMotion req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1208,6 +1816,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.motion.mode()
+    .motion(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardMotionMode{.motion = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardMotionMode req;
+req.motion = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1230,6 +1855,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.motion.sync()
+    .count(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardMotionSync{.count = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardMotionSync req;
+req.count = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1251,6 +1893,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.motion.track()
+    .count(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardMotionTrack{.count = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardMotionTrack req;
+req.count = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1279,6 +1938,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.power().read()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardPower::Read{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardPower::Read req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1304,6 +1980,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardPower::Configure::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.power().configure()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardPower::Configure{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardPower::Configure req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1331,6 +2024,23 @@ This endpoint has multiple intents:
 | **Safety** | `Destructive` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.power().reset()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardPower::Reset{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardPower::Reset req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1357,6 +2067,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.random()
+    .count(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardRandom{.count = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardRandom req;
+req.count = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1382,6 +2109,20 @@ This endpoint has multiple intents:
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.restart().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardRestart{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardRestart req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 
 
@@ -1394,6 +2135,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.restore()
+    .connected(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardRestore{.connected = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardRestore req;
+req.connected = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1413,6 +2171,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardSleep::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.sleep()
+    .mode(note::string_view("accel"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardSleep{.mode = note::string_view("accel") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardSleep req;
+req.mode = note::string_view("accel");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1442,6 +2217,20 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardStatus::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.status().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardStatus{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardStatus req;
+auto rsp = nc.execute(req);
+```
+
+
 
 
 **Response fields:**
@@ -1473,6 +2262,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardTemp::Read::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.temp().read()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTemp::Read{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTemp::Read req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1506,6 +2312,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.temp().configure()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTemp::Configure{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTemp::Configure req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1537,6 +2360,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardTemp::Stop::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.temp().stop()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTemp::Stop{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTemp::Stop req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1570,6 +2410,20 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.time().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTime{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTime req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 **Response fields:**
 
@@ -1594,6 +2448,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.trace()
+    .mode(note::string_view("on"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTrace{.mode = note::string_view("on") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTrace req;
+req.mode = note::string_view("on");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1611,6 +2482,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardTransport::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.transport()
+    .allow(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTransport{.allow = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTransport req;
+req.allow = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1637,6 +2525,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardTriangulate::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.triangulate()
+    .minutes(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardTriangulate{.minutes = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardTriangulate req;
+req.minutes = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1672,6 +2577,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.usageGet()
+    .mode(note::string_view("total"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardUsageGet{.mode = note::string_view("total") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardUsageGet req;
+req.mode = note::string_view("total");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1702,6 +2624,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardUsageTest::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.usageTest()
+    .days(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardUsageTest{.days = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardUsageTest req;
+req.days = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1738,6 +2677,20 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.version().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardVersion{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardVersion req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 **Response fields:**
 
@@ -1765,6 +2718,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardVoltage::Read::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.voltage().read()
+    .alert(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardVoltage::Read{.alert = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardVoltage::Read req;
+req.alert = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1811,6 +2781,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.voltage().configure()
+    .alert(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardVoltage::Configure{.alert = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardVoltage::Configure req;
+req.alert = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1856,6 +2843,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.wifi()
+    .name(note::string_view("x-name"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardWifi{.name = note::string_view("x-name") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardWifi req;
+req.name = note::string_view("x-name");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1887,6 +2891,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.wireless()
+    .apn(note::string_view("x-apn"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardWireless{.apn = note::string_view("x-apn") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardWireless req;
+req.apn = note::string_view("x-apn");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1916,6 +2937,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardWirelessPenalty::Check::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.wireless.penalty.check()
+    .add(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardWirelessPenalty::Check{.add = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardWirelessPenalty::Check req;
+req.add = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -1948,6 +2986,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.wireless.penalty.set()
+    .add(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardWirelessPenalty::Set{.add = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardWirelessPenalty::Set req;
+req.add = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -1978,6 +3033,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardWirelessPenalty::Clear::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.card.wireless.penalty.clear()
+    .add(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::CardWirelessPenalty::Clear{.add = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::CardWirelessPenalty::Clear req;
+req.add = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2010,6 +3082,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.dfu.get()
+    .binary(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::DfuGet{.binary = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::DfuGet req;
+req.binary = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2037,6 +3126,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<DfuStatus::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.dfu.status()
+    .err(note::string_view("x-err"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::DfuStatus{.err = note::string_view("x-err") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::DfuStatus req;
+req.err = note::string_view("x-err");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2075,6 +3181,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.env.defaults().set()
+    .name(note::string_view("x-name"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::EnvDefault::Set{.name = note::string_view("x-name") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::EnvDefault::Set req;
+req.name = note::string_view("x-name");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2098,6 +3221,23 @@ This endpoint has multiple intents:
 | **Safety** | `Destructive` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.env.defaults().remove()
+    .name(note::string_view("x-name"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::EnvDefault::Remove{.name = note::string_view("x-name") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::EnvDefault::Remove req;
+req.name = note::string_view("x-name");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2119,6 +3259,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<EnvGet::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.env.get()
+    .name(note::string_view("x-name"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::EnvGet{.name = note::string_view("x-name") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::EnvGet req;
+req.name = note::string_view("x-name");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2146,6 +3303,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.env.modified()
+    .time(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::EnvModified{.time = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::EnvModified req;
+req.time = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2168,6 +3342,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<EnvSet::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.env.set()
+    .name(note::string_view("x-name"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::EnvSet{.name = note::string_view("x-name") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::EnvSet req;
+req.name = note::string_view("x-name");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2193,6 +3384,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.env.templates()
+    .body(note::string_view("x-body"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::EnvTemplate{.body = note::string_view("x-body") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::EnvTemplate req;
+req.body = note::string_view("x-body");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2215,6 +3423,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<FileChanges::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.file.changes()
+    .files(note::string_view("x-files-item"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::FileChanges{.files = note::string_view("x-files-item") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::FileChanges req;
+req.files = note::string_view("x-files-item");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2242,6 +3467,20 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.file.changes.pending().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::FileChangesPending{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::FileChangesPending req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 **Response fields:**
 
@@ -2262,6 +3501,23 @@ This endpoint has multiple intents:
 | **Safety** | `Destructive` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.file.clear()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::FileClear{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::FileClear req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2279,6 +3535,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.file.delete_()
+    .files(note::string_view("x-files-item"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::FileDelete{.files = note::string_view("x-files-item") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::FileDelete req;
+req.files = note::string_view("x-files-item");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2301,6 +3574,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<FileStats::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.file.stats()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::FileStats{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::FileStats req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2326,6 +3616,20 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<HubGet::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.get().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubGet{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubGet req;
+auto rsp = nc.execute(req);
+```
+
+
 
 
 **Response fields:**
@@ -2354,6 +3658,23 @@ This endpoint has multiple intents:
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.log()
+    .alert(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubLog{.alert = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubLog req;
+req.alert = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2373,6 +3694,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.set()
+    .align(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubSet{.align = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubSet req;
+req.align = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2410,6 +3748,23 @@ This endpoint has multiple intents:
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.signal()
+    .seconds(note::json_int_t(42))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubSignal{.seconds = note::json_int_t(42) });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubSignal req;
+req.seconds = note::json_int_t(42);
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2434,6 +3789,20 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.status().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubStatus{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubStatus req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 **Response fields:**
 
@@ -2452,6 +3821,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.sync()
+    .allow(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubSync{.allow = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubSync req;
+req.allow = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2472,6 +3858,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<HubSyncStatus::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.hub.sync.status()
+    .sync(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::HubSyncStatus{.sync = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::HubSyncStatus req;
+req.sync = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2503,6 +3906,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NoteAdd::Response>` |
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.add()
+    .binary(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteAdd{.binary = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteAdd req;
+req.binary = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2543,6 +3963,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.changes().peek()
+    .deleted(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteChanges::Peek{.deleted = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteChanges::Peek req;
+req.deleted = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2572,6 +4009,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NoteChanges::Pop::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.changes().pop()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteChanges::Pop{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteChanges::Pop req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2607,6 +4061,25 @@ This endpoint has multiple intents:
 | **Safety** | `Destructive` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.delete_()
+    .file(note::string_view("x-file"))
+    .noteId(note::string_view("x-note"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteDelete{.file = note::string_view("x-file"), .noteId = note::string_view("x-note") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteDelete req;
+req.file = note::string_view("x-file");
+req.noteId = note::string_view("x-note");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2632,6 +4105,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NoteGet::Read::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.get().read()
+    .decrypt(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteGet::Read{.decrypt = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteGet::Read req;
+req.decrypt = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2662,6 +4152,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NoteGet::Pop::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.get().pop()
+    .decrypt(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteGet::Pop{.decrypt = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteGet::Pop req;
+req.decrypt = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2697,6 +4204,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.templates().define()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteTemplate::Define{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteTemplate::Define req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2728,6 +4252,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NoteTemplate::Remove::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.templates().remove()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteTemplate::Remove{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteTemplate::Remove req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2764,6 +4305,25 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.note.update()
+    .file(note::string_view("x-file"))
+    .noteId(note::string_view("x-note"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NoteUpdate{.file = note::string_view("x-file"), .noteId = note::string_view("x-note") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NoteUpdate req;
+req.file = note::string_view("x-file");
+req.noteId = note::string_view("x-note");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2785,6 +4345,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NtnGps::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.ntn.gps()
+    .off(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NtnGps{.off = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NtnGps req;
+req.off = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2811,6 +4388,20 @@ This endpoint has multiple intents:
 | **Safety** | `Destructive` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.ntn.reset().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NtnReset{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NtnReset req;
+auto rsp = nc.execute(req);
+```
+
+
+
 
 
 
@@ -2823,6 +4414,20 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<NtnStatus::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.ntn.status().execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::NtnStatus{});
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::NtnStatus req;
+auto rsp = nc.execute(req);
+```
+
+
 
 
 **Response fields:**
@@ -2842,6 +4447,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.var.delete_()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::VarDelete{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::VarDelete req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2864,6 +4486,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<VarGet::Response>` |
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.var.get()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::VarGet{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::VarGet req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2891,6 +4530,23 @@ This endpoint has multiple intents:
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.var.set()
+    .file(note::string_view("x-file"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::VarSet{.file = note::string_view("x-file") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::VarSet req;
+req.file = note::string_view("x-file");
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -2913,6 +4569,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<Web::Response>` |
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.web.request()
+    .content(note::string_view("x-content"))
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::Web{.content = note::string_view("x-content") });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::Web req;
+req.content = note::string_view("x-content");
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2943,6 +4616,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<WebDelete::Response>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.web.delete_()
+    .async(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::WebDelete{.async = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::WebDelete req;
+req.async = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -2980,6 +4670,23 @@ This endpoint has multiple intents:
 | **Safety** | `ReadOnly` |
 | **Command** | yes |
 
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.web.get()
+    .binary(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::WebGet{.binary = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::WebGet req;
+req.binary = true;
+auto rsp = nc.execute(req);
+```
+
+
+
 **Request fields:**
 
 | Field | Type | Required | Description |
@@ -3014,6 +4721,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<WebPost::Response>` |
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.web.post()
+    .async(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::WebPost{.async = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::WebPost req;
+req.async = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 
@@ -3055,6 +4779,23 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<WebPut::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
+**Usage:**
+
+```cpp
+// Intent-driven (group syntax)
+auto rsp = api.web.put()
+    .async(true)
+    .execute();
+// Direct type — designated init (C++20)
+auto rsp = nc.execute(note::api::WebPut{.async = true });
+// Direct type — assignment (C++17 or non-aggregate types)
+note::api::WebPut req;
+req.async = true;
+auto rsp = nc.execute(req);
+```
+
+
 
 **Request fields:**
 

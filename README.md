@@ -139,9 +139,9 @@ See [API reference](docs/api-reference.md) for the full endpoint list, and [API 
 </details>
 
 <details>
-<summary><strong>Intent-Scoped APIs</strong> — distinct types for multi-purpose requests</summary>
+<summary><strong>Intent-driven APIs</strong> — distinct types for multi-purpose requests</summary>
 
-Some Notecard requests behave differently depending on which fields you send. In `note-cpp`, each intent is a distinct type with only the fields that apply:
+Some Notecard requests behave differently depending on which fields you send (`note.get` reads a Note by default, pops it from a queue with `delete:true`; `card.location.mode` queries, configures periodic GPS, fixes a location, or resets — same wire request). `note-cpp` splits these into named **intents**, each a distinct C++ type that only exposes the fields and response shape that apply.
 
 ```cpp
 // Read a Note by ID
@@ -157,7 +157,20 @@ nc.card.location.mode.fixed()
     .execute();
 ```
 
-Setting a field that doesn't apply to that operation is a compile error. See [docs/intent-focused-apis.md](docs/intent-focused-apis.md) for the full list and [API reference](docs/api-reference.md) for all endpoints.
+Setting a field that doesn't apply to that intent is a compile error. The same direct-type form is also available for generic code or build configurations that disable API groups:
+
+```cpp
+// Direct type, designated init (C++20):
+auto rsp = nc.execute(note::api::CardLocationMode::Fixed{.lat = 42.565, .lon = -70.783});
+
+// Direct type, assignment (C++17 or non-aggregate):
+note::api::CardLocationMode::Fixed req;
+req.lat = 42.565;
+req.lon = -70.783;
+auto rsp = nc.execute(req);
+```
+
+See [docs/intent-focused-apis.md](docs/intent-focused-apis.md) for the broader pattern and [API reference](docs/api-reference.md) for every request with both styles.
 
 </details>
 

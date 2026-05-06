@@ -53,9 +53,7 @@ struct VarSet {
     static constexpr RadiosSupport radios{};
     static constexpr Firmware min_firmware{};
 
-#if NOTE_SINGLETON
-    static inline void* nc_;
-#else
+#if !NOTE_SINGLETON
     void* nc_ = nullptr;
 #endif
 
@@ -157,31 +155,19 @@ struct VarSet {
     using Response = void;
 
 #if NOTE_SINGLETON
-    private:
-    /// Singleton void execute — shared thunk, no per-type instantiation.
-    static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
-    public:
     /// Send this request to the Notecard and wait for a response.
     /// Returns an ApiResult<void> — boolean-convertible to true on success;
     /// call .error() to inspect the ErrorInfo on failure.
-    ApiResult<void> execute() const {
-        auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-        BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-        ::note::detail::NcErrorCapture nc_err_;
-        auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
-        if (!rv_) return ::note::Unexpected(rv_.error());
-        if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-        return ApiResult<void>{};
-    }
-    private:
-    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
-    public:
+    ApiResult<void> execute() const;
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
+    Result<void> command() const;
 #else
     ApiResult<Response>(*execute_fn_)(void*, const VarSet&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
     /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
-#endif
     /// Send this request as a fire-and-forget command (cmd) — the Notecard
     /// processes it without sending a response. Lower power and bandwidth
     /// than execute() when you don't need the result.
@@ -195,6 +181,7 @@ struct VarSet {
         };
         return send_fn_(nc_, fn_, &build_);
     }
+#endif
 
     private:
     void build(JsonBuilder& b) const;
@@ -308,6 +295,11 @@ struct request_traits<::note::api::VarSet> {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+#if NOTE_SINGLETON
+    static inline void* nc_ = nullptr;
+    static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
+    static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
+#endif
 };
 } // namespace note::detail
 namespace note::api {
@@ -328,6 +320,29 @@ inline void VarSet::build(JsonBuilder& b) const {
 }
 #pragma GCC diagnostic pop
 
+#if NOTE_SINGLETON
+inline ApiResult<void> VarSet::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    ::note::detail::NcErrorCapture nc_err_;
+    using meta_ = ::note::detail::request_traits<VarSet>;
+    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    return ApiResult<void>{};
+}
+inline Result<void> VarSet::command() const {
+    auto build_ = [&](JsonBuilder& b_) {
+        b_.add("cmd", notecard_request);
+        this->build(b_);
+    };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+        (*static_cast<decltype(build_)*>(p_))(b_);
+    };
+    using meta_ = ::note::detail::request_traits<VarSet>;
+    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+}
+#endif
 
 
 } // namespace note::api

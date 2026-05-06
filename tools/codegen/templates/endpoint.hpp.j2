@@ -143,11 +143,12 @@ namespace note::api {
 {{ indent }}};
 {% endif %}
 
-#if NOTE_SINGLETON
-{{ indent }}static inline void* nc_;
-#else
+#if !NOTE_SINGLETON
 {{ indent }}void* nc_ = nullptr;
 #endif
+{# In NOTE_SINGLETON mode, nc_ + dispatch fn pointers live in
+ # request_traits<T> (emitted by field_table below) so they don't pollute
+ # autocomplete on the request struct. #}
 
 {% if op.properties %}
 
@@ -891,46 +892,25 @@ namespace note::api {
 {% endfor %}
 {% endif %}
 #if NOTE_SINGLETON
-{% if not op.response.properties %}
-{{ indent }}private:
-{{ indent }}/// Singleton void execute — shared thunk, no per-type instantiation.
-{{ indent }}static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
-{{ indent }}public:
+{# In singleton mode, all dispatch fn pointers + nc_ + the execute() and    #}
+{# command() bodies live in request_traits<T> / out-of-line definitions     #}
+{# emitted by field_table below. The struct only carries forward decls.     #}
 {{ indent }}/// Send this request to the Notecard and wait for a response.
+{% if not op.response.properties %}
 {{ indent }}/// Returns an ApiResult<void> — boolean-convertible to true on success;
 {{ indent }}/// call .error() to inspect the ErrorInfo on failure.
-{{ indent }}ApiResult<void> execute() const {
-{{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-{{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-{{ indent }}    ::note::detail::NcErrorCapture nc_err_;
-{{ indent }}    auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
-{{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
-{{ indent }}    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-{{ indent }}    return ApiResult<void>{};
-{{ indent }}}
-{% elif exec_simple_props %}
-{{ indent }}private:
-{{ indent }}/// Singleton generic execute — shared thunk with body factory params.
-{{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
-{{ indent }}public:
-{{ indent }}/// Send this request to the Notecard and wait for a response.
+{{ indent }}ApiResult<void> execute() const;
+{% else %}
 {{ indent }}/// Returns an ApiResult<Response> — boolean-convertible to true on success;
 {{ indent }}/// dereference (or use member-of-pointer ->) to read response fields,
 {{ indent }}/// or call .error() to inspect the ErrorInfo on failure.
-{{ indent }}/// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
 {{ indent }}ApiResult<Response> execute() const;
-{% else %}
-{{ indent }}private:
-{{ indent }}/// Singleton per-type execute (non-standard response).
-{{ indent }}static inline ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&);
-{{ indent }}public:
-{{ indent }}/// Send this request to the Notecard and wait for a response.
-{{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
 {% endif %}
 {% if op.supports_cmd %}
-{{ indent }}private:
-{{ indent }}static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
-{{ indent }}public:
+{{ indent }}/// Send this request as a fire-and-forget command (cmd) — the Notecard
+{{ indent }}/// processes it without sending a response. Lower power and bandwidth
+{{ indent }}/// than execute() when you don't need the result.
+{{ indent }}Result<void> command() const;
 {% endif %}
 #else
 {{ indent }}ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&) = nullptr;
@@ -939,7 +919,6 @@ namespace note::api {
 {% endif %}
 {{ indent }}/// Send this request to the Notecard and wait for a response.
 {{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
-#endif
 {% if op.supports_cmd %}
 {{ indent }}/// Send this request as a fire-and-forget command (cmd) — the Notecard
 {{ indent }}/// processes it without sending a response. Lower power and bandwidth
@@ -955,6 +934,7 @@ namespace note::api {
 {{ indent }}    return send_fn_(nc_, fn_, &build_);
 {{ indent }}}
 {% endif %}
+#endif
 
 {# build() is forward-declared here; the definition is emitted out-of-line
  # below by field_table() so it can reference request_traits<T> (which holds
@@ -1123,7 +1103,6 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {% if simple_req_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
-{% if simple_req_props or simple_rsp_props %}
 } // namespace note::api
 namespace note::detail {
 template<>
@@ -1186,10 +1165,25 @@ struct request_traits<::note::api::{{ parent_qual }}> {
         return table_;
     }
 {% endif %}
+#if NOTE_SINGLETON
+{# Singleton dispatch plumbing — kept off the request struct so it doesn't
+ # surface in IDE autocomplete. Api::create_<T>() installs these via the
+ # trait. Exactly one execute_*_fn_ per op based on the response shape. #}
+    static inline void* nc_ = nullptr;
+{% if not op.response.properties %}
+    static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
+{% elif simple_rsp_props %}
+    static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
+{% else %}
+    static inline ::note::ApiResult<typename ::note::api::{{ parent_qual }}::Response>(*execute_fn_)(void*, const ::note::api::{{ parent_qual }}&) = nullptr;
+{% endif %}
+{% if op.supports_cmd %}
+    static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
+{% endif %}
+#endif
 };
 } // namespace note::detail
 namespace note::api {
-{% endif %}
 
 {# ----- Out-of-line build() ---------------------------------------------- #}
 {% if op.has_version_gated_props %}
@@ -1246,9 +1240,23 @@ inline void {{ parent_qual }}::build(JsonBuilder& b) const {
 #pragma GCC diagnostic pop
 {% endif %}
 
-{% if simple_rsp_props %}
-{# ----- Out-of-line execute() (singleton-generic path) -------------------- #}
+{# ----- Out-of-line execute() and command() — singleton mode only -------- #}
+{# Non-singleton execute()/command() are inline in the struct (they reference  #}
+{# non-static data members, no trait lookup needed). In singleton mode these   #}
+{# bodies need request_traits<T> to be complete, so they're out-of-line.       #}
 #if NOTE_SINGLETON
+{% if not op.response.properties %}
+inline ApiResult<void> {{ parent_qual }}::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    ::note::detail::NcErrorCapture nc_err_;
+    using meta_ = ::note::detail::request_traits<{{ parent_qual }}>;
+    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    return ApiResult<void>{};
+}
+{% elif simple_rsp_props %}
 inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execute() const {
     auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -1257,17 +1265,35 @@ inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execut
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<{{ parent_qual }}>;
 {% if op.response.has_body %}
-    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
+    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
 {% else %}
-    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
 {% endif %}
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
     return ApiResult<Response>(std::move(rsp_));
 }
-#endif
+{% else %}
+inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execute() const {
+    using meta_ = ::note::detail::request_traits<{{ parent_qual }}>;
+    return meta_::execute_fn_(meta_::nc_, *this);
+}
 {% endif %}
+{% if op.supports_cmd %}
+inline Result<void> {{ parent_qual }}::command() const {
+    auto build_ = [&](JsonBuilder& b_) {
+        b_.add("cmd", notecard_request);
+        this->build(b_);
+    };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+        (*static_cast<decltype(build_)*>(p_))(b_);
+    };
+    using meta_ = ::note::detail::request_traits<{{ parent_qual }}>;
+    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+}
+{% endif %}
+#endif
 {% endmacro %}
 
 {# Build doc string for an operation struct, appending @skus if restricted #}

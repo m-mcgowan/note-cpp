@@ -73,9 +73,7 @@ struct CardVoltage {
         static constexpr RadiosSupport radios{};
         static constexpr Firmware min_firmware{};
 
-#if NOTE_SINGLETON
-        static inline void* nc_;
-#else
+#if !NOTE_SINGLETON
         void* nc_ = nullptr;
 #endif
 
@@ -547,25 +545,20 @@ struct CardVoltage {
         };
 
 #if NOTE_SINGLETON
-        private:
-        /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
-        public:
         /// Send this request to the Notecard and wait for a response.
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
         ApiResult<Response> execute() const;
-        private:
-        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
-        public:
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
+        Result<void> command() const;
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardVoltage::Read&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
         /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
-#endif
         /// Send this request as a fire-and-forget command (cmd) — the Notecard
         /// processes it without sending a response. Lower power and bandwidth
         /// than execute() when you don't need the result.
@@ -579,6 +572,7 @@ struct CardVoltage {
             };
             return send_fn_(nc_, fn_, &build_);
         }
+#endif
 
         private:
         void build(JsonBuilder& b) const;
@@ -706,9 +700,7 @@ struct CardVoltage {
         static constexpr RadiosSupport radios{};
         static constexpr Firmware min_firmware{};
 
-#if NOTE_SINGLETON
-        static inline void* nc_;
-#else
+#if !NOTE_SINGLETON
         void* nc_ = nullptr;
 #endif
 
@@ -1180,25 +1172,20 @@ struct CardVoltage {
         };
 
 #if NOTE_SINGLETON
-        private:
-        /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
-        public:
         /// Send this request to the Notecard and wait for a response.
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
         ApiResult<Response> execute() const;
-        private:
-        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
-        public:
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
+        Result<void> command() const;
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardVoltage::Configure&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
         /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
-#endif
         /// Send this request as a fire-and-forget command (cmd) — the Notecard
         /// processes it without sending a response. Lower power and bandwidth
         /// than execute() when you don't need the result.
@@ -1212,6 +1199,7 @@ struct CardVoltage {
             };
             return send_fn_(nc_, fn_, &build_);
         }
+#endif
 
         private:
         void build(JsonBuilder& b) const;
@@ -1423,6 +1411,11 @@ struct request_traits<::note::api::CardVoltage::Read> {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+#if NOTE_SINGLETON
+    static inline void* nc_ = nullptr;
+    static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
+    static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
+#endif
 };
 } // namespace note::detail
 namespace note::api {
@@ -1453,11 +1446,22 @@ inline ApiResult<typename CardVoltage::Read::Response> CardVoltage::Read::execut
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardVoltage::Read>;
-    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
     return ApiResult<Response>(std::move(rsp_));
+}
+inline Result<void> CardVoltage::Read::command() const {
+    auto build_ = [&](JsonBuilder& b_) {
+        b_.add("cmd", notecard_request);
+        this->build(b_);
+    };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+        (*static_cast<decltype(build_)*>(p_))(b_);
+    };
+    using meta_ = ::note::detail::request_traits<CardVoltage::Read>;
+    return meta_::send_fn_(meta_::nc_, fn_, &build_);
 }
 #endif
 
@@ -1585,6 +1589,11 @@ struct request_traits<::note::api::CardVoltage::Configure> {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+#if NOTE_SINGLETON
+    static inline void* nc_ = nullptr;
+    static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
+    static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
+#endif
 };
 } // namespace note::detail
 namespace note::api {
@@ -1615,11 +1624,22 @@ inline ApiResult<typename CardVoltage::Configure::Response> CardVoltage::Configu
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardVoltage::Configure>;
-    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
     return ApiResult<Response>(std::move(rsp_));
+}
+inline Result<void> CardVoltage::Configure::command() const {
+    auto build_ = [&](JsonBuilder& b_) {
+        b_.add("cmd", notecard_request);
+        this->build(b_);
+    };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+        (*static_cast<decltype(build_)*>(p_))(b_);
+    };
+    using meta_ = ::note::detail::request_traits<CardVoltage::Configure>;
+    return meta_::send_fn_(meta_::nc_, fn_, &build_);
 }
 #endif
 

@@ -202,8 +202,9 @@ public:
     RequestT create() {
         RequestT r;
 #if NOTE_SINGLETON
-        RequestT::nc_ = nc_ptr();
-        RequestT::execute_fn_ = [](void* p_, const RequestT& req_) {
+        using meta_ = ::note::detail::request_traits<RequestT>;
+        meta_::nc_ = nc_ptr();
+        meta_::execute_fn_ = [](void* p_, const RequestT& req_) {
 #else
         r.nc_ = nc_ptr();
         r.execute_fn_ = [](void* p_, const RequestT& req_) {
@@ -219,7 +220,7 @@ public:
         };
         if constexpr (RequestT::supports_cmd) {
 #if NOTE_SINGLETON
-            RequestT::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+            meta_::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
 #else
             r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
 #endif
@@ -272,13 +273,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -290,7 +292,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -352,13 +354,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -370,7 +373,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -415,13 +418,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -433,7 +437,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -470,13 +474,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -488,7 +493,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -534,13 +539,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -552,7 +558,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -592,13 +598,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -610,7 +617,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -668,13 +675,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -686,7 +694,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -727,13 +735,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -745,7 +754,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -785,13 +794,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -803,7 +813,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -850,13 +860,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -868,7 +879,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -907,13 +918,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -925,7 +937,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -968,13 +980,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -986,7 +999,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1048,13 +1061,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1066,7 +1080,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1108,13 +1122,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1126,7 +1141,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1181,13 +1196,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1199,7 +1215,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1263,13 +1279,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1281,7 +1298,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1324,13 +1341,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1342,7 +1360,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1384,13 +1402,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1402,7 +1421,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1443,13 +1462,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1461,7 +1481,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1509,13 +1529,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -1527,7 +1548,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2164,13 +2185,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -2182,7 +2204,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2266,13 +2288,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -2284,7 +2307,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2455,13 +2478,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -2473,7 +2497,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2587,13 +2611,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -2605,7 +2630,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2717,13 +2742,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -2735,7 +2761,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -3027,13 +3053,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -3045,7 +3072,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -3163,13 +3190,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -3181,7 +3209,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -3275,13 +3303,14 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            T::nc_ = nc_ptr();
+            using meta_ = ::note::detail::request_traits<T>;
+            meta_::nc_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = &Api::void_thunk_;
+                meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
-                T::execute_generic_fn_ = &Api::generic_thunk_;
+                meta_::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
-                T::execute_fn_ = [](void* p_, const T& req_) {
+                meta_::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
                     if constexpr (detail::has_binary_src<T>::value) {
                         if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -3293,7 +3322,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = &Api::send_thunk_;
+                meta_::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;

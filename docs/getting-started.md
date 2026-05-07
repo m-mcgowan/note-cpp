@@ -127,7 +127,7 @@ The library scales from ATmega328P (32 KB flash / 2 KB RAM) to desktop hosts wit
 **What's my flash budget?**
 
 - **≥ 64 KB** — defaults are fine. The full typed API plus a JSON backend fits comfortably.
-- **32 KB (Arduino Uno class)** — define `NOTE_MINIMAL`. This bundles JSONB-on, sink mode, no retry, no request IDs, no extras — about 4-5 KB savings vs the full build. See the [AVR guide](platforms/arduino/avr-guide.md#binary-size-comparison) for the measured matrix across four API styles.
+- **32 KB (Arduino Uno class)** — define `NOTE_MINIMAL`. This bundles JSONB-on, sink mode, no retry, no request IDs, no extras — about 4-5 KB savings vs the full build. See the [Arduino guide § Binary size comparison](platforms/arduino/guide.md#binary-size-comparison) for the measured matrix across four API styles, and [`platforms/arduino/avr-guide.md`](platforms/arduino/avr-guide.md) for the AVR-specific patterns.
 - **< 32 KB or Cortex-M0** — `NOTE_MINIMAL` plus the `JsonView` scan pattern (raw JSON in, hand-parsed substring lookup out). Trades type safety for ~14 KB flash; covered in [using-the-api.md § Raw JSON](using-the-api.md#raw-json).
 
 **What's my RAM budget?**

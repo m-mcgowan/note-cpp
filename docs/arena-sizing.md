@@ -84,6 +84,7 @@ Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always includ
 | `CardAttn::Request` | `files[8]`=48×8, `payload`=256 | 64 | **704** |
 | `CardAttn::Query` | `files[8]`=48×8 | 64 | **448** |
 | `DfuGet` | `payload`=256, `status`=80 | 64 | **400** |
+| `Web` | `payload`=256, `status`=80 | 64 | **400** |
 | `WebDelete` | `payload`=256, `status`=80 | 64 | **400** |
 | `WebPost` | `payload`=256, `status`=80 | 64 | **400** |
 | `WebPut` | `payload`=256, `status`=80 | 64 | **400** |
@@ -92,7 +93,6 @@ Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always includ
 | `CardRandom` | `payload`=256 | 64 | **320** |
 | `NoteGet::Pop` | `payload`=256 | 64 | **320** |
 | `NoteGet::Read` | `payload`=256 | 64 | **320** |
-| `Web` | `payload`=256 | 64 | **320** |
 | `WebGet` | `payload`=256 | 64 | **320** |
 | `CardMotion` | `mode`=32, `movements`=128, `status`=80 | 64 | **304** |
 | `CardContact::Get` | `email`=64, `name`=48, `org`=48, `role`=32 | 64 | **256** |

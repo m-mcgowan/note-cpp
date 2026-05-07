@@ -74,7 +74,7 @@ void loop() {
 }
 ```
 
-See [arena-sizing.md](../../arena-sizing.md) for the underlying mechanism and [`note::RequestSet`](../../api-layers.md) for how the max is computed.
+See [arena-sizing.md](../../arena-sizing.md) for the underlying mechanism and how `RequestSet::max_arena_size` is computed.
 
 For styles 3–4 (raw JSON), there is no arena — you pass a `char rsp[N]` buffer directly to `transact_raw` and either scan it with `JsonView` or pipe it through a SAX sink.
 
@@ -207,7 +207,7 @@ See [feature-flags.md](../../feature-flags.md) for the complete list.
 
 ## See also
 
-- [API layers](../../api-layers.md) — typed → lambda → raw walk-through (platform-agnostic)
+- [Using the API](../../using-the-api.md) — calling styles + typed → lambda → raw layered walk-through (platform-agnostic)
 - [Arena sizing](../../arena-sizing.md) — `RequestSet::max_arena_size` mechanics
 - [Feature flags](../../feature-flags.md) — full opt-out reference
 - [`docs/internal/avr-flash-strings.md`](../../internal/avr-flash-strings.md) — how `FlashString` and the PROGMEM scan path work internally

@@ -26,7 +26,7 @@ details belong in git commit messages and design docs, not here.
 - Arduino `Printable` support for response fields and errors
 - [Raw JSON AVR benchmark](docs/platforms/arduino/guide.md#binary-size-comparison) in `tools/binary-size-comparison/`
 - Feature flags: [`NOTE_MINIMAL`](docs/feature-flags.md), [`NOTE_NO_API_GROUPS`](docs/feature-flags.md), `NOTE_NO_RETRY`, `NOTE_NO_REQUEST_IDS`, `NOTE_UNICODE_ESCAPES`
-- [API layers guide](docs/api-layers.md) — typed API → base requests → lambda builder → raw JSON
+- [API layers guide](docs/using-the-api.md#the-three-layers) — typed API → base requests → lambda builder → raw JSON
 - [note-c bridge pattern](docs/platforms/arduino/migration-from-note-arduino.md) for gradual migration
 
 ### Changed
@@ -51,7 +51,7 @@ details belong in git commit messages and design docs, not here.
 ## [0.1.0] - 2026-03-29
 
 ### Added
-- 74 auto-generated endpoint types with [fluent builder API](docs/api-patterns.md)
+- 74 auto-generated endpoint types with [fluent builder API](docs/using-the-api.md#calling-styles-within-the-typed-layer)
 - [`ApiResult<T>`](docs/working-with-responses.md) dot-access for response fields
 - [Native serial and I2C transport](docs/transport.md) with CRC32, retry, and chunking
 - [Type-safe duration units](docs/duration-units.md): `Seconds`, `Minutes`, `Hours`
@@ -60,7 +60,7 @@ details belong in git commit messages and design docs, not here.
 - [Target constraints](examples/stdcpp/target-filtering.cpp) via `make_api()` with `target<Product>()` / `target<Rat>()`
 - [`body()`](docs/body-values.md) helper and `NOTE_FIELDS` macro for typed request/response bodies
 - Arduino `Printable` support for response fields and errors
-- [Raw JSON escape hatch](docs/raw-requests.md): `transact(json, buf)` and `send(json)`
+- [Raw JSON escape hatch](docs/using-the-api.md#escape-hatches): `transact(json, buf)` and `send(json)`
 - [Examples](examples/): getting started, sending notes, hub configuration, attention, location
 
 ### Fixed

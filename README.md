@@ -134,7 +134,7 @@ req.execute();
 
 Requests also support ad-hoc fields via `operator[]` (`req["custom"] = value`), fire-and-forget commands (`.command()`), and on C++20 the compiler validates enum fields like `mode` at compile time — no runtime surprises from typos.
 
-See [API reference](docs/api-reference.md) for the full endpoint list, and [API patterns](docs/api-patterns.md) for how Notecard request names map to C++ methods.
+See [API reference](docs/api-reference.md) for the full endpoint list, and [Using the API](docs/using-the-api.md#calling-styles-within-the-typed-layer) for the calling-style options and how Notecard request names map to C++ methods.
 
 </details>
 
@@ -170,7 +170,7 @@ req.lon = -70.783;
 auto rsp = nc.execute(req);
 ```
 
-See [Focused APIs](docs/focused-apis.md) for the broader pattern and [API reference](docs/api-reference.md) for every request with both styles.
+See [Focused operations](docs/using-the-api.md#focused-operations-on-multi-purpose-endpoints) for the broader pattern and [API reference](docs/api-reference.md) for every request with both styles.
 
 </details>
 
@@ -296,7 +296,7 @@ On an Arduino Uno (ATmega328P, 32 KB flash / 2 KB RAM), an application with 8 di
 
 All memory is statically allocated at compile time using [`MonotonicArena`](docs/arena-sizing.md) and [`StaticNotecard`](docs/feature-flags.md). Enabled by default on AVR. See [docs/feature-flags.md](docs/feature-flags.md) for the compile-time options that enable this on other platforms.
 
-On constrained targets where the typed API's SAX parser is too big, `note-cpp` exposes progressively lower-level response-parsing paths — including a [`JsonView` / `note::scan::*`](docs/api-layers.md) mode that skips the SAX machinery entirely. On the same 8-endpoint Uno benchmark this drops flash to **10,882 bytes (−14 KB vs note-c)** at 680 B RAM. See [docs/platforms/arduino/guide.md](docs/platforms/arduino/guide.md#binary-size-comparison) for the full progression.
+On constrained targets where the typed API's SAX parser is too big, `note-cpp` exposes progressively lower-level response-parsing paths — including a [`JsonView` / `note::scan::*`](docs/using-the-api.md#raw-json) mode that skips the SAX machinery entirely. On the same 8-endpoint Uno benchmark this drops flash to **10,882 bytes (−14 KB vs note-c)** at 680 B RAM. See [docs/platforms/arduino/guide.md](docs/platforms/arduino/guide.md#binary-size-comparison) for the full progression.
 
 </details>
 
@@ -332,19 +332,19 @@ The core library works with C++17. Each successive standard unlocks additional f
 |---------|:-----:|:-----:|:-----:|
 | **Core** | | | |
 | Typed API (request builders, responses, fluent setters) | yes | yes | yes |
-| [Ad-hoc requests](docs/raw-requests.md) (`nc.request("hub.set", lambda)`) | yes | yes | yes |
+| [Ad-hoc requests](docs/using-the-api.md#escape-hatches) (`nc.request("hub.set", lambda)`) | yes | yes | yes |
 | [Error handling](docs/error-handling.md) | yes | yes | yes |
 | [Type-safe duration units](docs/duration-units.md) (`Seconds`, `Minutes`, `Hours`, `Days`) | yes | yes | yes |
 | **JSON** | | | |
 | [JSON backends](docs/json-backend.md) (cJSON, nlohmann, buffer/jsmn) | yes | yes | yes |
-| [SAX streaming parser](docs/api-layers.md) (`JsonSink`) | yes | yes | yes |
+| [SAX streaming parser](docs/using-the-api.md#raw-json) (`JsonSink`) | yes | yes | yes |
 | [`JsonBuf` runtime builder](docs/json-builder.md) (no allocations) | yes | yes | yes |
 | [`consteval` JSON](docs/json-builder.md) (`note::json<>()`) | — | yes | yes |
 | **Body structs** | | | |
 | [Body structs](docs/body-values.md) with [`NOTE_FIELDS`](docs/body-values.md) macro | yes | yes | yes |
 | [Body structs without macro](docs/body-values.md) (plain aggregates via reflection) | — | yes | yes |
 | **Compile-time checks** | | | |
-| [`consteval` enum validation](docs/api-patterns.md) (`validatedMode()`) | — | yes | yes |
+| [`consteval` enum validation](docs/using-the-api.md#calling-styles-within-the-typed-layer) (`validatedMode()`) | — | yes | yes |
 | [Target filtering](docs/feature-flags.md#target-filtering-c20) (hardware + firmware) | — | yes | yes |
 | [Version gating](docs/feature-flags.md#api-version-gating-and-strict-mode) (per-field firmware availability) | yes | yes | yes |
 | **Memory** | | | |
@@ -383,9 +383,9 @@ highest row that fits your target.
 | — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | +2 B | 729 B\* |
 | 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 25,470 B | +396 B | 804 B |
 | 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 25,074 B | baseline | 768 B |
-| 3 | **[Raw JSON + SAX sink](docs/api-layers.md)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 21,192 B | −3,882 B | 792 B |
-| 4 | **[Raw + `JsonView` scan](docs/api-layers.md)** (RAM keys) | 11,110 B | **−13,964 B** | 696 B |
-| 5 | **[Raw + `JsonView` scan](docs/api-layers.md)** (`F()` flash keys) | **11,078 B** | **−13,996 B** | **680 B** |
+| 3 | **[Raw JSON + SAX sink](docs/using-the-api.md#raw-json)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 21,192 B | −3,882 B | 792 B |
+| 4 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (RAM keys) | 11,110 B | **−13,964 B** | 696 B |
+| 5 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (`F()` flash keys) | **11,078 B** | **−13,996 B** | **680 B** |
 
 \*note-c's RAM excludes a ~371 B heap peak; every `note-cpp` row uses
 zero heap.

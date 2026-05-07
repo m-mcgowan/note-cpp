@@ -7,40 +7,37 @@
 
 ## Core features
 
-3. **[API layers](api-layers.md)** — typed API → base requests → lambda builder → raw JSON
-4. **[API calling patterns](api-patterns.md)** — fluent, assignment, conditional, fire-and-forget
-5. **[API reference](api-reference.md)** — complete reference for all Notecard endpoints
-6. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
-7. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
-8. **[Focused APIs](focused-apis.md)** — named operations for multi-purpose endpoints, with safety levels and field-shape constraints
-9. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
-10. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
-11. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
-12. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
-13. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
-14. **[Raw requests](raw-requests.md)** — escape hatch for requests not covered by the typed API
+3. **[Using the API](using-the-api.md)** — calling styles, three layers (typed → lambda → raw), focused operations, escape hatches
+4. **[API reference](api-reference.md)** — complete reference for all Notecard endpoints
+5. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
+6. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
+7. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
+8. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
+9. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
+10. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
+11. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
 
 ## Infrastructure
 
-15. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
-16. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
-17. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
-18. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
-19. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
-20. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
-21. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
-22. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
-23. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
-24. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
-25. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
-26. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
-27. **[Known issues](known-issues.md)**
+12. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
+13. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
+14. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
+15. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
+16. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
+17. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
+18. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
+19. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
+20. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
+21. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
+22. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
+23. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
+24. **[Known issues](known-issues.md)**
 
 ## Guides
 
-28. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-29. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-30. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+25. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+26. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+27. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

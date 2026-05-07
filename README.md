@@ -170,7 +170,7 @@ req.lon = -70.783;
 auto rsp = nc.execute(req);
 ```
 
-See [docs/focused-apis.md](docs/focused-apis.md) for the broader pattern and [API reference](docs/api-reference.md) for every request with both styles.
+See [Focused APIs](docs/focused-apis.md) for the broader pattern and [API reference](docs/api-reference.md) for every request with both styles.
 
 </details>
 

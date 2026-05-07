@@ -94,8 +94,8 @@ See [API Calling Patterns](api-patterns.md) for all styles. See
 
 ### Unguided Requests (Full Field Access)
 
-Operation methods are built on top of typed request structs — they pre-set
-the fields needed by the Notecard for the operation being performed and
+Focused operations are built on top of typed request structs — they pre-set
+the fields needed by the Notecard for the call being performed and
 include only the visible surface needed. The underlying general request
 type has all fields. You can access it directly when you need a field
 combination the library doesn't guide you towards:

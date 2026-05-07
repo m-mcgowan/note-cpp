@@ -25,7 +25,7 @@ auto rsp = nc.card.attn().query().execute();
 
 ## Operation Types
 
-Each `card.attn` mode has a dedicated operation type. The factory method builds the
+Each `card.attn` mode has a dedicated operation type — see [Focused APIs](../../focused-apis.md) for the broader pattern. The factory method builds the
 correct wire format automatically.
 
 | Factory method | Wire mode | Purpose |

@@ -67,7 +67,7 @@ expected.
 
 | Need | Use |
 |------|-----|
-| Standard operations | Focused operations (`nc.card.attn().arm()`) |
+| Standard operations | Focused API call (`nc.card.attn().arm()`) |
 | Existing endpoint, unusual field combo | Raw string on `Request` type |
 | New/unknown endpoint or field | `nc.request()` with builder lambda |
 | Fire-and-forget | `nc.command()` with builder lambda |

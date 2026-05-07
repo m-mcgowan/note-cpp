@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Verify documentation: embedded code snippets, migration table alignment,
-# and internal markdown links.
+# arena-sizing table sync, and internal markdown links.
 # Called by pre-push hook and ci.sh.
 set -euo pipefail
 
@@ -22,6 +22,14 @@ MIGRATION="$ROOT/docs/platforms/arduino/migration-from-note-arduino.md"
 if [ -f "$MIGRATION" ]; then
     echo "=== Migration table alignment ==="
     python3 "$ROOT/tools/pad_migration_tables.py" --check
+fi
+
+# Verify the per-endpoint arena sizing table is in sync with the OpenAPI spec.
+ARENA_DOC="$ROOT/docs/arena-sizing.md"
+if [ -f "$ARENA_DOC" ]; then
+    echo "=== Arena sizing table ==="
+    python3 "$ROOT/tools/arena_sizing_report.py" \
+        "$ROOT/notecard-api.openapi.json" --check "$ARENA_DOC"
 fi
 
 # Verify internal markdown links

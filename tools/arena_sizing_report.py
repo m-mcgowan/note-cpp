@@ -3,9 +3,21 @@
 
 Reuses the codegen model so the report is always in sync with generated headers.
 
-Usage:
-    python3 tools/arena_sizing_report.py notecard-api.openapi.json
-    python3 tools/arena_sizing_report.py notecard-api.openapi.json -o docs/arena-sizing.md
+Two modes:
+
+    Full-report generation (legacy):
+        python3 tools/arena_sizing_report.py notecard-api.openapi.json
+        python3 tools/arena_sizing_report.py notecard-api.openapi.json -o report.md
+
+    Inject / check the per-endpoint table block in a hand-written markdown file
+    (between `<!-- arena-table:start -->` and `<!-- arena-table:end -->` markers):
+        python3 tools/arena_sizing_report.py notecard-api.openapi.json \\
+            --check docs/arena-sizing.md
+        python3 tools/arena_sizing_report.py notecard-api.openapi.json \\
+            --inject docs/arena-sizing.md
+
+The check mode is wired into tools/verify-docs.sh so the pre-push hook catches
+drift between the generated headers and the doc table.
 """
 
 from __future__ import annotations
@@ -115,6 +127,98 @@ def _collect_void_responses(endpoints):
 # ---------------------------------------------------------------------------
 # Markdown rendering
 # ---------------------------------------------------------------------------
+
+TABLE_START_MARKER = "<!-- arena-table:start -->"
+TABLE_END_MARKER = "<!-- arena-table:end -->"
+
+
+def generate_table_block(rows) -> str:
+    """Render just the per-endpoint table (column header + separator + data rows).
+
+    This is the block that goes between TABLE_START_MARKER and TABLE_END_MARKER
+    in `docs/arena-sizing.md`. Trailing newline included.
+    """
+    lines = [
+        "| Endpoint | String fields | Error | **Total** |",
+        "|----------|-------------|-------|-----------|",
+    ]
+    for r in rows:
+        fields_str = _render_field_summary(r["string_fields"])
+        lines.append(
+            f"| `{r['name']}` | {fields_str} | {r['err_cost']} | **{r['total']}** |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _find_block_bounds(content: str) -> tuple[int, int] | None:
+    """Locate the inclusive byte range between (after) TABLE_START_MARKER and
+    (before) TABLE_END_MARKER. Returns None if either marker is missing.
+
+    The returned range is the content lines between the marker lines —
+    excludes the marker lines themselves.
+    """
+    start_idx = content.find(TABLE_START_MARKER)
+    if start_idx == -1:
+        return None
+    # Move past the start-marker line
+    after_start = content.find("\n", start_idx)
+    if after_start == -1:
+        return None
+    after_start += 1
+
+    end_idx = content.find(TABLE_END_MARKER, after_start)
+    if end_idx == -1:
+        return None
+    # Trim back to the start of the end-marker line
+    line_start = content.rfind("\n", 0, end_idx) + 1
+    return after_start, line_start
+
+
+def check_or_inject(md_path: Path, table_block: str, mode: str) -> int:
+    """Compare the table block against the markers in md_path.
+
+    Returns 0 on success, 1 on mismatch (check mode) or missing markers.
+    """
+    if not md_path.exists():
+        print(f"  ERROR: {md_path} not found", file=sys.stderr)
+        return 1
+
+    content = md_path.read_text()
+    bounds = _find_block_bounds(content)
+    if bounds is None:
+        print(
+            f"  ERROR: arena-table markers not found in {md_path}\n"
+            f"  Expected '{TABLE_START_MARKER}' and '{TABLE_END_MARKER}' on their own lines.",
+            file=sys.stderr,
+        )
+        return 1
+
+    start, end = bounds
+    current = content[start:end]
+
+    if mode == "check":
+        if current == table_block:
+            print("  OK")
+            return 0
+        print(
+            f"  ERROR: arena-sizing table is out of sync with the OpenAPI spec.\n"
+            f"  Run: python3 tools/arena_sizing_report.py "
+            f"notecard-api.openapi.json --inject {md_path}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if mode == "inject":
+        if current == table_block:
+            print(f"  {md_path} already in sync.")
+            return 0
+        new_content = content[:start] + table_block + content[end:]
+        md_path.write_text(new_content)
+        print(f"  Updated {md_path}")
+        return 0
+
+    raise ValueError(f"unknown mode: {mode}")
+
 
 def _render_field_summary(fields) -> str:
     """Render string fields as a compact summary."""
@@ -266,7 +370,7 @@ def generate_report(endpoints) -> str:
             ],
         },
         {
-            "title": "ATTN with scoped intents (vs full Request)",
+            "title": "ATTN with scoped operations (vs full Request)",
             "types": [
                 ("note::api::CardAttn::Arm", "CardAttn::Arm"),
                 ("note::api::CardAttn::Query", "CardAttn::Query"),
@@ -303,7 +407,17 @@ def generate_report(endpoints) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Generate arena sizing report")
     parser.add_argument("spec", help="Path to OpenAPI spec JSON")
-    parser.add_argument("-o", "--output", help="Output file (default: stdout)")
+    parser.add_argument("-o", "--output", help="Output file for full report (default: stdout)")
+    parser.add_argument(
+        "--check",
+        metavar="MD",
+        help="Check that the arena-table block in MD matches the spec; exit 1 on drift.",
+    )
+    parser.add_argument(
+        "--inject",
+        metavar="MD",
+        help="Inject the arena-table block into MD between marker comments.",
+    )
     args = parser.parse_args()
 
     spec_path = Path(args.spec)
@@ -339,6 +453,16 @@ def main():
                     spec_method[key] = value
 
     endpoints = parse_spec(spec_path, spec_dict=spec)
+
+    # Check / inject mode: operate on a hand-written .md file's table block.
+    if args.check or args.inject:
+        rows = _collect_response_info(endpoints)
+        table_block = generate_table_block(rows)
+        target = Path(args.check or args.inject)
+        mode = "check" if args.check else "inject"
+        return check_or_inject(target, table_block, mode)
+
+    # Default: emit the full standalone report.
     report = generate_report(endpoints)
 
     if args.output:
@@ -346,7 +470,8 @@ def main():
         print(f"Report written to {args.output}")
     else:
         print(report)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

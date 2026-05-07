@@ -79,7 +79,10 @@ spec. Fields not listed use the default of **48 bytes**.
 
 Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always included.
 
-| Request | String fields | Error | **Total** |
+The table below is auto-generated from the OpenAPI spec — see [`tools/arena_sizing_report.py`](../tools/arena_sizing_report.py). Edit the spec or the codegen model, not the table directly.
+
+<!-- arena-table:start -->
+| Endpoint | String fields | Error | **Total** |
 |----------|-------------|-------|-----------|
 | `CardAttn::Request` | `files[8]`=48×8, `payload`=256 | 64 | **704** |
 | `CardAttn::Query` | `files[8]`=48×8 | 64 | **448** |
@@ -156,6 +159,7 @@ Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always includ
 | `NoteChanges::Peek` | *(none)* | 64 | **64** |
 | `NoteChanges::Pop` | *(none)* | 64 | **64** |
 | `NtnGps` | *(none)* | 64 | **64** |
+<!-- arena-table:end -->
 
 ### Void-response endpoints (no arena cost)
 
@@ -196,7 +200,6 @@ using Requests = note::RequestSet<note::api::NoteAdd, note::api::NoteGet::Read, 
 // max_arena_size = 320
 ```
 
-- `NoteAdd`: 112 bytes
 - `NoteGet::Read`: 320 bytes
 - `NoteGet::Pop`: 320 bytes
 

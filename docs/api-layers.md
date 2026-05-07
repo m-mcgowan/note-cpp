@@ -16,7 +16,7 @@ is what most users should use, but the lower layers are there letting you drop d
 ┌──────────────────────────────────────────────────────┐
 │  Typed API                                           │
 │                                                      │
-│   Guided (intents):                                  │
+│   Guided (operations):                               │
 │     nc.card.attn().arm().connected().seconds(120)    │
 │                                                      │
 │   Unguided (full field access):                      │
@@ -47,12 +47,12 @@ lambdas — just methods, fields, and `execute()`. The API mirrors the
 Notecard's JSON structure using plain C++ naming, so if you know the
 Notecard API, you already know how to use it.
 
-### Guided Requests (Intents)
+### Guided Requests (Focused APIs)
 
 Many Notecard endpoints do different things depending on which fields you
 send. For example, `card.attn` can arm, disarm, query, sleep, or rearm —
 all via the same JSON `req` string. The typed API splits these into named
-**intents**, each exposing only the fields that apply:
+**operations**, each exposing only the fields that apply:
 
 ```cpp
 // Arm ATTN for file changes with 2-minute timeout
@@ -82,8 +82,8 @@ is a compile error, not a runtime surprise on a device in the field.
 
 Guided requests give you:
 - **Compile-time field validation** — misspelled or misplaced fields are compile errors.
-- **Intent scoping** — only the fields relevant to the operation are visible in the request and response.
-- **Safety classification** — each intent carries `ReadOnly`, `Idempotent`, or `Destructive` for retry decisions.
+- **Focused field surface** — only the fields relevant to the operation are visible in the request and response.
+- **Safety classification** — each operation carries `ReadOnly`, `Idempotent`, or `Destructive` for retry decisions.
 - **Target gating** (C++20) — compile warnings or errors when an endpoint is not available on your Notecard SKU.
 
 The examples throughout this page use fluent syntax, but every request
@@ -94,7 +94,7 @@ See [API Calling Patterns](api-patterns.md) for all styles. See
 
 ### Unguided Requests (Full Field Access)
 
-Intent methods are built on top of typed request structs — they pre-set
+Operation methods are built on top of typed request structs — they pre-set
 the fields needed by the Notecard for the operation being performed and
 include only the visible surface needed. The underlying general request
 type has all fields. You can access it directly when you need a field
@@ -116,7 +116,7 @@ pick the right combination. The Notecard still validates at runtime.
 
 Use unguided requests when:
 - New Notecard firmware adds something the typed API does not model yet.
-- You need a field combination that spans multiple intents.
+- You need a field combination that spans multiple operations.
 - You are prototyping and want to iterate quickly on field combinations.
 
 For fields that are not in the schema at all, the "extras" feature `operator[]` lets you set
@@ -261,7 +261,7 @@ overhead is too much.
 | Layer | Complexity | Use when | You lose | AVR flash (vs typed) |
 |-------|-----------|----------|----------|---------------------|
 | **Typed API** (guided) | Methods and fields | Normal development | Nothing — this is the default | baseline (~24.7 KB) |
-| **Typed API** (unguided) | Structs and fields | New request fields and values, cross-intent fields | Intent scoping | −210 B |
+| **Typed API** (unguided) | Structs and fields | New request fields and values, cross-operation fields | Focused field surface | −210 B |
 | **Lambda Request Builder** | Lambdas and strings | Unknown endpoints, migration from note-c | Most type safety | similar to typed |
 | **Raw JSON + SAX sink** | Raw strings + custom `JsonSink` | Need streaming response parse (low response RAM) | Typed response fields | **−4.2 KB** |
 | **Raw JSON + `JsonView` scan** | Raw strings + substring lookup | Known response shapes; flash is the bottleneck | Robust JSON parsing | **−13.8 KB** |

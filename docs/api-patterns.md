@@ -191,7 +191,7 @@ if (rsp) {
     float temp = rsp.value;      // temperature in °C
 }
 ```
-`.read()` selects the Read intent — `card.temp` is polymorphic (`Read`, `Configure`, `Stop`).
+`.read()` selects the Read operation — `card.temp` is polymorphic (`Read`, `Configure`, `Stop`).
 
 On error, `rsp` is falsy and `rsp.error()` returns the `ErrorInfo`:
 
@@ -267,8 +267,8 @@ The API is designed for autocomplete-driven discovery:
 
 1. **Type `api.`** — groups appear: `card`, `hub`, `note`, `env`, `file`, etc.
 2. **Type `api.card.`** — endpoints appear: `version()`, `temp()`, `binary`, etc.
-3. **Type `api.card.temp().`** — intents appear: `read()`, `configure()`, `stop()`
-4. **After an intent, type `.`** — fields and `execute()` appear
+3. **Type `api.card.temp().`** — operations appear: `read()`, `configure()`, `stop()`
+4. **After an operation, type `.`** — fields and `execute()` appear
 
 For aliases with positional args, the IDE shows parameter names and types
 in the signature tooltip:

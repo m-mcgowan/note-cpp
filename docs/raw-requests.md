@@ -14,7 +14,7 @@ Every typed request has field setters that accept `string_view`. You can
 pass any string — it goes directly to the wire with no validation:
 
 ```cpp
-// Typed intent (validated):
+// Typed operation (validated):
 nc.card.attn().arm().connected().motion().execute();
 
 // Same request via raw string on the base Request type:
@@ -23,10 +23,10 @@ req.mode = "arm,connected,motion,some_new_mode";
 req.execute();
 ```
 
-The base `Request` type exposes all fields without intent filtering.
+The base `Request` type exposes all fields without operation filtering.
 This is useful when:
 - A new firmware version adds a mode the typed API doesn't cover yet
-- You need a field combination that spans multiple intents
+- You need a field combination that spans multiple operations
 - You're prototyping and don't want type safety yet
 
 ### 2. Ad-hoc requests via `Notecard::request()`
@@ -67,7 +67,7 @@ expected.
 
 | Need | Use |
 |------|-----|
-| Standard operations | Typed intents (`nc.card.attn().arm()`) |
+| Standard operations | Focused operations (`nc.card.attn().arm()`) |
 | Existing endpoint, unusual field combo | Raw string on `Request` type |
 | New/unknown endpoint or field | `nc.request()` with builder lambda |
 | Fire-and-forget | `nc.command()` with builder lambda |
@@ -76,9 +76,9 @@ expected.
 
 | Level | Compile-time | Runtime |
 |-------|-------------|---------|
-| Typed intent + flag methods | Field existence, flag scoping | None needed |
-| Typed intent + named constants | Named constant validity | None needed |
-| Typed intent + string literal (C++20 GCC) | `consteval` flag validation | None needed |
+| Typed operation + flag methods | Field existence, flag scoping | None needed |
+| Typed operation + named constants | Named constant validity | None needed |
+| Typed operation + string literal (C++20 GCC) | `consteval` flag validation | None needed |
 | Raw string on Request | None | Notecard validates |
 | `request()` / `command()` | None | Notecard validates |
 

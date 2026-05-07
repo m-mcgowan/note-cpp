@@ -153,14 +153,14 @@ Note: some endpoints that *appear* related are actually **separate `req` strings
 
 These are separate Layer 1 methods, not polymorphic variants.
 
-## Layer 2: Intent-driven overloads
+## Layer 2: Focused operations
 
-Layer 2 adds semantic helper methods that map user intent to the correct wire-level operation. These are thin wrappers around Layer 1 builders with pre-set fields and constrained interfaces.
+Layer 2 adds focused operations on top of Layer 1's typed request structs. Each operation maps a user-facing behavior (e.g. `read`, `pop`, `arm`) to the right combination of wire-level fields. These are thin wrappers around Layer 1 builders with pre-set fields and constrained interfaces.
 
 ### Design principles
 
 1. **Aliases, not abstractions** -- each Layer 2 method delegates to a Layer 1 builder. No new types, no hidden behavior.
-2. **Metadata-driven** -- intent mappings come from `x-intents` metadata in the OpenAPI spec, so codegen produces them.
+2. **Metadata-driven** -- operation mappings come from `x-intents` metadata in the OpenAPI spec, so codegen produces them.
 3. **Same response type** -- Layer 2 methods return the same Response as the underlying Layer 1 builder.
 4. **Discoverable** -- grouped on the same resource objects as Layer 1 methods.
 
@@ -220,7 +220,7 @@ The `Args` structs (`PopArgs`, `ReadArgs`, `RemoveArgs`, etc.) are also exported
 
 ### Verb vocabulary
 
-Intent verbs are chosen for clarity to Notecard users (who may not know HTTP methods). They appear as factory methods on the relevant nested factory; the no-param flat shortcuts on the resource group (`readTemp()`, `binaryClear()`, …) were removed because the nested form already conveys intent and adding flat duplicates only crowded autocomplete. The parameterized one-liners (`pop("file")`, `setDefault("name", "text")`) remain on the group as inline shorthand.
+Operation names are chosen for clarity to Notecard users (who may not know HTTP methods). They appear as factory methods on the relevant nested factory; the no-param flat shortcuts on the resource group (`readTemp()`, `binaryClear()`, …) were removed because the nested form already conveys the behavior and adding flat duplicates only crowded autocomplete. The parameterized one-liners (`pop("file")`, `setDefault("name", "text")`) remain on the group as inline shorthand.
 
 | Verb | Meaning | Example |
 |---|---|---|
@@ -247,12 +247,12 @@ Layer 2 methods are generated from `x-intents` metadata in the OpenAPI spec:
 }
 ```
 
-Each intent becomes a method that:
+Each operation becomes a method that:
 1. Creates the Layer 1 builder
 2. Pre-sets any `requires` fields
 3. Returns a constrained builder that hides `excludes` fields (or the full builder if no constraints)
 
-No-param intents land on the endpoint's nested factory (so `card.temp()` exposes `.read()` and `.stop()`); parameterized intents stay on the resource group as inline shorthand.
+No-param operations land on the endpoint's nested factory (so `card.temp()` exposes `.read()` and `.stop()`); parameterized operations stay on the resource group as inline shorthand.
 
 ```cpp
 // On CardTempFactory (returned from `api.card.temp()`):

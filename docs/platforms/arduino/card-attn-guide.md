@@ -23,9 +23,9 @@ nc.card.attn().disarm().execute();
 auto rsp = nc.card.attn().query().execute();
 ```
 
-## Intent Types
+## Operation Types
 
-Each `card.attn` mode has a dedicated intent type. The factory method builds the
+Each `card.attn` mode has a dedicated operation type. The factory method builds the
 correct wire format automatically.
 
 | Factory method | Wire mode | Purpose |
@@ -147,7 +147,7 @@ Unlike `disarm()` which clears triggers but leaves processing enabled,
 
 ## Raw Request Escape Hatch
 
-For modes or combinations not covered by the intent types, use the base
+For modes or combinations not covered by the operation types, use the base
 `Request` type with the mode string directly:
 
 ```cpp

@@ -562,7 +562,7 @@ nc.sendRequest(req);
   `r.value` is a named member — misspelling won't compile.
 - `card.temp` can do several things - it can read the current
   temperature or configure periodic monitoring depending on which fields you
-  send. note-cpp has `.read()` and `.configure()` — each with only the fields that apply so the intent is clear.
+  send. note-cpp has `.read()` and `.configure()` — each with only the fields that apply so the operation's purpose is clear.
 
 ## Reading device info (card.version)
 
@@ -675,7 +675,7 @@ nc.execute(req);
   `"arm,connected,motion"` yourself — get the commas or names wrong and it
   fails silently. note-cpp has named methods (`.connected()`, `.motion()`)
   and flag constants (`note::attn::connected | note::attn::motion`).
-- Intent-based types (`Arm`, `Rearm`, `Disarm`, `Sleep`, `Watchdog`, `Off`, `On`)
+- Per-operation types (`Arm`, `Rearm`, `Disarm`, `Sleep`, `Watchdog`, `Off`, `On`)
   expose only the fields relevant to that operation.
 - The base `Request` type accepts all mode values if you need full control —
   string literals are validated at compile time (C++20).

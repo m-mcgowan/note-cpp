@@ -139,9 +139,9 @@ See [API reference](docs/api-reference.md) for the full endpoint list, and [API 
 </details>
 
 <details>
-<summary><strong>Intent-driven APIs</strong> — distinct types for multi-purpose requests</summary>
+<summary><strong>Focused APIs</strong> — distinct types for multi-purpose requests</summary>
 
-Some Notecard requests behave differently depending on which fields you send (`note.get` reads a Note by default, pops it from a queue with `delete:true`; `card.location.mode` queries, configures periodic GPS, fixes a location, or resets — same wire request). `note-cpp` splits these into named **intents**, each a distinct C++ type that only exposes the fields and response shape that apply.
+Some Notecard requests behave differently depending on which fields you send (`note.get` reads a Note by default, pops it from a queue with `delete:true`; `card.location.mode` queries, configures periodic GPS, fixes a location, or resets — same wire request). `note-cpp` splits these into named **operations**, each a distinct C++ type that only exposes the fields and response shape that apply.
 
 ```cpp
 // Read a Note by ID
@@ -157,7 +157,7 @@ nc.card.location.mode.fixed()
     .execute();
 ```
 
-Setting a field that doesn't apply to that intent is a compile error. The same direct-type form is also available for generic code or build configurations that disable API groups:
+Setting a field that doesn't apply to that operation is a compile error. The same direct-type form is also available for generic code or build configurations that disable API groups:
 
 ```cpp
 // Direct type, designated init (C++20):

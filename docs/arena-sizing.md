@@ -200,7 +200,7 @@ using Requests = note::RequestSet<note::api::NoteAdd, note::api::NoteGet::Read, 
 - `NoteGet::Read`: 320 bytes
 - `NoteGet::Pop`: 320 bytes
 
-### ATTN with scoped intents (vs full Request)
+### ATTN with scoped operations (vs full Request)
 
 ```cpp
 using Requests = note::RequestSet<note::api::CardAttn::Arm, note::api::CardAttn::Query, note::api::CardStatus>;

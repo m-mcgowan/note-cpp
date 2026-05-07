@@ -463,6 +463,7 @@ All three checks run via [`tools/verify-docs.sh`](tools/verify-docs.sh), wired i
 
 ## Documentation
 
+- **Start here:** [Getting started](docs/getting-started.md) — top-down walkthrough from a clean project to your first request
 - [Migrating from note-arduino](docs/platforms/arduino/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)
 - [Full documentation index](docs/README.md) — all guides, from getting started to internals

@@ -43,7 +43,7 @@ add_subdirectory(note-cpp)
 target_link_libraries(my_app PRIVATE note-cpp)
 ```
 
-A minimal `main.cpp` — replace `MyHal` with whatever talks to your hardware (or a mock for host-side experiments):
+A minimal `main.cpp` — replace `MySerialHal` with whatever talks to your hardware (or a mock for host-side experiments):
 
 ```cpp
 #include <note/notecard.hpp>
@@ -52,11 +52,11 @@ A minimal `main.cpp` — replace `MyHal` with whatever talks to your hardware (o
 #include <note/link/serial.hpp>
 
 int main() {
-    MyHal hal;                                       // your serial/I2C HAL
-    note::link::SerialFramer transport(hal);         // ITransact (protocol)
+    MySerialHal hal;                                 // your serial HAL impl
+    note::link::SerialFramer serial_hal(hal);        // note::Hal — wire framing
     note::backends::CjsonBackend backend;            // tree-mode JSON backend
 
-    note::Notecard nc(backend, transport);
+    note::Notecard nc(backend, serial_hal);
     note::Api api(nc);
 
     auto r = api.card.version().execute();

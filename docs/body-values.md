@@ -282,6 +282,6 @@ is whether you can omit it for plain aggregates.
 
 ## NTN considerations
 
-When using NTN (satellite), templates should use `compact` format and specify a port (1-100) for efficient over-the-air encoding. The [app orchestration layer]# handles this automatically when NTN mode is enabled.
+When using NTN (satellite), templates should use `compact` format and specify a port (1-100) for efficient over-the-air encoding. The app orchestration layer handles this automatically when NTN mode is enabled.
 
 See [examples/sending-notes/](../examples/stdcpp/sending-notes/) for a complete walkthrough of all body patterns.

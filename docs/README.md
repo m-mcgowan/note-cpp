@@ -31,16 +31,16 @@
 21. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
 22. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
 23. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
-22. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
-23. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
-24. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
-25. **[Known issues](known-issues.md)**
+24. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
+25. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
+26. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
+27. **[Known issues](known-issues.md)**
 
 ## Guides
 
-26. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-27. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-28. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+28. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+29. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+30. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

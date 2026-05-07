@@ -92,7 +92,7 @@ Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always includ
 | `CardRandom` | `payload`=256 | 64 | **320** |
 | `NoteGet::Pop` | `payload`=256 | 64 | **320** |
 | `NoteGet::Read` | `payload`=256 | 64 | **320** |
-| `Web` | `payload`=256 | 64 | **320** |. why is Web smaller than WebDelete?
+| `Web` | `payload`=256 | 64 | **320** |
 | `WebGet` | `payload`=256 | 64 | **320** |
 | `CardMotion` | `mode`=32, `movements`=128, `status`=80 | 64 | **304** |
 | `CardContact::Get` | `email`=64, `name`=48, `org`=48, `role`=32 | 64 | **256** |

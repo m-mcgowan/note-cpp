@@ -877,6 +877,82 @@ TEST_CASE("Notecard::send() validates JSON") {
     REQUIRE(r.error().code == note::Error::Json);
 }
 
+// ---------------------------------------------------------------------------
+// transact_raw_inplace — single buffer for both request render and response.
+
+TEST_CASE("Notecard::transact_raw_inplace single-buffer round-trip") {
+    note::test::TestJsonBackend backend;
+    std::string captured;
+    note::test::CallbackTransport transport(
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+            captured = std::string(req);
+            return R"({"value":42.0})";
+        });
+    auto nc = note::test::make_test_notecard(backend, transport);
+
+    char buf[64];
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "card.temp");
+    });
+    REQUIRE(r.has_value());
+    REQUIRE(*r == R"({"value":42.0})");
+    // Mock saw the rendered JSON before the response overwrote the buffer.
+    REQUIRE(captured == R"({"req":"card.temp"})");
+}
+
+TEST_CASE("Notecard::transact_raw_inplace nested object") {
+    note::test::TestJsonBackend backend;
+    std::string captured;
+    note::test::CallbackTransport transport(
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+            captured = std::string(req);
+            return "{}";
+        });
+    auto nc = note::test::make_test_notecard(backend, transport);
+
+    char buf[128];
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "note.add");
+        w.add("file", "sensors.qo");
+        w.begin_object("body");
+            w.add("temperature", 22.5);
+            w.add("humidity", 60);
+        w.end_object();
+    });
+    REQUIRE(r.has_value());
+    REQUIRE(captured ==
+            R"({"req":"note.add","file":"sensors.qo","body":{"temperature":22.5,"humidity":60}})");
+}
+
+TEST_CASE("Notecard::transact_raw_inplace overflow returns Error::Overflow") {
+    note::test::TestJsonBackend backend;
+    int call_count = 0;
+    note::test::CallbackTransport transport(
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            ++call_count;
+            return "{}";
+        });
+    auto nc = note::test::make_test_notecard(backend, transport);
+
+    char buf[8];  // way too small
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "card.temp");
+    });
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::Overflow);
+    CHECK(call_count == 0);  // overflow short-circuits — no transport hop
+}
+
+TEST_CASE("Default-constructed Notecard: transact_raw_inplace returns NotReady") {
+    note::Notecard nc;
+    char buf[64];
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "card.temp");
+    });
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::NotReady);
+}
+
 TEST_CASE("Notecard::send() sends valid JSON via buffered transport") {
     note::test::TestJsonBackend backend;
     std::string captured;

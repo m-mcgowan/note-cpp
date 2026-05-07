@@ -5,6 +5,7 @@
 #include "debug.hpp"
 #include "owned_buffer.hpp"
 #include "json.hpp"
+#include "json_render.hpp"
 #include "md5.hpp"
 #include "retry.hpp"
 #include "retry_policy.hpp"
@@ -690,6 +691,37 @@ public:
         return result;
     }
 
+    /// In-place variant — `buf` is used both to render the request *and* to
+    /// receive the response. The lambda receives a writer (`auto& w`) with
+    /// the same `add()` / `begin_object()` / `close()` shape as `JsonBuf`.
+    /// After it returns, the rendered bytes are sent over the transport,
+    /// then the response overwrites `buf`. The returned `string_view`
+    /// points into `buf`.
+    ///
+    /// Mirrors `StaticNotecard::transact_raw_inplace` so the same call
+    /// shape works on both Notecard variants. The shared buffer is safe
+    /// because `ITransact::transact` fully drains the request before
+    /// reading the response.
+    ///
+    ///     char buf[64];
+    ///     auto v = note::JsonView(nc.transact_raw_inplace(buf, [](auto& w) {
+    ///         w.add("req", "card.temp");
+    ///     }));
+    ///     float t = v.get_float("value");
+    template<size_t N, typename Fn>
+    Result<string_view> transact_raw_inplace(char (&buf)[N], Fn&& build,
+                                             uint32_t timeout_ms = 10000) {
+        // Type-erase the lambda via a stateless trampoline so the bulk of
+        // the work (`transact_raw_inplace_impl_`) is one out-of-line copy
+        // shared by every call site.
+        InplaceBuilder trampoline = [](JsonRender& w, const void* ctx) {
+            (*static_cast<const std::remove_reference_t<Fn>*>(ctx))(w);
+        };
+        return transact_raw_inplace_impl_(buf, N, trampoline,
+                                          static_cast<const void*>(&build),
+                                          timeout_ms);
+    }
+
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
@@ -761,6 +793,27 @@ public:
     }
 
 private:
+    using InplaceBuilder = void(*)(JsonRender& w, const void* ctx);
+
+    /// Out-of-line workhorse for `transact_raw_inplace`. One copy shared
+    /// across all lambda types — only the per-Fn trampoline above varies.
+    Result<string_view> transact_raw_inplace_impl_(char* buf, size_t cap,
+                                                    InplaceBuilder fn,
+                                                    const void* ctx,
+                                                    uint32_t timeout_ms) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        JsonRender w(buf, cap);
+        fn(w, ctx);
+        w.close();
+        if (w.overflow())
+            return make_error(Error::Overflow, Cause::Unspecified,
+                              NOTE_ERR("transact_raw_inplace: buffer overflow"));
+        const size_t req_size = w.size();
+        return transport_->transact(string_view(buf, req_size),
+                                     span<char>(buf, cap), timeout_ms);
+    }
+
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
         using Rsp = typename RequestT::Response;

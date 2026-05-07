@@ -13,30 +13,29 @@
 6. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
 7. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
 8. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
-9. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
-10. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
-11. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
+9. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
+10. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
 
 ## Infrastructure
 
-12. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
-13. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
-14. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
-15. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
-16. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
-17. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
-18. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
-19. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
-20. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
-21. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
-22. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
-23. **[Known issues](known-issues.md)**
+11. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
+12. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
+13. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
+14. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
+15. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
+16. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
+17. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
+18. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
+19. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
+20. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
+21. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
+22. **[Known issues](known-issues.md)**
 
 ## Guides
 
-24. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-25. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-26. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+23. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+24. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+25. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

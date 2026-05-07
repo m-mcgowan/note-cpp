@@ -1,5 +1,7 @@
 # Custom Field Transforms
 
+> **Status:** Design proposal, partly subsumed by the shipped `NOTE_STRICT_BODY_FIELDS` mechanism (see [`strict-body-fields.md`](strict-body-fields.md)). Kept here as historical design context for the field-transform problem space across `note-cpp`, `embedded-config-cpp`, and `note-cpp-app`.
+
 ## Problem
 
 All three libraries (note-cpp, embedded-config-cpp, note-cpp-app) convert

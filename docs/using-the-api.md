@@ -1,10 +1,36 @@
 # Using the API
 
-<!-- One-paragraph orienting sentence — written in Task A2. -->
+`note-cpp` wraps the Notecard's JSON-over-wire API in typed C++ — autocomplete-friendly operations, several calling styles for different C++ standards, and an escape hatch for raw JSON when you need it. This page walks the layers and styles so you can pick what fits.
+
+> Throughout this page, `nc` is the `Notecard` instance. On Arduino it is also the API surface (`nc.hub.set()` works directly). On stdcpp you wrap explicitly — `Notecard nc(backend, transport); Api api(nc);` — and `api.hub.set()` is equivalent. Either style appears in `note-cpp` code in the wild; pick the one that matches your platform.
 
 ## A taster
 
-<!-- Section 1 — written in Task A2. -->
+A request, the wire bytes it produces, and the response — start to finish:
+
+```cpp
+auto r = nc.card.version().execute();
+if (r) {
+    // r.version is the firmware version string
+    // r.device  is the device DID
+}
+```
+
+That call sends this JSON to the Notecard:
+
+```json
+{"req":"card.version"}
+```
+
+The Notecard answers in kind:
+
+```json
+{"version":"notecard-1.5.4...","device":"dev:864475044211711","sku":"NOTE-WBNA","board":"3.2.1","api":4,...}
+```
+
+`note-cpp` parses that into the `r` struct. Each response field is typed; setters work the same way — `nc.hub.set().product("com.example.app").mode("periodic").execute()` produces `{"req":"hub.set","product":"com.example.app","mode":"periodic"}`. See [working-with-responses.md](working-with-responses.md) for the full response model (presence checks, body parsing, errors).
+
+The rest of this page explains why there are layers underneath this one call — and when you'd reach for them.
 
 ## The three layers
 

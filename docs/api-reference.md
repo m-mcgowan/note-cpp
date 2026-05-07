@@ -15,11 +15,11 @@ auto rsp = nc.execute(note::api::CardTemp::Read{});
 
 Both forms produce identical requests. The group syntax is more readable; the direct form is useful for generic code or when API groups are disabled (`NOTE_NO_API_GROUPS`).
 
-### Multi-intent Request APIs
+### Multi-operation Request APIs
 
-Some Notecard requests behave differently depending on which fields you send. For example, `card.attn` arms or disarms attention pins, configures sleep, queries state, or acts as a watchdog — all under the same `req` string. `note-cpp` splits these into named **intents** so each behavior is a distinct C++ type with only the fields and response shape that apply to it.
+Some Notecard requests behave differently depending on which fields you send. For example, `card.attn` arms or disarms attention pins, configures sleep, queries state, or acts as a watchdog — all under the same `req` string. `note-cpp` splits these into named **operations** so each behavior is a distinct C++ type with only the fields and response shape that apply to it.
 
-In the Overview tables below, multi-intent requests occupy one row per intent and share the same wire name. The wire name is shown on the first row and left blank on the continuation rows to make the grouping easier to scan. See [Intent-focused APIs](intent-focused-apis.md) for the broader pattern, including safety levels, retry semantics, and the deprecated HTTP-verb names (`get()` / `set()` / `delete_()`).
+In the Overview tables below, multi-operation requests occupy one row per operation and share the same wire name. The wire name is shown on the first row and left blank on the continuation rows to make the grouping easier to scan. See [Focused APIs](focused-apis.md) for the broader pattern, including safety levels, retry semantics, and the deprecated HTTP-verb names (`get()` / `set()` / `delete_()`).
 
 ## Contents
 
@@ -250,7 +250,7 @@ Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE.
 ## Request API details
 
 ### card.attn
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.attn — request()
 
@@ -265,7 +265,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().request()
     .files(note::string_view("x-files-item"))
     .execute();
@@ -316,7 +316,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().arm()
     .files(note::string_view("x-files-item"))
     .execute();
@@ -359,7 +359,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().rearm()
     .files(note::string_view("x-files-item"))
     .execute();
@@ -402,7 +402,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().watchdog()
     .seconds(note::json_int_t(42))
     .execute();
@@ -437,7 +437,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().sleep()
     .payload(note::string_view("x-payload"))
     .execute();
@@ -473,7 +473,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().retrieve().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardAttn::Retrieve{});
@@ -506,7 +506,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().disarm().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardAttn::Disarm{});
@@ -533,7 +533,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().off().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardAttn::Off{});
@@ -560,7 +560,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().on().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardAttn::On{});
@@ -587,7 +587,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.attn().query()
     .verify(true)
     .execute();
@@ -629,7 +629,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.aux()
     .connected(true)
     .execute();
@@ -674,7 +674,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.aux.serial
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.aux.serial — request()
 
@@ -689,7 +689,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.aux.serial.request()
     .duration(note::json_int_t(42))
     .execute();
@@ -736,7 +736,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.aux.serial.notify()
     .duration(note::json_int_t(42))
     .execute();
@@ -776,7 +776,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.aux.serial.gps()
     .limit(true)
     .execute();
@@ -812,7 +812,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.aux.serial.configure()
     .rate(note::json_int_t(42))
     .execute();
@@ -847,7 +847,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.aux.serial.off().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardAuxSerial::Off{});
@@ -862,7 +862,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.binary
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.binary — status()
 
@@ -877,7 +877,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.binary.status()
     .delete_(true)
     .execute();
@@ -922,7 +922,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.binary.clear()
     .delete_(true)
     .execute();
@@ -967,7 +967,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.binary.get()
     .cobs(note::json_int_t(42))
     .execute();
@@ -1010,7 +1010,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.binary.put()
     .cobs(note::json_int_t(42))
     .execute();
@@ -1052,7 +1052,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.carrier()
     .mode(note::string_view("charging"))
     .execute();
@@ -1081,7 +1081,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.contact
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.contact — get()
 
@@ -1096,7 +1096,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.contact().get()
     .email(note::string_view("x-email"))
     .execute();
@@ -1142,7 +1142,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.contact().set()
     .email(note::string_view("x-email"))
     .execute();
@@ -1188,7 +1188,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.dfu()
     .mode(note::string_view("altdfu"))
     .execute();
@@ -1234,7 +1234,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.illumination().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardIllumination{});
@@ -1266,7 +1266,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.io()
     .i2c(note::json_int_t(42))
     .execute();
@@ -1302,7 +1302,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.led()
     .mode(note::string_view("red"))
     .execute();
@@ -1339,7 +1339,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardLocation{});
@@ -1366,7 +1366,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.location.mode
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.location.mode — get()
 
@@ -1381,7 +1381,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.mode.get()
     .delete_(true)
     .execute();
@@ -1436,7 +1436,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.mode.set()
     .delete_(true)
     .execute();
@@ -1491,7 +1491,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.mode.continuous()
     .threshold(note::json_int_t(42))
     .execute();
@@ -1534,7 +1534,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.mode.periodic()
     .lat(1.5)
     .execute();
@@ -1587,7 +1587,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.mode.fixed()
     .lat(1.5)
     .execute();
@@ -1630,7 +1630,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.mode.remove()
     .delete_(true)
     .execute();
@@ -1685,7 +1685,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.location.track()
     .file(note::string_view("x-file"))
     .execute();
@@ -1736,7 +1736,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.monitor()
     .count(note::json_int_t(42))
     .execute();
@@ -1773,7 +1773,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.motion()
     .minutes(note::json_int_t(42))
     .execute();
@@ -1819,7 +1819,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.motion.mode()
     .motion(note::json_int_t(42))
     .execute();
@@ -1858,7 +1858,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.motion.sync()
     .count(note::json_int_t(42))
     .execute();
@@ -1897,7 +1897,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.motion.track()
     .count(note::json_int_t(42))
     .execute();
@@ -1926,7 +1926,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.power
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.power — read()
 
@@ -1941,7 +1941,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.power().read()
     .minutes(note::json_int_t(42))
     .execute();
@@ -1984,7 +1984,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.power().configure()
     .minutes(note::json_int_t(42))
     .execute();
@@ -2027,7 +2027,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.power().reset()
     .minutes(note::json_int_t(42))
     .execute();
@@ -2070,7 +2070,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.random()
     .count(note::json_int_t(42))
     .execute();
@@ -2112,7 +2112,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.restart().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardRestart{});
@@ -2139,7 +2139,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.restore()
     .connected(true)
     .execute();
@@ -2175,7 +2175,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.sleep()
     .mode(note::string_view("accel"))
     .execute();
@@ -2221,7 +2221,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.status().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardStatus{});
@@ -2251,7 +2251,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.temp
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.temp — read()
 
@@ -2266,7 +2266,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.temp().read()
     .minutes(note::json_int_t(42))
     .execute();
@@ -2315,7 +2315,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.temp().configure()
     .minutes(note::json_int_t(42))
     .execute();
@@ -2364,7 +2364,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.temp().stop()
     .minutes(note::json_int_t(42))
     .execute();
@@ -2413,7 +2413,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.time().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardTime{});
@@ -2451,7 +2451,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.trace()
     .mode(note::string_view("on"))
     .execute();
@@ -2486,7 +2486,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.transport()
     .allow(true)
     .execute();
@@ -2529,7 +2529,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.triangulate()
     .minutes(note::json_int_t(42))
     .execute();
@@ -2580,7 +2580,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.usage.read()
     .mode(note::string_view("total"))
     .execute();
@@ -2628,7 +2628,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.usage.test()
     .days(note::json_int_t(42))
     .execute();
@@ -2680,7 +2680,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.version().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::CardVersion{});
@@ -2707,7 +2707,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.voltage
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.voltage — read()
 
@@ -2722,7 +2722,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.voltage().read()
     .alert(true)
     .execute();
@@ -2784,7 +2784,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.voltage().configure()
     .alert(true)
     .execute();
@@ -2846,7 +2846,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.wifi()
     .name(note::string_view("x-name"))
     .execute();
@@ -2894,7 +2894,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.wireless()
     .apn(note::string_view("x-apn"))
     .execute();
@@ -2926,7 +2926,7 @@ auto rsp = nc.execute(req);
 
 
 ### card.wireless.penalty
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### card.wireless.penalty — check()
 
@@ -2941,7 +2941,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.wireless.penalty.check()
     .add(note::json_int_t(42))
     .execute();
@@ -2989,7 +2989,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.wireless.penalty.set()
     .add(note::json_int_t(42))
     .execute();
@@ -3037,7 +3037,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.card.wireless.penalty.clear()
     .add(note::json_int_t(42))
     .execute();
@@ -3085,7 +3085,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.dfu.get()
     .binary(true)
     .execute();
@@ -3130,7 +3130,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.dfu.status()
     .err(note::string_view("x-err"))
     .execute();
@@ -3169,7 +3169,7 @@ auto rsp = nc.execute(req);
 
 
 ### env.default
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### env.default — set()
 
@@ -3184,7 +3184,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.env.defaults().set()
     .name(note::string_view("x-name"))
     .execute();
@@ -3224,7 +3224,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.env.defaults().remove()
     .name(note::string_view("x-name"))
     .execute();
@@ -3263,7 +3263,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.env.get()
     .name(note::string_view("x-name"))
     .execute();
@@ -3306,7 +3306,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.env.modified()
     .time(note::json_int_t(42))
     .execute();
@@ -3346,7 +3346,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.env.set()
     .name(note::string_view("x-name"))
     .execute();
@@ -3387,7 +3387,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.env.templates()
     .body(note::string_view("x-body"))
     .execute();
@@ -3427,7 +3427,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.file.changes()
     .files(note::string_view("x-files-item"))
     .execute();
@@ -3470,7 +3470,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.file.changes.pending().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::FileChangesPending{});
@@ -3504,7 +3504,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.file.clear()
     .file(note::string_view("x-file"))
     .execute();
@@ -3539,7 +3539,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.file.delete_()
     .files(note::string_view("x-files-item"))
     .execute();
@@ -3578,7 +3578,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.file.stats()
     .file(note::string_view("x-file"))
     .execute();
@@ -3620,7 +3620,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.get().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::HubGet{});
@@ -3661,7 +3661,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.log()
     .alert(true)
     .execute();
@@ -3698,7 +3698,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.set()
     .align(true)
     .execute();
@@ -3751,7 +3751,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.signal()
     .seconds(note::json_int_t(42))
     .execute();
@@ -3792,7 +3792,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.status().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::HubStatus{});
@@ -3825,7 +3825,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.sync()
     .allow(true)
     .execute();
@@ -3862,7 +3862,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.hub.sync.status()
     .sync(true)
     .execute();
@@ -3910,7 +3910,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.add()
     .binary(true)
     .execute();
@@ -3951,7 +3951,7 @@ auto rsp = nc.execute(req);
 
 
 ### note.changes
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### note.changes — peek()
 
@@ -3966,7 +3966,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.changes().peek()
     .deleted(true)
     .execute();
@@ -4013,7 +4013,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.changes().pop()
     .file(note::string_view("x-file"))
     .execute();
@@ -4064,7 +4064,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.delete_()
     .file(note::string_view("x-file"))
     .noteId(note::string_view("x-note"))
@@ -4094,7 +4094,7 @@ auto rsp = nc.execute(req);
 - `note.remove(note::string_view file, note::string_view noteId)`
 
 ### note.get
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### note.get — read()
 
@@ -4109,7 +4109,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.get().read()
     .decrypt(true)
     .execute();
@@ -4156,7 +4156,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.get().pop()
     .decrypt(true)
     .execute();
@@ -4192,7 +4192,7 @@ auto rsp = nc.execute(req);
 - `note.pop(note::string_view file)`
 
 ### note.template
-This endpoint has multiple intents:
+This endpoint has multiple operations:
 
 #### note.template — define()
 
@@ -4207,7 +4207,7 @@ This endpoint has multiple intents:
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.templates().define()
     .file(note::string_view("x-file"))
     .execute();
@@ -4256,7 +4256,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.templates().remove()
     .file(note::string_view("x-file"))
     .execute();
@@ -4308,7 +4308,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.note.update()
     .file(note::string_view("x-file"))
     .noteId(note::string_view("x-note"))
@@ -4349,7 +4349,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.ntn.gps()
     .off(true)
     .execute();
@@ -4391,7 +4391,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.ntn.reset().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::NtnReset{});
@@ -4418,7 +4418,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.ntn.status().execute();
 // Direct type — designated init (C++20)
 auto rsp = nc.execute(note::api::NtnStatus{});
@@ -4451,7 +4451,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.var.delete_()
     .file(note::string_view("x-file"))
     .execute();
@@ -4490,7 +4490,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.var.get()
     .file(note::string_view("x-file"))
     .execute();
@@ -4533,7 +4533,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.var.set()
     .file(note::string_view("x-file"))
     .execute();
@@ -4573,7 +4573,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.web.request()
     .content(note::string_view("x-content"))
     .execute();
@@ -4620,7 +4620,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.web.delete_()
     .async(true)
     .execute();
@@ -4673,7 +4673,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.web.get()
     .binary(true)
     .execute();
@@ -4725,7 +4725,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.web.post()
     .async(true)
     .execute();
@@ -4783,7 +4783,7 @@ auto rsp = nc.execute(req);
 **Usage:**
 
 ```cpp
-// Intent-driven (group syntax)
+// Focused (group syntax)
 auto rsp = api.web.put()
     .async(true)
     .execute();

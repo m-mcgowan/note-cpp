@@ -35,6 +35,32 @@ progression diagram in
   the Uno board used by `main_wokwi_layers.cpp`.
 - `chips/` — Wokwi custom-chip stubs (currently a mock Notecard).
 
+## Mock Notecard limits
+
+`chips/notecard-mock.c` is a *minimal* Notecard stand-in for runtime
+verification of the AVR examples. It only canned-responds for three
+requests:
+
+| Wire request | Mock response |
+|---|---|
+| `card.temp` | `{"value":22.5}` |
+| `note.template` | `{"bytes":14,"template":true}` |
+| `note.get` | `{"body":{"temperature":22.5,"humidity":60}}` |
+| anything else | `{}` |
+
+So requests like `card.status` and `card.voltage` come back empty, and
+the `JsonView::get_bool("connected")` / `get_double("value")` calls in
+the examples extract the field defaults. On Uno that's invisible
+because the only `Serial` is owned by the Notecard UART; on the Mega
+variant the loop's tail prints the extracted values to the free
+debug `Serial`, where you'd see the empty-response defaults reflected.
+
+If you want a richer demo round-trip, extend the chip's request
+table or canned values directly — the file is small and the structure
+is obvious. Avoid teaching the mock real Notecard semantics; this
+harness is for verifying the *transport / render / parse* path, not
+the protocol.
+
 ## Usage
 
 ```bash

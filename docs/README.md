@@ -12,7 +12,7 @@
 5. **[API reference](api-reference.md)** — complete reference for all Notecard endpoints
 6. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
 7. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
-8. **[Intent-focused APIs](intent-focused-apis.md)** — named intents for multi-purpose endpoints, with safety levels and field-shape constraints
+8. **[Focused APIs](focused-apis.md)** — named operations for multi-purpose endpoints, with safety levels and field-shape constraints
 9. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
 10. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
 11. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags

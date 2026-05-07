@@ -90,7 +90,7 @@ The examples throughout this page use fluent syntax, but every request
 also supports method calls (`req.mode("periodic")`), direct field
 assignment (`req.mode = "periodic"`), and designated initializers (C++20).
 See [API Calling Patterns](api-patterns.md) for all styles. See
-[Intent-Focused APIs](intent-focused-apis.md) for the full intent design.
+[Focused APIs](focused-apis.md) for the full design.
 
 ### Unguided Requests (Full Field Access)
 

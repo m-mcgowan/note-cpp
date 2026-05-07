@@ -352,8 +352,8 @@ The core library works with C++17. Each successive standard unlocks additional f
 | [`StringPool`](docs/memory.md) response string interning | yes | yes | yes |
 | [Zero-alloc `BufferJsonBackend`](docs/json-backend.md) (jsmn) | yes | yes | yes |
 | **Standard library** | | | |
-| [`std::expected`](docs/cpp-standard-requirements.md) (native, vs `tl::expected` fallback) | — | — | yes |
-| [`std::unreachable`](docs/cpp-standard-requirements.md) (native, vs compiler builtins) | — | — | yes |
+| [`std::expected`](docs/internal/cpp-version-blockers.md) (native, vs `tl::expected` fallback) | — | — | yes |
+| [`std::unreachable`](docs/internal/cpp-version-blockers.md) (native, vs compiler builtins) | — | — | yes |
 
 ## How It Scales
 

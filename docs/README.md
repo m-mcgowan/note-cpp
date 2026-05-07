@@ -29,15 +29,14 @@
 19. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
 20. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
 21. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
-22. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
-23. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
-24. **[Known issues](known-issues.md)**
+22. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
+23. **[Known issues](known-issues.md)**
 
 ## Guides
 
-25. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-26. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-27. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+24. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+25. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+26. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

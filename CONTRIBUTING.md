@@ -10,6 +10,8 @@ under the project's [MIT License](LICENSE).
 note-cpp is header-only — no compilation step for the library itself.
 You need a C++17 compiler (C++20 recommended) and Python 3 for code generation.
 
+For the per-feature C++ standard breakdown — what would block lowering to an older standard, and which features each standard unlocks — see [`docs/internal/cpp-version-blockers.md`](docs/internal/cpp-version-blockers.md).
+
 ## Building and testing
 
 ```bash

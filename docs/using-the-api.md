@@ -212,7 +212,230 @@ We recommend starting with the typed API and dropping down only when you have a 
 
 ## Calling styles within the typed layer
 
-<!-- Section 3 — written in Task A4. -->
+The typed API accepts the same request five different ways. Pick the one that matches your C++ standard and house style — they all compile to the same code, none is "more advanced" than another. Most projects settle on one or two and stay there.
+
+| Style | C++17 | C++20 | Best for |
+|---|---|---|---|
+| Fluent builder | ✓ | ✓ | One-shot calls, chained setters reading top-to-bottom |
+| Positional shorthand | ✓ | ✓ | One-liners with one or two common fields |
+| Designated initializers | — | ✓ | Named-field syntax, locally-scoped struct construction |
+| Args struct (nested braces) | ✓ | ✓ | C++17 equivalent of designated init |
+| Direct struct construction | ✓ | ✓ | When you have a request struct from elsewhere |
+
+C++20 also adds `consteval` validation for enum fields like `mode` — passing an invalid string is a compile error on C++20, runtime error on C++17. Other than that, the surface is the same. See [§ Setting the C++ standard](#setting-the-c-standard) below for build flags per platform.
+
+### Fluent builder
+
+Every endpoint is a builder with typed setters that chain:
+
+```cpp
+auto result = nc.hub.set()
+    .mode("periodic")
+    .product("com.example.app")
+    .outbound(60_mins)
+    .execute();
+```
+
+Each setter returns a reference to the builder, so calls chain naturally. `execute()` sends the request and returns a typed `ApiResult<Response>`.
+
+### Positional shorthand
+
+Aliases accept the most common arguments as positional parameters:
+
+```cpp
+nc.note.read("data.qi");                 // file
+nc.note.remove("data.db", "my-note");    // file, noteId
+nc.env.setDefault("name", "value");      // name, text
+nc.file.remove("old.db");                // files (single)
+```
+
+These return the same builder — you can chain further:
+
+```cpp
+nc.note.read("data.qi").noteId("specific-note").execute();
+```
+
+### Designated initializers (C++20)
+
+Aliases accept an args struct with named fields:
+
+```cpp
+nc.note.read({.file = "data.qi"}).execute();
+nc.env.setDefault({.name = "var", .text = "value"}).execute();
+nc.file.remove({.files = {"a.db", "b.db"}}).execute();
+```
+
+The `Args` structs (`ReadArgs`, `RemoveArgs`, etc.) mirror the builder's field types. Array fields use `ArrayField`, so initializer-list syntax works naturally inside the designator.
+
+### Args struct (C++17)
+
+The same args struct works without designated initializers using nested braces:
+
+```cpp
+// Single field — outer braces for the struct, value inside:
+nc.note.read({"data.qi"}).execute();
+
+// Multiple fields — positional order matches struct declaration:
+nc.note.remove({"data.db", "my-note"}).execute();
+
+// Array field — nested braces for the initializer list:
+nc.file.remove({{"a.db", "b.db"}}).execute();
+```
+
+### Direct struct construction
+
+For `nc.execute()` with a fully constructed request:
+
+```cpp
+// C++20 designated init:
+nc.execute(note::api::EnvSet{.name = "temp", .text = "22.5"});
+
+// C++17:
+note::api::EnvSet req;
+req.name = "temp";
+req.text = "22.5";
+nc.execute(req);
+```
+
+This is what to reach for when you have a request struct from elsewhere — built by a function, returned from a config object, or assembled across several lines.
+
+### Ad-hoc fields (`operator[]`)
+
+Every request supports `operator[]` for setting fields by their JSON wire name. For known fields, the value is routed to the typed field. For unknown fields, the value is stored in an extras buffer and serialized alongside the typed fields.
+
+```cpp
+auto req = nc.hub.set();
+
+// Known field — routes to the typed setter (same as req.product = "...")
+req["product"] = "com.example.app";
+
+// Unknown field — stored in extras, sent on the wire as-is
+req["some_new_field"] = "value";
+req["retry_count"] = int32_t(3);
+
+req.execute();
+```
+
+This is useful when new Notecard firmware adds fields the typed API does not model yet, or for one-off experimentation. Supported value types are `bool`, `int32_t`, `double`, and `string_view`.
+
+The extras buffer holds up to 4 ad-hoc fields by default. Override `NOTE_EXTRAS_MAX` before including any `note/api` headers to change the limit. Define `NOTE_EXTRAS=0` to disable extras entirely and save flash. See [Feature Flags](feature-flags.md) for details.
+
+> **Note:** `operator[]` is available on requests only, not on responses. Response fields are always accessed via the typed struct members. To read response fields by name, drop down to the [§ Lambda request builder](#lambda-request-builder) and parse the response via `JsonReader`:
+>
+> ```cpp
+> auto result = nc.request("card.version");
+> if (result) {
+>     auto& reader = *result.value();
+>     auto version = reader.get_string("version");
+>     auto some_new_field = reader.get_int("some_new_field");
+> }
+> ```
+
+### Array fields
+
+Some request fields accept multiple values (e.g. `file.delete` takes a list of filenames). These support several initialization styles:
+
+```cpp
+auto req = nc.file.remove();
+
+// Initializer list — most natural for literals:
+req.files = {"data.qi", "settings.db"};
+
+// Single value — clears and sets one element:
+req.files = "data.qi";
+
+// Chained add():
+req.files.add("data.qi").add("settings.db");
+
+// Callable with initializer list:
+req.files({"data.qi", "settings.db"});
+```
+
+All produce the same wire format: `"files":["data.qi","settings.db"]`.
+
+Single-value assignment (`req.files = "data.qi"`) replaces the array contents. Use `add()` to append.
+
+### Responses
+
+Responses are typed structs with fields that match the Notecard's JSON output:
+
+```cpp
+auto rsp = nc.card.version().execute();
+if (rsp) {
+    auto ver = rsp.version;      // string_view
+    auto body = rsp.body;        // BodyValue (nested JSON)
+}
+
+auto rsp = nc.card.temp().read().execute();
+if (rsp) {
+    float temp = rsp.value;      // temperature in °C
+}
+```
+
+`.read()` selects the Read operation — `card.temp` is polymorphic (`Read`, `Configure`, `Stop`). On error, `rsp` is falsy and `rsp.error()` returns the `ErrorInfo`. See [working-with-responses.md](working-with-responses.md) for the full response model — presence checks, body parsing, error categories.
+
+### Setting the C++ standard
+
+The library requires C++17 or later. C++20 unlocks designated initializers, duck-typed args structs, and `consteval` enum validation; the rest of the surface is the same.
+
+#### PlatformIO (Arduino framework)
+
+```ini
+; platformio.ini
+[env:myboard]
+build_flags = -std=gnu++20    ; or gnu++23
+```
+
+Common platform defaults:
+- **ESP32 (pioarduino)**: defaults to `gnu++11`. Set `-std=gnu++23` for full C++20 features.
+- **nRF52/nRF53 (Arduino)**: defaults to `gnu++11`. Set `-std=gnu++17` or higher.
+- **STM32 (STM32duino)**: defaults to `gnu++14`. Set `-std=gnu++17` or higher.
+
+#### PlatformIO (ESP-IDF framework)
+
+```ini
+; platformio.ini — ESP-IDF uses CMake, not build_flags for C++ standard
+build_flags = -std=gnu++20
+```
+
+Or in your component's `CMakeLists.txt`:
+
+```cmake
+target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
+```
+
+#### Zephyr
+
+In `prj.conf` or your board's config:
+
+```
+CONFIG_STD_CPP20=y
+```
+
+Or in `CMakeLists.txt`:
+
+```cmake
+set(CMAKE_CXX_STANDARD 20)
+```
+
+### IDE discoverability
+
+The API is designed for autocomplete-driven discovery:
+
+1. **Type `nc.`** — groups appear: `card`, `hub`, `note`, `env`, `file`, etc.
+2. **Type `nc.card.`** — endpoints appear: `version()`, `temp()`, `binary`, etc.
+3. **Type `nc.card.temp().`** — operations appear: `read()`, `configure()`, `stop()`
+4. **After an operation, type `.`** — fields and `execute()` appear
+
+For aliases with positional args, the IDE shows parameter names and types in the signature tooltip:
+
+```
+remove(string_view file_arg, string_view noteId_arg) → NoteDelete
+remove(RemoveArgs args) → NoteDelete
+remove() → NoteDelete
+```
+
+The `Args` struct definition is visible in the tooltip, showing which fields are available for designated init.
 
 ## Focused operations on multi-purpose endpoints
 

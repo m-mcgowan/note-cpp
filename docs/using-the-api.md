@@ -28,7 +28,7 @@ The Notecard answers in kind:
 {"version":"notecard-1.5.4...","device":"dev:864475044211711","sku":"NOTE-WBNA","board":"3.2.1","api":4,...}
 ```
 
-`note-cpp` parses that into the `r` struct. Each response field is typed; setters work the same way — `nc.hub.set().product("com.example.app").mode("periodic").execute()` produces `{"req":"hub.set","product":"com.example.app","mode":"periodic"}`. See [working-with-responses.md](working-with-responses.md) for the full response model (presence checks, body parsing, errors).
+`note-cpp` parses that into the `r` struct — each field is typed and tracks whether the Notecard sent it. Building a request follows the same shape: chain typed setters and call `execute()`. For example, `nc.hub.set().product("com.example.app").mode("periodic").execute()` produces `{"req":"hub.set","product":"com.example.app","mode":"periodic"}`. See [working-with-responses.md](working-with-responses.md) for the full response model (presence checks, body parsing, errors).
 
 The rest of this page explains why there are layers underneath this one call — and when you'd reach for them.
 
@@ -98,7 +98,7 @@ For fields that are not in the schema at all, the **extras** mechanism (`operato
 
 ### Lambda request builder
 
-The lambda request builder is the first layer that uses lambdas. It targets advanced cases such as migrating custom JSON structures from existing code, where declaring struct types for custom note bodies is more work than it's worth.
+The lambda request builder is the first layer where lambdas appear. It targets advanced cases like migrating custom JSON structures from existing code, where declaring struct types for one-off custom note bodies is more work than it's worth.
 
 The lambda builder lets you build JSON by hand without any generated types. This is useful for entirely new request types or as a familiar entry point for developers migrating from `note-c`, where all requests are hand-built JSON. The typed API itself uses lambda builders internally to construct requests and parse responses.
 
@@ -449,13 +449,13 @@ Reading a Note vs. popping it:
 
 ```cpp
 // Read a Note — non-destructive, safe to retry
-auto r = api.note.read("data.qi").noteId("my-note").execute();
+auto r = nc.note.read("data.qi").noteId("my-note").execute();
 
 // Pop from a queue — destructive, removes the Note on success
-auto r = api.note.pop("requests.qi").execute();
+auto r = nc.note.pop("requests.qi").execute();
 ```
 
-Same Notecard endpoint (`note.get`), two different operations, two different C++ methods. Autocomplete shows you the operations available on `api.note.*`, and each operation only exposes fields that make sense for that behavior.
+Same Notecard endpoint (`note.get`), two different operations, two different C++ methods. Autocomplete shows you the operations available on `nc.note.*`, and each operation only exposes fields that make sense for that behavior.
 
 ### Why this matters
 
@@ -467,14 +467,14 @@ Each operation exposes only the fields the Notecard actually uses for that behav
 
 ```cpp
 // Configure a fixed location — lat and lon available
-api.card.location.mode.fixed()
+nc.card.location.mode.fixed()
     .lat(42.565).lon(-70.783)
     .execute();
 
 // Query current mode — no lat/lon fields
-auto r = api.card.location.mode.get().execute();
+auto r = nc.card.location.mode.get().execute();
 
-// api.card.location.mode.get().lat(42.565);   // compile error: no such field
+// nc.card.location.mode.get().lat(42.565);   // compile error: no such field
 ```
 
 With the raw Notecard API, setting `lat` on a query is silently ignored — you find out it didn't do what you meant only when behavior is wrong in production. The focused field surface catches it at compile time.
@@ -490,7 +490,7 @@ For `note.get`:
 The library's retry logic uses this automatically. You can also check it yourself:
 
 ```cpp
-auto req = api.note.pop("data.qi");
+auto req = nc.note.pop("data.qi");
 static_assert(decltype(req)::safety == Safety::Destructive);
 ```
 
@@ -506,12 +506,12 @@ Some operation groups are reached as a property (`.`) and some as a method call 
 
 ```cpp
 // Factory method — simple endpoints where you pick an operation
-api.card.attn().arm("location,motion").execute();
-api.note.read("data.qi").execute();
+nc.card.attn().arm("location,motion").execute();
+nc.note.read("data.qi").execute();
 
 // Property access — groups that also have nested groups
-api.card.location.mode.fixed().lat(42.565).lon(-70.783).execute();
-api.card.binary.status().execute();
+nc.card.location.mode.fixed().lat(42.565).lon(-70.783).execute();
+nc.card.binary.status().execute();
 ```
 
 The IDE autocomplete will disambiguate: if you get a `CardAttnFactory` member instead of a call result, add parens.
@@ -533,21 +533,21 @@ A few examples across endpoints:
 
 ```cpp
 // card.location.mode — configure GPS
-api.card.location.mode.periodic().seconds(300).execute();
-api.card.location.mode.continuous().execute();
-api.card.location.mode.get().execute();
+nc.card.location.mode.periodic().seconds(300).execute();
+nc.card.location.mode.continuous().execute();
+nc.card.location.mode.get().execute();
 
 // card.binary — binary store management
-api.card.binary.status().execute();
-api.card.binary.clear().execute();
+nc.card.binary.status().execute();
+nc.card.binary.clear().execute();
 
 // card.attn — interrupt-driven wake
-api.card.attn().arm("location,motion").execute();
-api.card.attn().disarm().execute();
-api.card.attn().query().execute();
+nc.card.attn().arm("location,motion").execute();
+nc.card.attn().disarm().execute();
+nc.card.attn().query().execute();
 
 // note.templates — register a typed template
-api.note.templates().define("sensors.qo").body(template_of<Readings>()).execute();
+nc.note.templates().define("sensors.qo").body(template_of<Readings>()).execute();
 ```
 
 ### Dropping back to the raw request
@@ -562,7 +562,7 @@ Before this pattern settled, some operations were named after their HTTP verb (`
 
 ```cpp
 // Still compiles, but warns — use remove() instead:
-api.card.location.mode.delete_().execute();
+nc.card.location.mode.delete_().execute();
 ```
 
 ## Escape hatches

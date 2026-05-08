@@ -20,7 +20,7 @@ Yes — incremental migration is supported via a small bridge that routes `note-
 
 ## What's the smallest target this runs on?
 
-ATmega328P (Arduino Uno — 32 KB flash, 2 KB RAM) is the validated floor. With `NOTE_MINIMAL` an 8-endpoint app fits in ~24 KB flash and ~830 bytes of static RAM, leaving room for application code. Smaller hasn't been tried; for the AVR-specific patterns and measured sizes see [`platforms/arduino/avr-guide.md`](platforms/arduino/avr-guide.md).
+ATmega328P (Arduino Uno — 32 KB flash, 2 KB RAM) is the validated floor. With `NOTE_MINIMAL` an 8-endpoint app fits comfortably with room for application code. Smaller hasn't been tried; for the AVR-specific patterns and the live size matrix see [`platforms/arduino/avr-guide.md`](platforms/arduino/avr-guide.md).
 
 ## Is there a synchronous-vs-async distinction?
 

@@ -69,7 +69,12 @@ See the [Arduino guide § Setup](platforms/arduino/guide.md#setup). The pioardui
 
 ## I'm seeing `send_failed[timeout]` after it was working
 
-Cause: usually a CRC mismatch after auto-detection. The Notecard turns CRC on as soon as it sees the host include one — but if the host then sends a request without a fresh sequence number (because firmware reset between requests, or because the transport was rebuilt mid-session), the Notecard rejects it and the host blocks until timeout. A baud-rate mismatch on serial produces the same symptom (the Notecard's auto-baud only locks within a window after its own reset). Fix: call `nc.reset()` to cycle the transport and clear CRC state, or destroy and rebuild the `Notecard` object. See [`transport-crc.md` § Auto-detection](transport-crc.md#auto-detection).
+Cause is usually one of:
+
+- **CRC mismatch after auto-detection.** The Notecard turns CRC on as soon as it sees the host include one. If the host then sends a request without a fresh sequence number (because firmware reset between requests, or because the transport was rebuilt mid-session), the Notecard rejects it and the host blocks until timeout.
+- **Baud-rate mismatch on serial.** The Notecard's auto-baud only locks within a window after its own reset; a host reset that lands outside that window leaves the two sides talking past each other.
+
+Fix: call `nc.reset()` to cycle the transport and clear CRC state, or destroy and rebuild the `Notecard` object. See [`transport-crc.md` § Auto-detection](transport-crc.md#auto-detection).
 
 ## My AVR build is overflowing flash
 
@@ -88,7 +93,7 @@ Cause: the I2C bus needs pull-up resistors on both SDA and SCL, and the Notecard
 
 ## `response.body()` returns null
 
-Cause: you're running in sink mode (no `JsonBackend`), and `body()` requires a tree to walk. Sink-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in sink mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`transport.md` § JSON layer](transport.md#json-layer-the-actual-bufferedstreaming-choice) for the trade-off and [`body-values.md`](body-values.md) for typed body parsing.
+Cause: you're running in [sink mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Sink-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in sink mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`transport.md` § JSON layer](transport.md#json-layer-the-actual-bufferedstreaming-choice) for the trade-off and [`body-values.md`](body-values.md) for typed body parsing.
 
 ## consteval validation rejects a string the Notecard accepts
 

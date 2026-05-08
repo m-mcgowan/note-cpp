@@ -34,12 +34,13 @@
 24. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
 25. **[Known issues](known-issues.md)** — confirmed library bugs with workarounds
 26. **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix catalog for common user-side footguns
+27. **[Production deployment](production-deployment.md)** — flags, OTA, watchdog, log routing, reset recovery for shipped firmware
 
 ## Guides
 
-27. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-28. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-29. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+28. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+29. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+30. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

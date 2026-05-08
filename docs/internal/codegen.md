@@ -7,27 +7,26 @@ All changes belong in the source files described below.
 
 ## Pipeline Overview
 
-```
-notecard-schema repo          Our extension metadata
-  *.req.notecard.api.json  ┐  tools/codegen/metadata/safety_semantics.json
-  *.rsp.notecard.api.json  ┤  tools/codegen/metadata/property_extensions.json
-                           ┤  tools/codegen/metadata/operation_extensions.json
-                           ┘  tools/codegen/metadata/binary_transfer.json
-              │
-              ▼
-   tools/schema_to_openapi.py
-              │
-              ▼
-   notecard-api.openapi.json   ← GENERATED, do not edit
-              │
-              ▼
-   tools/codegen/generate.py   (reads spec + Jinja2 templates)
-              │
-              ▼
-   include/note/api/*.hpp      ← GENERATED, do not edit
-   include/note/api.hpp        ← GENERATED, do not edit
-   tests/test_samples.cpp      ← GENERATED, do not edit
-   tests/test_endpoint_coverage.cpp  ← GENERATED, do not edit
+```mermaid
+flowchart TB
+    subgraph Inputs["Inputs"]
+        Schema["<b>notecard-schema repo</b><br/><code>*.req.notecard.api.json</code><br/><code>*.rsp.notecard.api.json</code>"]
+        Meta["<b>Our extension metadata</b><br/><code>tools/codegen/metadata/safety_semantics.json</code><br/><code>tools/codegen/metadata/property_extensions.json</code><br/><code>tools/codegen/metadata/operation_extensions.json</code><br/><code>tools/codegen/metadata/binary_transfer.json</code>"]
+    end
+    Convert["<code>tools/schema_to_openapi.py</code>"]
+    Spec["<code>notecard-api.openapi.json</code><br/><i>← GENERATED, do not edit</i>"]
+    Generate["<code>tools/codegen/generate.py</code><br/>(reads spec + Jinja2 templates)"]
+    subgraph Outputs["Outputs &nbsp;·&nbsp; all GENERATED, do not edit"]
+        H1["<code>include/note/api/*.hpp</code>"]
+        H2["<code>include/note/api.hpp</code>"]
+        T1["<code>tests/test_samples.cpp</code>"]
+        T2["<code>tests/test_endpoint_coverage.cpp</code>"]
+    end
+    Schema --> Convert
+    Meta --> Convert
+    Convert --> Spec
+    Spec --> Generate
+    Generate --> H1 & H2 & T1 & T2
 ```
 
 ## Source Files

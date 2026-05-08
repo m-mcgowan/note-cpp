@@ -40,12 +40,15 @@ Pick a window that comfortably exceeds your worst-case `execute()` latency — t
 Production debug output rarely goes to a serial console — there isn't one, or it's expensive to leave attached. The [debug listener](debugging.md#custom-listeners) routes wire bytes, timing, transport events, and memory events into a callback. In production, route to a bounded buffer (a ring buffer in RAM, or a small Notefile) and dump on error rather than streaming everything:
 
 ```cpp
+// LogRing is a sketch — your platform's bounded log sink (ring buffer,
+// Notefile spool, syslog adapter, …). The DebugListener API and event
+// shapes are real; see debugging.md for the canonical reference.
 note::DebugListener d;
 d.ctx = &log_ring;
 d.on_wire = [](const note::WireEvent& ev, void* ctx) {
     static_cast<LogRing*>(ctx)->push(ev.json);   // bounded, lossy on overflow
 };
-d.on_transport = [](note::TransportEvent ev, int detail, void* ctx) {
+d.on_transport = [](note::TransportEvent ev, uint32_t detail, void* ctx) {
     static_cast<LogRing*>(ctx)->dump_to_notefile();  // flush on any transport hiccup
 };
 nc.set_debug(d);

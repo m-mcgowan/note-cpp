@@ -31,8 +31,8 @@ These are the terms used throughout this codebase's docs and headers — the lay
 - **`Protocol`** — the concrete Notecard wire protocol driver: CRC, init handshake, line termination, sequence numbers, framing over a `Hal`. See [internal/streaming-transport.md § Architecture](internal/streaming-transport.md#architecture).
 - **`ITransact`** — unified Notecard transaction interface: `transact(req, span)`, `transact(req, sink)`, `send(req)`. The contract a session class holds; `Protocol` implements it natively. See [internal/streaming-transport.md § Transport Interfaces](internal/streaming-transport.md#transport-interfaces).
 - **Session** — runtime object owning the transport, optional `JsonBackend`, retry policy, and inter-transaction timing. Where retry happens. The session classes (`Notecard`, `BareNotecard`, `StaticNotecard`) are peers, not stacked.
-- **Backend** (`JsonBackend`) — selects the JSON layer's tree-mode strategy (cJSON, nlohmann, fixed buffer + jsmn, cJSON-on-arena). See [json-backend.md](json-backend.md).
-- **Sink** (`JsonSink`) — receives SAX events from the streaming parser. The sink-mode counterpart to `JsonBackend`. Each typed `Response` defines one (`Rsp::Sink`); user code rarely writes one directly.
+- **Backend** (`JsonBackend`) — JSON tree-mode strategy (cJSON, nlohmann, fixed buffer + jsmn, cJSON-on-arena). See [json-backend.md](json-backend.md).
+- **Sink** (`JsonSink`) — SAX-event receiver from the streaming parser; the sink-mode counterpart to `JsonBackend`. Each typed `Response` defines one (`Rsp::Sink`); user code rarely writes one directly.
 - **`StaticNotecard`** — peer session class that wires the transport and (optional) backend at compile time, no virtual dispatch. Smallest flash; no runtime swap.
 - **`BareNotecard`** — peer session class that strips retry and inter-transaction timing. Use when you handle those concerns yourself.
 - **`Api<>`** — the generated typed surface, templated on a session class. `nc.card.version()` etc. live here.

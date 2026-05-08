@@ -50,13 +50,15 @@ A minimal `main.cpp` — replace `MySerialHal` with whatever talks to your hardw
 #include <note/api.hpp>
 #include <note/backends/cjson.hpp>
 #include <note/link/serial.hpp>
+#include <note/protocol.hpp>
 
 int main() {
     MySerialHal hal;                                 // your serial HAL impl
     note::link::SerialFramer serial_hal(hal);        // note::Hal — wire framing
+    note::Protocol transport(serial_hal);            // ITransact — wire protocol
     note::backends::CjsonBackend backend;            // tree-mode JSON backend
 
-    note::Notecard nc(backend, serial_hal);
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     auto r = api.card.version().execute();
@@ -74,7 +76,7 @@ The HAL implementation for ESP-IDF UART/I2C drivers is yours to wire (the same `
 
 ## Your first request
 
-> Throughout the rest of this page, `nc` is the API surface. On Arduino, that's the `Notecard nc;` you declared. On stdcpp/ESP-IDF, after `Notecard nc(backend, serial_hal); Api api(nc);` you write `api.card.version()` instead — the calls are identical, the receiver isn't. See [using-the-api.md](using-the-api.md) for the full picture.
+> Throughout the rest of this page, `nc` is the API surface. On Arduino, that's the `Notecard nc;` you declared. On stdcpp/ESP-IDF, after `Notecard nc(backend, transport); Api api(nc);` you write `api.card.version()` instead — the calls are identical, the receiver isn't. See [using-the-api.md](using-the-api.md) for the full picture.
 
 Walking through one full request — `card.version`, the simplest readable Notecard endpoint — top to bottom:
 
@@ -135,7 +137,7 @@ The library scales from ATmega328P (32 KB flash / 2 KB RAM) to desktop hosts wit
 - **Heap available, don't care about allocs** — defaults. `CjsonBackend` allocates per-node from the heap.
 - **Heap allowed but want it bounded** — pair `BufferJsonBackend<N,T>` (fixed in-memory build/parse buffers, zero heap) with no arena. Response strings stay valid until the next `execute()`.
 - **No heap, want response strings to outlive the next call** — sink mode (no JSON backend) plus a `MonotonicArena`. The arena interns response strings; you reset it when you're done with a batch. See [memory.md](memory.md) for sizing.
-- **No heap at all** — sink mode plus arena, as above. Compile-time-checked: `note::Notecard nc(serial_hal, note::arena_allocator(arena))` constructs the streaming-only Notecard, which won't link if you later try to call a tree-mode-only path.
+- **No heap at all** — sink mode plus arena, as above. Compile-time-checked: `note::Notecard nc(transport, note::arena_allocator(arena))` (where `transport` is a `note::Protocol` over your `SerialFramer`) constructs the streaming-only Notecard, which won't link if you later try to call a tree-mode-only path.
 
 **Which API style?**
 

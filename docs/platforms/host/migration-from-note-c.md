@@ -29,9 +29,11 @@ In `note-cpp` on a host, you instantiate a HAL, a transport, a JSON backend, and
 #include <note/api.hpp>
 #include <note/backends/cjson.hpp>
 #include <note/link/serial.hpp>
+#include <note/protocol.hpp>
 
-MySerialHal hal;                              // your HAL impl (note::Hal)
-note::link::SerialFramer transport(hal);      // wire framing
+MySerialHal hal;                              // your HAL impl (note::SerialHal)
+note::link::SerialFramer serial_hal(hal);     // wraps to note::Hal — wire framing
+note::Protocol transport(serial_hal);         // ITransact — wire protocol
 note::backends::CjsonBackend backend;         // JSON backend (cJSON-backed)
 
 note::Notecard nc(backend, transport);
@@ -81,11 +83,11 @@ public:
 };
 ```
 
-Wire it up the same way as a real transport:
+Wire it up the same way as a real transport (the runnable example uses `MockBackend` so it compiles standalone; in your project, swap in `CjsonBackend` or another real backend):
 
 ```cpp
 int main() {
-    MockBackend backend;
+    MockBackend backend;            // → note::backends::CjsonBackend in your project
     NoteCTransport transport;
     note::Notecard nc(backend, transport);
     note::Api api(nc);

@@ -26,16 +26,22 @@
 //
 // Usage — compile-time default policy (zero overhead, most common):
 //
-//   SerialFramer transport(hal);
+//   SerialFramer serial_hal(hal);
 //
 // Usage — compile-time custom policy (zero overhead):
 //
-//   SerialFramer<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
+//   SerialFramer<StaticSerialPolicy<SerialPolicy::fast()>> serial_hal(hal);
 //
 // Usage — runtime mutable policy:
 //
-//   SerialFramer<SerialPolicy> transport(hal);
-//   transport.policy.segment_delay_ms = 0;  // adjust pacing on a fast bus
+//   SerialFramer<SerialPolicy> serial_hal(hal);
+//   serial_hal.policy.segment_delay_ms = 0;  // adjust pacing on a fast bus
+//
+// `serial_hal` is a note::Hal; wrap it in note::Protocol to get the
+// ITransact required by note::Notecard:
+//
+//   note::Protocol transport(serial_hal);
+//   note::Notecard nc(backend, transport);
 
 namespace note::link {
 
@@ -178,12 +184,12 @@ private:
 
 // Deduction guides — allow construction without explicit template arguments.
 #if __cplusplus >= 202002L
-//   SerialFramer transport(hal)  → StaticSerialPolicy (zero overhead)
+//   SerialFramer serial_hal(hal)  → StaticSerialPolicy (zero overhead)
 SerialFramer(SerialHal&) -> SerialFramer<StaticSerialPolicy<SerialPolicy{}>>;
 template <SerialPolicy P>
 SerialFramer(SerialHal&, StaticSerialPolicy<P>) -> SerialFramer<StaticSerialPolicy<P>>;
 #else
-//   SerialFramer transport(hal)  → SerialPolicy (runtime, 28 bytes)
+//   SerialFramer serial_hal(hal)  → SerialPolicy (runtime, 28 bytes)
 SerialFramer(SerialHal&) -> SerialFramer<SerialPolicy>;
 #endif
 SerialFramer(SerialHal&, SerialPolicy) -> SerialFramer<SerialPolicy>;

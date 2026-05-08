@@ -30,16 +30,14 @@
 //     I2cHal(Wire, external_bus)         // App owns Wire; HAL never calls
 //                                        // begin()/end().
 //
-// Usage:
+// Usage — full stack (I2cHal → I2cFramer → Protocol → Notecard):
 //
 //   note::arduino::I2cHal hal(Wire);                 // default address 0x17
 //   note::arduino::I2cHal hal(Wire, 14, 21);         // custom pins
 //   note::arduino::I2cHal hal(Wire, note::arduino::external_bus);  // shared bus
-//   note::link::I2cFramer transport(hal);
-//   note::Notecard nc(backend,
-//       [&transport](note::string_view req, uint32_t t) {
-//           return transport(req, t);
-//       });
+//   note::link::I2cFramer i2c_hal(hal);          // note::Hal — wire framing
+//   note::Protocol transport(i2c_hal);            // ITransact
+//   note::Notecard nc(backend, transport);
 
 namespace note::arduino {
 

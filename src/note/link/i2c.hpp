@@ -19,16 +19,22 @@
 //
 // Usage — compile-time default policy (zero overhead, most common):
 //
-//   I2cFramer transport(hal);
+//   I2cFramer i2c_hal(hal);
 //
 // Usage — compile-time custom policy (zero overhead):
 //
-//   I2cFramer<StaticI2cPolicy<I2cPolicy::fast()>> transport(hal);
+//   I2cFramer<StaticI2cPolicy<I2cPolicy::fast()>> i2c_hal(hal);
 //
 // Usage — runtime mutable policy:
 //
-//   I2cFramer<I2cPolicy> transport(hal);
-//   transport.policy.segment_delay_ms = 100;  // adjust before a heavy request
+//   I2cFramer<I2cPolicy> i2c_hal(hal);
+//   i2c_hal.policy.segment_delay_ms = 100;  // adjust before a heavy request
+//
+// `i2c_hal` is a note::Hal; wrap it in note::Protocol to get the
+// ITransact required by note::Notecard:
+//
+//   note::Protocol transport(i2c_hal);
+//   note::Notecard nc(backend, transport);
 
 namespace note::link {
 

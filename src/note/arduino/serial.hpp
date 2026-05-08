@@ -10,14 +10,15 @@
 // Implements note::link::SerialHal for any Arduino HardwareSerial
 // (or compatible Stream subclass with write/readBytes/available).
 //
-// Usage:
+// Usage — full stack (SerialHal → SerialFramer → Protocol → Notecard):
 //
 //   note::arduino::SerialHal hal(Serial1, 9600);
-//   note::link::SerialFramer transport(hal);
-//   note::Notecard nc(backend,
-//       [&transport](note::string_view req, uint32_t t) {
-//           return transport(req, t);
-//       });
+//   note::link::SerialFramer serial_hal(hal);   // note::Hal — wire framing
+//   note::Protocol transport(serial_hal);        // ITransact
+//   note::Notecard nc(backend, transport);
+//
+// For a convenience wrapper that owns all three layers, see
+// note::arduino::SerialTransportStack in <note/arduino/begin.hpp>.
 
 namespace note::arduino {
 

@@ -26,17 +26,23 @@
 //
 // Usage — compile-time default (zero overhead, most common):
 //
-//   SerialFramer transport(hal);   // deduces StaticSerialPolicy<SerialPolicy{}>
+//   SerialFramer serial_hal(hal);   // deduces StaticSerialPolicy<SerialPolicy{}>
 //
 // Usage — compile-time custom policy (zero overhead):
 //
-//   SerialFramer<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
+//   SerialFramer<StaticSerialPolicy<SerialPolicy::fast()>> serial_hal(hal);
 //
 // Usage — runtime policy (mutable, 28 bytes overhead):
 //
-//   SerialFramer<SerialPolicy> transport(hal);
-//   transport.policy.max_retries = 1;   // adjust before a destructive request
-//   transport.policy.max_retries = 5;   // restore
+//   SerialFramer<SerialPolicy> serial_hal(hal);
+//   serial_hal.policy.max_retries = 1;   // adjust before a destructive request
+//   serial_hal.policy.max_retries = 5;   // restore
+//
+// `serial_hal` is a note::Hal; wrap it in note::Protocol to get the
+// ITransact required by note::Notecard:
+//
+//   note::Protocol transport(serial_hal);
+//   note::Notecard nc(backend, transport);
 
 namespace note::link {
 

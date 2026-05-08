@@ -4,6 +4,8 @@
 
 This document describes the two-layer API design for `note-cpp` and how it relates to the Notecard wire protocol and other SDKs like `note-python`.
 
+> **Terminology bridge.** This document uses **Layer 1** for the wire-mapped request builders (what user-facing docs call **unguided requests** in [`docs/using-the-api.md`](../using-the-api.md#unguided-requests)) and **Layer 2** for the focused-operation aliases on top (what user-facing docs call **focused operations**, [§ Focused operations on multi-purpose endpoints](../using-the-api.md#focused-operations-on-multi-purpose-endpoints)). The internal layered framing is preserved here for clarity in the design discussion below.
+
 ## Background
 
 The Notecard API is a set of JSON requests sent over serial or I2C. Each request has a `req` string (e.g. `"note.get"`) and optional fields. The original `notecard-schema` repository defines one JSON Schema file per `req` string. There are no HTTP methods in the wire protocol -- the HTTP verbs in our OpenAPI spec are a modeling convenience for dispatch metadata.
@@ -224,14 +226,16 @@ Operation names are chosen for clarity to Notecard users (who may not know HTTP 
 
 | Verb | Meaning | Example |
 |---|---|---|
-| `read` | Query current state (no side effects) | `api.card.temp().read()`, `api.card.location.mode.get()` |
+| `read` | Query current state (no side effects) | `api.card.temp().read()` |
 | `pop` | Read and delete (queue consumption) | `api.note.pop("data.qi")`, `api.note.popChanges("data.qi")` |
 | `clear` | Remove/reset a configuration or buffer | `api.card.binary.clear()`, `api.env.clearDefault("name")` |
 | `stop` | Stop an ongoing process | `api.card.temp().stop()` |
-| `reset` | Restore to default state | `api.card.location.mode.remove()` |
+| `remove` | Reset/restore to default | `api.card.location.mode.remove()`, `api.note.remove("data.db", "id")` |
 | `set` | Create or update a value | `api.env.setDefault("name", "text")` |
 
 These are paired intuitively: `set`/`clear`, `read`/`pop`, `start`/`stop`.
+
+The HTTP-verb names (`get()`, `set()`, `delete_()`) the codegen previously emitted are now `[[deprecated]]` aliases for the corresponding focused-operation names (`read()`, `configure()`, `remove()`); they continue to compile so existing code keeps working. For the full operation taxonomy as users see it — including `peek`, `status`, mode-specific (`fixed`, `periodic`, `continuous`) and lifecycle (`arm`, `disarm`, `query`) verbs — see [`docs/using-the-api.md` § Operations you'll see most often](../using-the-api.md#operations-youll-see-most-often).
 
 ### Implementation
 

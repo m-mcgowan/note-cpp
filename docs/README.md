@@ -4,40 +4,41 @@
 
 1. **[Getting started](getting-started.md)** — top-down walkthrough from a clean project to your first request
 2. **[Glossary](glossary.md)** — Notecard wire vocabulary vs `note-cpp` library vocabulary, side by side
-3. **[Getting started example](../examples/stdcpp/getting-started.cpp)** — runnable code companion for the walkthrough
-4. **[Migration guide](platforms/arduino/migration-from-note-arduino.md)** — examples showing `note-c` and `note-cpp` side by side - quicker learning path if you're already familiar with `note-c`.
+3. **[FAQ](faq.md)** — short answers to the questions readers hit before they know where to look
+4. **[Getting started example](../examples/stdcpp/getting-started.cpp)** — runnable code companion for the walkthrough
+5. **[Migration guide](platforms/arduino/migration-from-note-arduino.md)** — examples showing `note-c` and `note-cpp` side by side - quicker learning path if you're already familiar with `note-c`.
 
 ## Core features
 
-5. **[Using the API](using-the-api.md)** — calling styles, three layers (typed → lambda → raw), focused operations, escape hatches
-6. **[API reference](api-reference.md)** — complete reference for all Notecard endpoints
-7. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
-8. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
-9. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
-10. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
-11. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
-12. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
+6. **[Using the API](using-the-api.md)** — calling styles, three layers (typed → lambda → raw), focused operations, escape hatches
+7. **[API reference](api-reference.md)** — complete reference for all Notecard endpoints
+8. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
+9. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
+10. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
+11. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
+12. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
+13. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
 
 ## Infrastructure
 
-13. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
-14. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
-15. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
-16. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
-17. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
-18. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
-19. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
-20. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
-21. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
-22. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
-23. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
-24. **[Known issues](known-issues.md)**
+14. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
+15. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
+16. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
+17. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
+18. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
+19. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
+20. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
+21. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
+22. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
+23. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
+24. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
+25. **[Known issues](known-issues.md)**
 
 ## Guides
 
-25. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-26. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-27. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+26. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+27. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+28. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

@@ -1,6 +1,8 @@
 # Examples
 
-Learn `note-cpp` by example. Start with the Arduino quickstart or the stdcpp getting-started walkthrough, then explore the feature-specific examples below.
+Learn `note-cpp` by running code. The two top-level entry points are platform-shaped: if you're on an embedded MCU and PlatformIO or the Arduino IDE is your build system, start with [`arduino/quickstart/`](arduino/quickstart/) — minimal sketch, real Notecard. If you're on a Linux/macOS host or in a CMake build, start with [`stdcpp/getting-started.cpp`](stdcpp/getting-started.cpp) — host-runnable, no hardware needed.
+
+The feature-specific examples below assume you've worked through one of those entry points; each one zooms in on one concept (sending notes, hub configuration, IntelliSense) without the setup overhead.
 
 ### Arduino
 

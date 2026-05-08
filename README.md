@@ -463,6 +463,8 @@ All three checks run via [`tools/verify-docs.sh`](tools/verify-docs.sh), wired i
 
 ## Documentation
 
+`note-cpp` ships full prose documentation alongside the headers. The four pointers below cover the most common entry points; [`docs/README.md`](docs/README.md) is the full index.
+
 - **Start here:** [Getting started](docs/getting-started.md) — top-down walkthrough from a clean project to your first request
 - [Migrating from note-arduino](docs/platforms/arduino/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)

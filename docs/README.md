@@ -1,5 +1,7 @@
 # Documentation
 
+This index is the full doc tree, ordered by audience. **If you're new, start with [Getting started](getting-started.md)** — it walks you from a clean project to your first request. **Core features** covers the typed API and the language-level tools built on top; **Infrastructure** is for transport, JSON, memory, and the topics you reach for once your app is talking to the Notecard. **Guides** covers platform-specific setup and migration paths.
+
 ## Getting started
 
 1. **[Getting started](getting-started.md)** — top-down walkthrough from a clean project to your first request

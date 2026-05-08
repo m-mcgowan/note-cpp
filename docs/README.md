@@ -32,13 +32,14 @@
 22. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
 23. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
 24. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
-25. **[Known issues](known-issues.md)**
+25. **[Known issues](known-issues.md)** — confirmed library bugs with workarounds
+26. **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix catalog for common user-side footguns
 
 ## Guides
 
-26. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
-27. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
-28. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
+27. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
+28. **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
+29. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 
 ## Contributing
 

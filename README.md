@@ -281,26 +281,6 @@ Hardware targets: `Hardware::WiFi`, `Hardware::Cell`, `Hardware::CellWifi`, `Har
 </details>
 
 <details>
-<summary><strong>Streaming Architecture</strong> — zero-heap operation</summary>
-
-Requests are streamed directly to the Notecard — there is no need for a request buffer in memory. Responses are parsed with a SAX (event-driven) parser that populates struct fields as data arrives from Notecard.
-
-On an Arduino Uno (ATmega328P, 32 KB flash / 2 KB RAM), an application with 8 different requests compiles to a similar size as note-c, and uses less RAM:
-
-| | note-c | `note-cpp` (JSONB) | `note-cpp` (JSON) |
-|---|---|---|---|
-| **Flash** | 25,076 (78%) | 24,290 (75%) | 26,484 (82%) |
-| **Static RAM** | 729 (36%) | 832 (41%) | 832 (41%) |
-| **Heap (peak)** | 371 (18%) | 0 (0%) | 0 (0%) |
-| **Total RAM** | 1,100 (54%) | 832 (41%) | 832 (41%) |
-
-All memory is statically allocated at compile time using [`MonotonicArena`](docs/arena-sizing.md) and [`StaticNotecard`](docs/feature-flags.md). Enabled by default on AVR. See [docs/feature-flags.md](docs/feature-flags.md) for the compile-time options that enable this on other platforms.
-
-On constrained targets where the typed API's SAX parser is too big, `note-cpp` exposes progressively lower-level response-parsing paths — including a [`JsonView` / `note::scan::*`](docs/using-the-api.md#raw-json) mode that skips the SAX machinery entirely. On the same 8-endpoint Uno benchmark this drops flash to **10,882 bytes (−14 KB vs note-c)** at 680 B RAM. See [docs/platforms/arduino/guide.md](docs/platforms/arduino/guide.md#binary-size-comparison) for the full progression.
-
-</details>
-
-<details>
 <summary><strong>Wire Protocols</strong> — serial and I2C with CRC, retry, and binary transfer</summary>
 
 Header-only implementations of the Notecard serial and I2C protocols: [`SerialFramer`](docs/transport-serial.md) and [`I2cFramer`](docs/transport-i2c.md). These handle CRC auto-detection, segmented TX/RX, retry logic, and auto-reset.
@@ -310,17 +290,6 @@ Each protocol implementation uses a thin platform HAL — a lightweight interfac
 Binary transfer APIs (`card.binary.get`, `card.binary.put`) use COBS framing handled internally by the transport. See [docs/binary-transfer.md](docs/binary-transfer.md).
 
 An optional JSONB binary wire format (`NOTE_JSONB`) replaces JSON text with compact binary opcodes for reduced overhead on numeric-heavy payloads as well as smaller flash footprint on constrained devices. See [docs/jsonb.md](docs/jsonb.md).
-
-</details>
-
-<details>
-<summary><strong>Streaming vs Buffered</strong> — zero-heap streaming by default, buffered path for migration</summary>
-
-The typed API (`execute()`, response fields, body structs) works identically on both paths. **Streaming** is the default — requests are serialized directly to the wire, responses are SAX-parsed as bytes arrive. No JSON tree in memory.
-
-The **buffered** path builds a JSON tree in memory using a [JSON backend](docs/json-backend.md) (cJSON, nlohmann, or the built-in [`BufferJsonBackend`](docs/json-backend.md)). Use it when migrating from note-c (keeps the cJSON/lambda builder pattern) or when you need [`JsonReader`](docs/working-with-responses.md) tree access on responses.
-
-See [docs/transport.md](docs/transport.md) for when to use each, and [docs/json-backend.md](docs/json-backend.md) for backend options.
 
 </details>
 
@@ -402,18 +371,71 @@ for full code patterns per row, [`docs/feature-flags.md`](docs/feature-flags.md)
 complete list of compile-time switches, and [`tools/binary-size-comparison/`](tools/binary-size-comparison/)
 for the benchmark harness that produced these numbers.
 
-## Architecture
+## Streaming or tree
 
-```mermaid
-flowchart TB
-    App["<b>Your application</b>"]
-    Typed["<b>Typed API layer</b> &nbsp;·&nbsp; note-cpp<br/>Generated requests &amp; responses<br/>Body structs · Note templates · targeting"]
-    Proto["<b>Protocol layer</b> &nbsp;·&nbsp; note-cpp<br/>Notecard serial &amp; I²C framing<br/>CRC · retry · segmented TX/RX"]
-    Hal["<b>Platform HAL</b> &nbsp;·&nbsp; note-cpp<br/>Arduino (built-in)<br/>Any RTOS / bare-metal via callback HAL"]
-    App --> Typed --> Proto --> Hal
+`note-cpp` has two execution paths:
+
+- **Streaming** — SAX events parse the wire bytes directly into your typed response struct or sink. No JSON tree in memory. Zero heap.
+- **Tree** — a `JsonBackend` parses the response into an in-memory `JsonReader` you can query by key after the call returns.
+
+For most code, the choice is invisible. The same `nc.card.version().execute()` returns the same `r.version` either way:
+
+```cpp
+auto r = nc.card.version().execute();
+if (r) {
+    log(r.version);   // identical on both paths
+    log(r.device);
+}
 ```
 
-note-cpp ships a built-in Arduino HAL, selected automatically when `ARDUINO` is defined. For other platforms (Zephyr, ESP-IDF, POSIX, bare-metal), integrate via the callback HAL — a small read/write/delay interface. See [docs/transport.md](docs/transport.md).
+`.into(struct)` for body parsing, body lambdas for request building, and the raw `nc.transact(json, buf)` API all behave identically on both paths.
+
+**The user-visible divergence is post-call body inspection.** Streaming commits at call time — you decide what to do with the body before sending the request, and SAX fires events into your sink as bytes arrive. Tree mode parks a parsed `JsonReader` on the response, so you can query body fields by name *after* the call returns:
+
+```cpp
+auto r = nc.note.get("data.qi").execute();
+
+// Tree mode — query the parsed JsonReader by key after the call:
+if (r && r.body()) {
+    double temp = r.body()->get_double("temperature");
+    int    hum  = r.body()->get_int("humidity");
+}
+
+// Streaming — r.body() is null. Commit a struct (or JsonSink) up front:
+struct Readings { float temperature; int humidity; NOTE_FIELDS(temperature, humidity); };
+Readings readings{};
+nc.note.get("data.qi").into(readings).execute();
+```
+
+If you know the body shape ahead of time, `.into(struct)` is the better idiom in either mode — it's faster, has lower memory cost, and works on the smallest targets.
+
+### Picking a backend
+
+Tree mode requires a `JsonBackend`. Streaming wants none. The wire-up:
+
+```cpp
+// Streaming — no backend, zero heap, smallest flash.
+note::Notecard nc(transport, note::Allocator{});
+
+// Tree, default — cJSON-backed; heap-allocated nodes, familiar from note-c.
+note::backends::CjsonBackend backend;
+note::Notecard nc(backend, transport);
+
+// Tree, zero-heap — fixed-size jsmn token view over the response bytes.
+note::backends::BufferJsonBackend<512, 64> backend;
+note::Notecard nc(backend, transport);
+
+// Tree, zero-heap with a real cJSON node graph — tree backed by an arena.
+note::MonotonicArena arena(arena_buf);
+note::backends::CjsonArenaBackend backend(arena);
+note::Notecard nc(backend, transport);
+
+// Tree, nlohmann/json — only worthwhile if the project already pulls it in.
+note::backends::NlohmannBackend backend;
+note::Notecard nc(backend, transport);
+```
+
+See [docs/json-backend.md](docs/json-backend.md) for the full backend comparison and [docs/transport.md](docs/transport.md) for when streaming vs tree fits a deployment.
 
 ## Quality Assurance
 

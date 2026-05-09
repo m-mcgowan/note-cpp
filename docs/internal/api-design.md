@@ -35,6 +35,19 @@ The naming rule: first segment becomes the module, remaining segments become a c
 
 ## Transport and Construction
 
+The library is a stack of three layers above the application:
+
+```mermaid
+flowchart TB
+    App["<b>Your application</b>"]
+    Typed["<b>Typed API layer</b> &nbsp;·&nbsp; note-cpp<br/>Generated requests &amp; responses<br/>Body structs · Note templates · targeting"]
+    Proto["<b>Protocol layer</b> &nbsp;·&nbsp; note-cpp<br/>Notecard serial &amp; I²C framing<br/>CRC · retry · segmented TX/RX"]
+    Hal["<b>Platform HAL</b> &nbsp;·&nbsp; note-cpp<br/>Arduino (built-in)<br/>Any RTOS / bare-metal via callback HAL"]
+    App --> Typed --> Proto --> Hal
+```
+
+`note-cpp` ships a built-in Arduino HAL, selected automatically when `ARDUINO` is defined. For other platforms (Zephyr, ESP-IDF, POSIX, bare-metal), integrate via the callback HAL — a small read/write/delay interface. See [`docs/transport.md`](../transport.md) for the user-facing setup.
+
 `note-cpp` has two construction paths, matching the two transport interfaces:
 
 ### Streaming path (recommended)

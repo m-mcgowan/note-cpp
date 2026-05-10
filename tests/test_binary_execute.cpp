@@ -83,9 +83,9 @@ struct BinaryTestHarness {
 };
 
 // Harness with real JSON parsing — needed for binary GET tests that verify
-// response fields (status/MD5). Uses BufferJsonBackend with jsmn.
+// response fields (status/MD5). Uses StaticJsonBackend with jsmn.
 struct BinaryGetHarness {
-    note::backends::BufferJsonBackend<512, 32> backend;
+    note::backends::StaticJsonBackend<512, 32> backend;
     std::string last_request;
     std::vector<uint8_t> read_data;
     size_t read_offset = 0;
@@ -413,7 +413,7 @@ TEST_CASE("Binary GET: const execute() triggers binary pipeline") {
 
 // Harness with controllable transact responses for verify tests.
 struct VerifyTestHarness {
-    note::backends::BufferJsonBackend<512, 32> backend;
+    note::backends::StaticJsonBackend<512, 32> backend;
     std::vector<uint8_t> written_bytes;
     int transact_count = 0;
     std::vector<std::string> responses;  // queued JSON responses

@@ -20,7 +20,7 @@ Linux (no Notecard hardware needed — they use the shared
   Notecard (ad-hoc JSON, compile-time JSON, typed API, body schemas),
   end to end.
 - `zero-alloc.cpp` — zero-allocation patterns for memory-constrained
-  systems: `BufferJsonBackend`, `StringPool`, `MonotonicArena`.
+  systems: `StaticJsonBackend`, `StringPool`, `MonotonicArena`.
 - `note-c-bridge.cpp` — implementing `ITransact` on top of
   `note-c`'s `NoteRequestResponseJSON()`. The migration-bridge
   pattern for projects that already have `note-c` wiring they don't

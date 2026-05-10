@@ -4,7 +4,7 @@
 // zero-copy response parsing (tokens index into the original JSON string).
 //
 // Usage:
-//   note::backends::BufferJsonBackend<512, 64> backend;
+//   note::backends::StaticJsonBackend<512, 64> backend;
 //   note::Notecard nc(backend, transport);
 #pragma once
 
@@ -24,93 +24,93 @@
 namespace note::backends {
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder: writes JSON directly into a fixed buffer.
+// StaticJsonBuilder: writes JSON directly into a fixed buffer.
 // Same logic as JsonBuf<N> but with a runtime buffer pointer and virtual
 // dispatch via the JsonBuilder interface.
 // ---------------------------------------------------------------------------
-class BufferJsonBuilder : public JsonBuilder {
+class StaticJsonBuilder : public JsonBuilder {
 public:
     using JsonBuilder::add;
     using JsonBuilder::add_element;
 
-    BufferJsonBuilder(char* buf, size_t capacity)
+    StaticJsonBuilder(char* buf, size_t capacity)
         : buf_(buf), capacity_(capacity) { put('{'); }
 
-    BufferJsonBuilder& add(string_view key, bool value) override {
+    StaticJsonBuilder& add(string_view key, bool value) override {
         kv(key);
         put(value ? "true" : "false");
         return *this;
     }
-    BufferJsonBuilder& add(string_view key, json_int_t value) override {
+    StaticJsonBuilder& add(string_view key, json_int_t value) override {
         kv(key);
         char tmp[24];
         size_t len = note::detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
-    BufferJsonBuilder& add(string_view key, double value) override {
+    StaticJsonBuilder& add(string_view key, double value) override {
         kv(key);
         char tmp[32];
         size_t len = note::detail::dtoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
-    BufferJsonBuilder& add(string_view key, string_view value) override {
+    StaticJsonBuilder& add(string_view key, string_view value) override {
         kv(key);
         quoted(value);
         return *this;
     }
-    BufferJsonBuilder& add_raw(string_view key, string_view json_fragment) override {
+    StaticJsonBuilder& add_raw(string_view key, string_view json_fragment) override {
         kv(key);
         for (char c : json_fragment) put(c);
         return *this;
     }
-    BufferJsonBuilder& begin_object(string_view key) override {
+    StaticJsonBuilder& begin_object(string_view key) override {
         kv(key);
         put('{');
         need_comma_ = false;
         return *this;
     }
-    BufferJsonBuilder& end_object() override {
+    StaticJsonBuilder& end_object() override {
         put('}');
         need_comma_ = true;
         return *this;
     }
-    BufferJsonBuilder& begin_array(string_view key) override {
+    StaticJsonBuilder& begin_array(string_view key) override {
         kv(key);
         put('[');
         need_comma_ = false;
         return *this;
     }
-    BufferJsonBuilder& end_array() override {
+    StaticJsonBuilder& end_array() override {
         put(']');
         need_comma_ = true;
         return *this;
     }
-    BufferJsonBuilder& begin_element_object() override {
+    StaticJsonBuilder& begin_element_object() override {
         comma();
         put('{');
         need_comma_ = false;
         return *this;
     }
-    BufferJsonBuilder& add_element(bool value) override {
+    StaticJsonBuilder& add_element(bool value) override {
         comma(); put(value ? "true" : "false"); return *this;
     }
-    BufferJsonBuilder& add_element(json_int_t value) override {
+    StaticJsonBuilder& add_element(json_int_t value) override {
         comma();
         char tmp[24];
         size_t len = note::detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
-    BufferJsonBuilder& add_element(double value) override {
+    StaticJsonBuilder& add_element(double value) override {
         comma();
         char tmp[32];
         size_t len = note::detail::dtoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
-    BufferJsonBuilder& add_element(string_view value) override {
+    StaticJsonBuilder& add_element(string_view value) override {
         comma(); quoted(value); return *this;
     }
 
@@ -385,16 +385,16 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// BufferJsonBackend: ties builder and reader together. Zero heap allocation
+// StaticJsonBackend: ties builder and reader together. Zero heap allocation
 // for building; jsmn tokens are a member array (no heap).
 // ---------------------------------------------------------------------------
 template<size_t BuildBufSize = 512, size_t MaxTokens = 64>
-class BufferJsonBackend : public JsonBackend {
+class StaticJsonBackend : public JsonBackend {
 public:
     std::unique_ptr<JsonBuilder> create_builder() override {
         // Fallback: use get_builder() but wrap in a non-owning unique_ptr.
         // This is for backward compat with code that expects unique_ptr.
-        return std::make_unique<BufferJsonBuilder>(build_buf_, BuildBufSize);
+        return std::make_unique<StaticJsonBuilder>(build_buf_, BuildBufSize);
     }
 
     JsonBuilder& get_builder() override {
@@ -415,9 +415,19 @@ public:
 
 private:
     char build_buf_[BuildBufSize]{};
-    BufferJsonBuilder builder_{build_buf_, BuildBufSize};
+    StaticJsonBuilder builder_{build_buf_, BuildBufSize};
     jsmntok_t tokens_[MaxTokens]{};
     JsmnJsonReader reader_{nullptr, 0, tokens_, 0};
 };
+
+// ---------------------------------------------------------------------------
+// Deprecated aliases — old names, kept for one release for source compatibility.
+// ---------------------------------------------------------------------------
+
+using BufferJsonBuilder [[deprecated("Renamed to StaticJsonBuilder")]] = StaticJsonBuilder;
+
+template<size_t BuildBufSize = 512, size_t MaxTokens = 64>
+using BufferJsonBackend [[deprecated("Renamed to StaticJsonBackend")]] =
+    StaticJsonBackend<BuildBufSize, MaxTokens>;
 
 } // namespace note::backends

@@ -4,7 +4,7 @@
 // read temperature, publish a note. Same operations as main_notec.cpp.
 //
 // Uses cJSON backend (heap-allocated, like note-c) for a like-for-like
-// comparison. The BufferJsonBackend alternative eliminates heap allocation
+// comparison. The StaticJsonBackend alternative eliminates heap allocation
 // but adds ~1.7 KB of static RAM.
 
 #if 1

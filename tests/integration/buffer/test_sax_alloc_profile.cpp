@@ -28,7 +28,7 @@ using note::test::ScriptedTransport;
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("buffer/sax_alloc_profile/sax_zero_alloc_card_version") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"notecard-7.2.1","device":"dev:12345","board":"1.0","cell":true})";
 
@@ -55,7 +55,7 @@ TEST_CASE("buffer/sax_alloc_profile/sax_zero_alloc_card_version") {
 }
 
 TEST_CASE("buffer/sax_alloc_profile/sax_string_survives_reuse") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
 
     char arena_buf[2048];
@@ -95,7 +95,7 @@ TEST_CASE("buffer/sax_alloc_profile/sax_string_survives_reuse") {
 }
 
 TEST_CASE("buffer/sax_alloc_profile/sax_error_detection") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
 
     char arena_buf[1024];
@@ -123,7 +123,7 @@ TEST_CASE("buffer/sax_alloc_profile/sax_error_detection") {
 }
 
 TEST_CASE("buffer/sax_alloc_profile/sax_json_parse_error") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
 
     char arena_buf[1024];
@@ -146,7 +146,7 @@ TEST_CASE("buffer/sax_alloc_profile/sax_json_parse_error") {
 }
 
 TEST_CASE("buffer/sax_alloc_profile/sax_bounded_memory") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"notecard-7.2.1","device":"dev:12345","board":"1.0"})";
 
@@ -181,7 +181,7 @@ TEST_CASE("buffer/sax_alloc_profile/sax_bounded_memory") {
 
 TEST_CASE("buffer/sax_alloc_profile/sax_via_api") {
     // Full Api → Notecard flow with stored allocator
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"v3.5.1","device":"dev:XYZ","name":"notecard"})";
 
@@ -208,7 +208,7 @@ TEST_CASE("buffer/sax_alloc_profile/sax_via_api") {
 
 TEST_CASE("buffer/sax_alloc_profile/sax_explicit_allocator") {
     // Per-call allocator overload (no stored allocator on Notecard)
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"v1.0","device":"dev:001"})";
 

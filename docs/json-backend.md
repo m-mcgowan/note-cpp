@@ -25,7 +25,7 @@ the right default. Only read further if one of these applies:
 
 - You want sink mode (no JsonBackend) for the lowest-memory profile.
 - You're memory-constrained and need to avoid heap allocation during
-  serialisation but still want tree mode (`BufferJsonBackend` /
+  serialisation but still want tree mode (`StaticJsonBackend` /
   `CjsonArenaBackend`).
 - You already have a JSON library linked (cJSON, nlohmann-json) and
   want to reuse it instead of pulling in a second one.
@@ -41,7 +41,7 @@ move on.
 |-----------|---------|-------|
 | Getting started / prototyping | `CjsonBackend` (default) | Yes |
 | Memory-constrained, no JsonReader needed | *(none — sink mode)* | No |
-| Memory-constrained, want tree, no external deps | `BufferJsonBackend<N,T>` | No |
+| Memory-constrained, want tree, no external deps | `StaticJsonBackend<N,T>` | No |
 | Memory-constrained, prefer debuggable tree | `CjsonArenaBackend` | No (arena) |
 | Already using cJSON (ESP-IDF, note-c) | `CjsonBackend` | Yes |
 | Already using nlohmann-json | `NlohmannBackend` | Yes |
@@ -74,12 +74,12 @@ often already linked (ESP-IDF bundles cJSON; `note-c` uses it).
 **Tradeoff:** multiple small heap allocations per request/response —
 one per JSON node.
 
-### Zero-heap — `BufferJsonBackend`
+### Zero-heap — `StaticJsonBackend`
 
 ```cpp
 #include <note/backends/buffer.hpp>
 
-note::backends::BufferJsonBackend<512, 64> backend;
+note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc(backend, transport);
 ```
 

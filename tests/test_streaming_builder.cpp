@@ -110,7 +110,7 @@ TEST_CASE("JsonBufferWriter: single char write") {
 }
 
 // ---------------------------------------------------------------------------
-// StreamingJsonBuilder -- output must match BufferJsonBuilder exactly
+// StreamingJsonBuilder -- output must match StaticJsonBuilder exactly
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -126,11 +126,11 @@ std::string streaming_build(BuildFn fn) {
     return std::string(w.view());
 }
 
-// Helper: build JSON with BufferJsonBuilder, return as std::string.
+// Helper: build JSON with StaticJsonBuilder, return as std::string.
 template<typename BuildFn>
 std::string buffer_build(BuildFn fn) {
     char buf[512];
-    note::backends::BufferJsonBuilder b(buf, sizeof(buf));
+    note::backends::StaticJsonBuilder b(buf, sizeof(buf));
     fn(b);
     return std::string(b.to_view());
 }
@@ -143,7 +143,7 @@ TEST_CASE("StreamingJsonBuilder: empty object") {
     REQUIRE(streaming_build(fn) == "{}");
 }
 
-TEST_CASE("StreamingJsonBuilder: basic types match BufferJsonBuilder") {
+TEST_CASE("StreamingJsonBuilder: basic types match StaticJsonBuilder") {
     auto fn = [](JsonBuilder& b) {
         b.add("flag", true);
         b.add("count", int32_t{42});
@@ -243,9 +243,9 @@ TEST_CASE("CrcWriter: CRC matches single-shot crc32") {
 
 TEST_CASE("CrcWriter: streaming build CRC matches crc_add") {
     // Build the same request both ways and verify CRC values match.
-    // Method 1: BufferJsonBuilder + crc_add (existing approach)
+    // Method 1: StaticJsonBuilder + crc_add (existing approach)
     char buf1[256];
-    note::backends::BufferJsonBuilder builder(buf1, sizeof(buf1));
+    note::backends::StaticJsonBuilder builder(buf1, sizeof(buf1));
     builder.add("req", string_view("card.status"));
     auto json = builder.to_view();
     char wire1[256];

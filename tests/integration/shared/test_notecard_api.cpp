@@ -115,7 +115,7 @@ TEST_CASE(".into() populates body via buffered Notecard on real hardware") {
     // to the buffered Notecard ctor lights up tree-mode body() and
     // sink-mode .into() over the same physical Notecard the streaming
     // g_api is talking to.
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     note::Notecard nc(backend, *g_streaming_transport);
     note::Api<> api(nc);
 

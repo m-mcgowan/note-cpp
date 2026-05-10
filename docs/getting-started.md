@@ -135,7 +135,7 @@ The library scales from ATmega328P (32 KB flash / 2 KB RAM) to desktop hosts wit
 **What's my RAM budget?**
 
 - **Heap available, don't care about allocs** — defaults. `CjsonBackend` allocates per-node from the heap.
-- **Heap allowed but want it bounded** — pair `BufferJsonBackend<N,T>` (fixed in-memory build/parse buffers, zero heap) with no arena. Response strings stay valid until the next `execute()`.
+- **Heap allowed but want it bounded** — pair `StaticJsonBackend<N,T>` (fixed in-memory build/parse buffers, zero heap) with no arena. Response strings stay valid until the next `execute()`.
 - **No heap, want response strings to outlive the next call** — sink mode (no JSON backend) plus a `MonotonicArena`. The arena interns response strings; you reset it when you're done with a batch. See [memory.md](memory.md) for sizing.
 - **No heap at all** — sink mode plus arena, as above. Compile-time-checked: `note::Notecard nc(transport, note::arena_allocator(arena))` (where `transport` is a `note::Protocol` over your `SerialFramer`) constructs the streaming-only Notecard, which won't link if you later try to call a tree-mode-only path.
 

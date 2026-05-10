@@ -200,7 +200,7 @@ private:
 // ---------------------------------------------------------------------------
 // StreamingJsonBuilder — JsonBuilder that writes through a JsonWriter.
 //
-// Same interface as BufferJsonBuilder, but each add() call writes directly
+// Same interface as StaticJsonBuilder, but each add() call writes directly
 // to the underlying JsonWriter instead of appending to an internal buffer.
 // This is the inverse of the SAX parser: SAX is streaming parse (events in
 // from bytes), this is streaming build (events out to bytes).

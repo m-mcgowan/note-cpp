@@ -28,7 +28,7 @@ note::test::CallbackTransport make_transport() {
 }
 
 void instantiate() {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     auto transport = make_transport();
     note::Notecard nc(backend, transport);
     note::Api api(nc);

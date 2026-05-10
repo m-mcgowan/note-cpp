@@ -65,5 +65,5 @@ Internal documentation for contributors:
 | [hub-configuration/](../examples/stdcpp/hub-configuration/) | Units, named constants, consteval validation, voltage-variable sync |
 | [sending-notes/](../examples/stdcpp/sending-notes/) | All body patterns: raw, lambda, struct, template, receive, command |
 | [target-filtering.cpp](../examples/stdcpp/target-filtering.cpp) | Hardware and firmware targeting with compile-time warnings/errors |
-| [zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) | Zero-allocation patterns: BufferJsonBackend, StringPool, CjsonArena |
+| [zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) | Zero-allocation patterns: StaticJsonBackend, StringPool, CjsonArena |
 | [env-vars.cpp](../examples/stdcpp/env-vars.cpp) | All four env.get modes: single, multi-into-struct, all, change-polling |

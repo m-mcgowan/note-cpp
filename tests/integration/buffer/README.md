@@ -1,6 +1,6 @@
 # `tests/integration/buffer/`
 
-Host integration tests for the `BufferJsonBackend` — the zero-alloc
+Host integration tests for the `StaticJsonBackend` — the zero-alloc
 jsmn-based JSON backend used on AVR and other constrained targets.
 Separate from the main Catch2 suite because the main suite uses stubbed
 backends; here we exercise the real parser/builder end to end.

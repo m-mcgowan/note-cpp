@@ -2,7 +2,7 @@
 
 Host integration tests for the `CjsonBackend` — the tree-based JSON
 backend used when you want typed `JsonReader` tree access on responses
-(e.g. migrating from `note-c`, or when `BufferJsonBackend`'s streaming
+(e.g. migrating from `note-c`, or when `StaticJsonBackend`'s streaming
 API is a poor fit for your parse pattern).
 
 Pulls cJSON v1.7.18 via CMake `FetchContent`; no system install needed.

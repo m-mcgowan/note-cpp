@@ -45,7 +45,7 @@ mode is selected by *which `Notecard` ctor* you use:
 
 ```cpp
 // Tree mode — JsonBackend supplied → response.body() works.
-note::backends::BufferJsonBackend<512, 64> backend;
+note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc(backend, transport);
 
 // Sink mode — no JsonBackend → smaller flash, .into(struct) for body.
@@ -94,7 +94,7 @@ savings). Set automatically by `NOTE_MINIMAL`.
 |---------|:----:|----------|
 | `CjsonBackend` | yes | Migration from note-c |
 | `NlohmannBackend` | yes | Projects already using nlohmann/json |
-| `BufferJsonBackend<N, M>` | no | Fixed-size buffer, no heap |
+| `StaticJsonBackend<N, M>` | no | Fixed-size buffer, no heap |
 | `CjsonArenaBackend` | no (arena) | Tree debuggability + bounded memory |
 
 See [JSON backend](json-backend.md) for configuration details.

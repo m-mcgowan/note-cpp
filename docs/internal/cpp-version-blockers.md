@@ -135,7 +135,7 @@ The streaming transport (`transact_streaming`, `set_receive_buffer`, `transact_i
 bypasses both `wire_` and `response_buf_` entirely. The `std::string` members are
 only used by the legacy `transact()` fallback path.
 
-For platforms without `<string>` (AVR), the streaming path + `BufferJsonBackend`
+For platforms without `<string>` (AVR), the streaming path + `StaticJsonBackend`
 avoids the fallback — but the compiler still parses the `std::string` member
 declarations. Full AVR support requires either:
 - A `std::string` polyfill from the compat project (fixed-capacity, no heap)

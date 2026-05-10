@@ -571,7 +571,7 @@ TEST_CASE("Notecard error without allocator keeps reader alive for message") {
 TEST_CASE("execute(req, Allocator) uses the temporary allocator then restores") {
     // Use a real JSON backend so we can exercise the full buffered path
     // including string interning.
-    note::backends::BufferJsonBackend<512, 32> backend;
+    note::backends::StaticJsonBackend<512, 32> backend;
     note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return R"({"version":"1.2.3","board":"notecard"})";
@@ -637,7 +637,7 @@ namespace {
 
 // Harness for binary pre-flight tests: queues transact responses.
 struct PreflightHarness {
-    note::backends::BufferJsonBackend<512, 32> backend;
+    note::backends::StaticJsonBackend<512, 32> backend;
     std::vector<uint8_t> written_bytes;
     int transact_count = 0;
     std::vector<std::string> responses;
@@ -665,7 +665,7 @@ struct PreflightHarness {
 
 // Harness where the transact call itself returns a transport error.
 struct PreflightErrorHarness {
-    note::backends::BufferJsonBackend<512, 32> backend;
+    note::backends::StaticJsonBackend<512, 32> backend;
     int transact_count = 0;
     int fail_at;  // which transact call (0-based) should return error
 
@@ -1055,7 +1055,7 @@ TEST_CASE("clear_allocator removes the allocator for subsequent calls") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Successful execute with allocator interns response strings into pool") {
-    note::backends::BufferJsonBackend<512, 32> backend;
+    note::backends::StaticJsonBackend<512, 32> backend;
     note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return R"({"version":"4.5.6","board":"notecard:v2"})";

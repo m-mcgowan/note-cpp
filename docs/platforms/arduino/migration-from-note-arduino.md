@@ -1440,12 +1440,12 @@ duplication.
 
 | Concern | note-c | note-cpp |
 |---|---|---|
-| **Heap per request** | cJSON `malloc`/`free` per request | `BufferJsonBackend` — stack-allocated, zero heap in steady state |
+| **Heap per request** | cJSON `malloc`/`free` per request | `StaticJsonBackend` — stack-allocated, zero heap in steady state |
 | **Response lifetime** | Caller must `deleteResponse` | RAII — automatic cleanup, `string_view` into transport buffer |
 | **Transport buffers** | `malloc`'d, freed per call | Reused `std::string` member — no allocation after warmup |
 | **Error strings** | `ERRSTR(long, short)` macro | `string_view` literals — linker deduplicates |
 
-With the default `BufferJsonBackend`, note-cpp uses ~1.7 KB more static
+With the default `StaticJsonBackend`, note-cpp uses ~1.7 KB more static
 RAM (the stack-allocated JSON build buffer + token array) but performs
 zero heap allocations in steady state. This tradeoff avoids heap
 fragmentation — a common problem on long-running embedded devices.

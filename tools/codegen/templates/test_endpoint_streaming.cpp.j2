@@ -74,7 +74,7 @@ struct StreamingHarness {
 
 /// Buffered harness: CallbackTransport + real JSON parsing backend.
 struct BufferedHarness {
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     std::string canned_response;
     note::test::CallbackTransport transport;
     note::Notecard nc;

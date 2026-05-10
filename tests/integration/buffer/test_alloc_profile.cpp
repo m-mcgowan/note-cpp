@@ -2,7 +2,7 @@
 //
 // Proves that a full execute() cycle (build request → transport → parse
 // response → populate Response) requires ZERO heap allocations in steady
-// state when using BufferJsonBackend + member-buffer transport.
+// state when using StaticJsonBackend + member-buffer transport.
 //
 // After a warm-up call (which establishes transport buffer capacity),
 // subsequent execute() calls must allocate nothing.
@@ -30,7 +30,7 @@ using note::test::ScriptedTransport;
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("buffer/alloc_profile/zero_alloc_card_version") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"notecard-7.2.1","device":"dev:12345","board":"1.0"})";
 
@@ -52,7 +52,7 @@ TEST_CASE("buffer/alloc_profile/zero_alloc_card_version") {
 }
 
 TEST_CASE("buffer/alloc_profile/zero_alloc_hub_set") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({})";
 
@@ -70,7 +70,7 @@ TEST_CASE("buffer/alloc_profile/zero_alloc_hub_set") {
 }
 
 TEST_CASE("buffer/alloc_profile/zero_alloc_multiple_requests") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
 
     note::Notecard nc(backend, transport);
@@ -104,7 +104,7 @@ TEST_CASE("buffer/alloc_profile/zero_alloc_multiple_requests") {
 TEST_CASE("buffer/alloc_profile/zero_alloc_with_body_response") {
     // Responses with a "body" field still allocate 1 unique_ptr for the
     // sub-reader from get_object("body"). This test documents that behavior.
-    note::backends::BufferJsonBackend<1024, 128> backend;
+    note::backends::StaticJsonBackend<1024, 128> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"v1","body":{"org":"blues","product":"app"}})";
 
@@ -129,7 +129,7 @@ TEST_CASE("buffer/alloc_profile/zero_alloc_with_body_response") {
 }
 
 TEST_CASE("buffer/alloc_profile/zero_alloc_no_leaks") {
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"version":"v1"})";
 
@@ -151,7 +151,7 @@ TEST_CASE("buffer/alloc_profile/zero_alloc_no_leaks") {
 
 TEST_CASE("buffer/alloc_profile/zero_alloc_error_response") {
     // Error responses use parse_response() (allocating) to keep error string alive.
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     ScriptedTransport transport;
     transport.response = R"({"err":"file not found"})";
 

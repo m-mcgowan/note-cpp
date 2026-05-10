@@ -212,7 +212,7 @@ No `JsonBackend` required. No `std::string` linked. No `operator new`.
 ### Non-Arduino — buffered path (tests/compat)
 
 ```cpp
-note::backends::BufferJsonBackend<512, 64> backend;
+note::backends::StaticJsonBackend<512, 64> backend;
 note::link::I2cFramer transport(hal);        // ITransact
 note::Notecard nc(backend, transport);
 nc.set_allocator(note::Allocator{});                // optional: arena or heap

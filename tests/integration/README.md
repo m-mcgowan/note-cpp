@@ -14,7 +14,7 @@ and `validate-release.sh` enforces them as release-gate steps.
   doctest runner to an ESP32-S3 (MPCB 1.9 / 1.10) and drives it
   against a real Notecard over serial or I2C. The on-hardware
   regression suite.
-- [`buffer/`](buffer/) — host tests for the `BufferJsonBackend`
+- [`buffer/`](buffer/) — host tests for the `StaticJsonBackend`
   (jsmn-based zero-alloc backend). Builds with no backend dependency.
 - [`cjson/`](cjson/) — host tests for the `CjsonBackend`. Requires
   cJSON (pulled via the system package or the bundled vendor copy,

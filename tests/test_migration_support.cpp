@@ -167,7 +167,7 @@ TEST_CASE("Issue 5: literals work with request fields") {
 TEST_CASE("card.aux state: get_object_array reads pin states") {
     // Simulate a card.aux response with state array
     std::string canned = R"({"mode":"gpio","state":[{"high":true},{"low":true,"input":true},{}]})";
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     note::test::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(canned);

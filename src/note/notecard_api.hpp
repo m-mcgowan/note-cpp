@@ -29,9 +29,9 @@ namespace note {
 
 namespace detail {
 
-    /// Default JSON backend: zero-heap BufferJsonBackend.
+    /// Default JSON backend: zero-heap StaticJsonBackend.
     /// 512-byte build buffer + 64 jsmn tokens covers typical Notecard requests.
-    using DefaultBackend = backends::BufferJsonBackend<512, 64>;
+    using DefaultBackend = backends::StaticJsonBackend<512, 64>;
 
     /// Owns the backend + Notecard, ensuring construction order.
     struct NcOwner {

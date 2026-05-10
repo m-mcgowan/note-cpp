@@ -319,7 +319,7 @@ The core library works with C++17. Each successive standard unlocks additional f
 | **Memory** | | | |
 | [Arena sizing](docs/arena-sizing.md) — [`MonotonicArena`](docs/arena-sizing.md) + arena allocator | yes | yes | yes |
 | [`StringPool`](docs/memory.md) response string interning | yes | yes | yes |
-| [Zero-alloc `BufferJsonBackend`](docs/json-backend.md) (jsmn) | yes | yes | yes |
+| [Zero-alloc `StaticJsonBackend`](docs/json-backend.md) (jsmn) | yes | yes | yes |
 | **Standard library** | | | |
 | [`std::expected`](docs/internal/cpp-version-blockers.md) (native, vs `tl::expected` fallback) | — | — | yes |
 | [`std::unreachable`](docs/internal/cpp-version-blockers.md) (native, vs compiler builtins) | — | — | yes |
@@ -422,7 +422,7 @@ note::backends::CjsonBackend backend;
 note::Notecard nc(backend, transport);
 
 // Tree, zero-heap — fixed-size jsmn token view over the response bytes.
-note::backends::BufferJsonBackend<512, 64> backend;
+note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc(backend, transport);
 
 // Tree, zero-heap with a real cJSON node graph — tree backed by an arena.

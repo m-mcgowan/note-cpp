@@ -5,7 +5,7 @@
 // Demonstrates three approaches to eliminating heap allocation in request/response
 // cycles, suitable for hard real-time or memory-constrained embedded systems.
 //
-// Pattern 1: BufferJsonBackend — truly zero heap allocation.
+// Pattern 1: StaticJsonBackend — truly zero heap allocation.
 //   All JSON building and parsing uses fixed member buffers. Transport returns
 //   string_view into its member buffer. Response string_views point into the
 //   transport buffer (valid until next execute() call).
@@ -65,13 +65,13 @@ struct MockTransport : note::ITransact {
     note::Hal& hal() override { return hal_; }
 };
 
-// ── Pattern 1: BufferJsonBackend — zero heap allocation ─────────────────────
+// ── Pattern 1: StaticJsonBackend — zero heap allocation ─────────────────────
 
 static void demo_buffer_backend() {
-    std::puts("=== Pattern 1: BufferJsonBackend (zero heap allocation) ===\n");
+    std::puts("=== Pattern 1: StaticJsonBackend (zero heap allocation) ===\n");
 
     // Template parameters: build buffer size, max jsmn tokens
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
 
     // Transport with member buffer (string_view return)
     MockTransport transport;
@@ -114,7 +114,7 @@ static void demo_buffer_backend() {
 static void demo_string_pool() {
     std::puts("=== Pattern 2: StringPool (arena-backed response strings) ===\n");
 
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
 
     MockTransport transport;
     note::Notecard nc(backend, transport);
@@ -201,7 +201,7 @@ int main() {
     std::puts("  See: tests/integration/cjson/test_alloc_profile.cpp");
 
     std::puts("\nKey constraints for zero-allocation operation:");
-    std::puts("  1. Use BufferJsonBackend or CjsonArenaBackend (not CjsonBackend)");
+    std::puts("  1. Use StaticJsonBackend or CjsonArenaBackend (not CjsonBackend)");
     std::puts("  2. Transport must return string_view into member buffer");
     std::puts("  3. Use set_allocator() if response strings must survive buffer reuse");
     std::puts("  4. Reset the arena between request batches to bound memory");

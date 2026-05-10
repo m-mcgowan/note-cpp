@@ -18,7 +18,7 @@ The short version for both: **by default things work**. You only need this guide
 | Collect data from several requests before processing | Arena allocator. |
 | Fire-and-forget commands (no response) | Nothing. |
 | Using the streaming path | Arena is **required** by the constructor — the library won't compile without one. |
-| Running on a target with no heap / strict flash budget | Use the streaming path, or `BufferJsonBackend`. See [Backend profiles](#backend-memory-profiles). |
+| Running on a target with no heap / strict flash budget | Use the streaming path, or `StaticJsonBackend`. See [Backend profiles](#backend-memory-profiles). |
 
 If you're in the first row, stop reading. If you're anywhere else, continue.
 
@@ -90,12 +90,12 @@ On the buffered path, your backend choice decides whether you allocate heap memo
 | Backend | JSON build | JSON parse | Heap allocs per request |
 |---------|------------|------------|-------------------------|
 | *Streaming (no backend)* | direct-to-transport | SAX | **0** |
-| `BufferJsonBackend<N,T>` | fixed `char[N]` | fixed token array | **0** |
+| `StaticJsonBackend<N,T>` | fixed `char[N]` | fixed token array | **0** |
 | `CjsonArenaBackend` | cJSON + arena | cJSON + arena | **0** (all from arena) |
 | `CjsonBackend` | cJSON (heap) | cJSON (heap) | ~5–10 |
 | `NlohmannBackend` | nlohmann (heap) | nlohmann (heap) | many |
 
-For zero-alloc: streaming path, or `BufferJsonBackend`, or `CjsonArenaBackend`.
+For zero-alloc: streaming path, or `StaticJsonBackend`, or `CjsonArenaBackend`.
 
 ## Configuration recipes
 
@@ -119,13 +119,13 @@ auto r = api.card.version().execute();   // 0 heap allocs, strings in arena
 
 No backend needed. No `std::string` linked. No `operator new`.
 
-### Tree mode — with `BufferJsonBackend` (zero heap)
+### Tree mode — with `StaticJsonBackend` (zero heap)
 
 A `JsonBackend` enables `response.body()` to return a walkable
 `JsonReader` tree.
 
 ```cpp
-note::backends::BufferJsonBackend<512, 64> backend;
+note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc(backend, transport);   // ITransact (same Protocol)
 note::Api api(nc);
 
@@ -138,7 +138,7 @@ The two template parameters are: request/response buffer size, and jsmn token co
 ### Buffered path — with arena
 
 ```cpp
-note::backends::BufferJsonBackend<512, 64> backend;
+note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc(backend, transport);
 
 char arena_buf[1024];
@@ -190,7 +190,7 @@ Default overloads use 384 bytes on the stack. All memory is caller-provided or s
 
 The integration tests override global `operator new`/`operator delete` to count every C++ heap allocation:
 
-- `tests/integration/buffer/test_alloc_profile` — proves `BufferJsonBackend` + tree parse = 0 heap allocs.
+- `tests/integration/buffer/test_alloc_profile` — proves `StaticJsonBackend` + tree parse = 0 heap allocs.
 - `tests/integration/buffer/test_sax_alloc_profile` — proves streaming + arena = 0 heap allocs and strings survive transport reuse.
 
 ## See also

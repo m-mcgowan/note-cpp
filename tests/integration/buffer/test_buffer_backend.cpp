@@ -1,4 +1,4 @@
-// Integration test for the buffer JSON backend (BufferJsonBuilder + JsmnJsonReader).
+// Integration test for the buffer JSON backend (StaticJsonBuilder + JsmnJsonReader).
 // Same test structure as test_cjson_backend.cpp to verify identical behavior.
 //
 // This file compiles into two binaries:
@@ -17,7 +17,7 @@
 using namespace note::backends;
 
 TEST_CASE("buffer/builder/simple") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto& builder = backend.get_builder();
     builder.add("req", "hub.set");
     builder.add("product", "com.example.app");
@@ -31,7 +31,7 @@ TEST_CASE("buffer/builder/simple") {
 }
 
 TEST_CASE("buffer/builder/types") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto& builder = backend.get_builder();
     builder.add("flag", true);
     builder.add("count", int32_t{42});
@@ -46,7 +46,7 @@ TEST_CASE("buffer/builder/types") {
 }
 
 TEST_CASE("buffer/builder/nested_object") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto& builder = backend.get_builder();
     builder.add("req", "note.add");
     builder.begin_object("body");
@@ -61,7 +61,7 @@ TEST_CASE("buffer/builder/nested_object") {
 }
 
 TEST_CASE("buffer/builder/reset") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto& builder = backend.get_builder();
     builder.add("req", "first");
     auto json1 = std::string(builder.to_view());
@@ -76,7 +76,7 @@ TEST_CASE("buffer/builder/reset") {
 }
 
 TEST_CASE("buffer/builder/exact_serialization") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto& builder = backend.get_builder();
     builder.add("req", "test");
     auto s = std::string(builder.to_view());
@@ -84,7 +84,7 @@ TEST_CASE("buffer/builder/exact_serialization") {
 }
 
 TEST_CASE("buffer/reader/simple") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto reader = backend.parse_response(
         R"({"version":"notecard-7.2.1","device":"dev:1234","connected":true,"cells":3})");
 
@@ -98,7 +98,7 @@ TEST_CASE("buffer/reader/simple") {
 }
 
 TEST_CASE("buffer/reader/numbers") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto reader = backend.parse_response(R"({"int_val":42,"float_val":3.14,"neg":-7})");
 
     CHECK(reader->get_int("int_val") == 42);
@@ -107,7 +107,7 @@ TEST_CASE("buffer/reader/numbers") {
 }
 
 TEST_CASE("buffer/reader/nested_object") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto reader = backend.parse_response(
         R"({"body":{"temp":22.5,"label":"room-1"},"file":"data.qi"})");
 
@@ -122,7 +122,7 @@ TEST_CASE("buffer/reader/nested_object") {
 }
 
 TEST_CASE("buffer/reader/error") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
 
     auto reader = backend.parse_response(R"({"err":"file not found"})");
     CHECK(reader->get_error() == "file not found");
@@ -132,7 +132,7 @@ TEST_CASE("buffer/reader/error") {
 }
 
 TEST_CASE("buffer/reader/defaults") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto reader = backend.parse_response("{}");
 
     CHECK(reader->get_bool("x", true) == true);
@@ -142,14 +142,14 @@ TEST_CASE("buffer/reader/defaults") {
 }
 
 TEST_CASE("buffer/reader/bool_false") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto reader = backend.parse_response(R"({"a":false,"b":true})");
     CHECK(reader->get_bool("a") == false);
     CHECK(reader->get_bool("b") == true);
 }
 
 TEST_CASE("buffer/round_trip") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
 
     auto& builder = backend.get_builder();
     builder.add("req", "note.add");
@@ -171,7 +171,7 @@ TEST_CASE("buffer/round_trip") {
 }
 
 TEST_CASE("buffer/builder/escape") {
-    BufferJsonBackend<> backend;
+    StaticJsonBackend<> backend;
     auto& builder = backend.get_builder();
     builder.add("msg", "hello \"world\"\nnewline");
     auto json = builder.to_view();
@@ -180,7 +180,7 @@ TEST_CASE("buffer/builder/escape") {
 }
 
 TEST_CASE("buffer/builder/array") {
-    BufferJsonBackend<512, 128> backend;
+    StaticJsonBackend<512, 128> backend;
     auto& builder = backend.get_builder();
     builder.add("req", "test");
     builder.begin_array("tags");

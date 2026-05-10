@@ -142,7 +142,7 @@ TEST_CASE("§1 typed API: .into() populates struct on streaming transport") {
 }
 
 TEST_CASE("§1 typed API: .into() populates struct on buffered transport") {
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     note::test::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(kCannedResponse);
@@ -212,7 +212,7 @@ TEST_CASE("§1b typed API: .into(JsonSink&) on streaming transport") {
 }
 
 TEST_CASE("§1b typed API: .into(JsonSink&) on buffered transport") {
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     note::test::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(kCannedResponse);
@@ -266,7 +266,7 @@ TEST_CASE("§1c typed API: .into(BodyBytes) captures body JSON on streaming tran
 }
 
 TEST_CASE("§1c typed API: .into(BodyBytes) captures body JSON on buffered transport") {
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     note::test::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(kCannedResponse);
@@ -340,7 +340,7 @@ TEST_CASE("§2 typed API: .body() — streaming and buffered emit identical body
     REQUIRE_FALSE(streaming_body.empty());
 
     std::string buffered_request;
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     note::test::CallbackTransport buffered(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             buffered_request = std::string(req);
@@ -386,7 +386,7 @@ TEST_CASE("§3 raw transact(json, buf) — same wire bytes, same response on bot
     REQUIRE(stream_rv.has_value());
 
     // ── Buffered side: lambda echoes the canned response.
-    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::backends::StaticJsonBackend<1024, 64> backend;
     std::string buffered_seen_request;
     note::test::CallbackTransport buffered_transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
@@ -430,7 +430,7 @@ TEST_CASE("§4 raw send(json) — same wire bytes on both transports") {
 
     // ── Buffered side.
     std::string buffered_seen;
-    note::backends::BufferJsonBackend<512, 64> backend;
+    note::backends::StaticJsonBackend<512, 64> backend;
     note::test::CallbackTransport buffered_transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             buffered_seen = std::string(req);

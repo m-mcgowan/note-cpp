@@ -1,4 +1,4 @@
-// Tests for BufferJsonBackend, BufferJsonBuilder, and JsmnJsonReader.
+// Tests for StaticJsonBackend, StaticJsonBuilder, and JsmnJsonReader.
 // Exercises the zero-allocation JSON backend used on embedded targets.
 
 #include <doctest.h>
@@ -12,12 +12,12 @@ using namespace note;
 using namespace note::backends;
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder
+// StaticJsonBuilder
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: basic key-value types") {
+TEST_CASE("StaticJsonBuilder: basic key-value types") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
 
     b.add("flag", true);
     b.add("count", int32_t{42});
@@ -27,23 +27,23 @@ TEST_CASE("BufferJsonBuilder: basic key-value types") {
     REQUIRE(b.to_view() == R"({"flag":true,"count":42,"temp":22.5,"name":"hello"})");
 }
 
-TEST_CASE("BufferJsonBuilder: false boolean") {
+TEST_CASE("StaticJsonBuilder: false boolean") {
     char buf[128];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("off", false);
     REQUIRE(b.to_view() == R"({"off":false})");
 }
 
-TEST_CASE("BufferJsonBuilder: negative integer") {
+TEST_CASE("StaticJsonBuilder: negative integer") {
     char buf[128];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("val", int32_t{-100});
     REQUIRE(b.to_view() == R"({"val":-100})");
 }
 
-TEST_CASE("BufferJsonBuilder: nested object") {
+TEST_CASE("StaticJsonBuilder: nested object") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("req", string_view("note.add"));
     b.begin_object("body");
     b.add("temp", 22.5);
@@ -52,9 +52,9 @@ TEST_CASE("BufferJsonBuilder: nested object") {
     REQUIRE(b.to_view() == R"({"req":"note.add","body":{"temp":22.5,"label":"room"}})");
 }
 
-TEST_CASE("BufferJsonBuilder: array with elements") {
+TEST_CASE("StaticJsonBuilder: array with elements") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.begin_array("files");
     b.add_element(string_view("data.qi"));
     b.add_element(string_view("settings.db"));
@@ -62,9 +62,9 @@ TEST_CASE("BufferJsonBuilder: array with elements") {
     REQUIRE(b.to_view() == R"({"files":["data.qi","settings.db"]})");
 }
 
-TEST_CASE("BufferJsonBuilder: array with mixed types") {
+TEST_CASE("StaticJsonBuilder: array with mixed types") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.begin_array("items");
     b.add_element(true);
     b.add_element(int32_t{7});
@@ -74,9 +74,9 @@ TEST_CASE("BufferJsonBuilder: array with mixed types") {
     REQUIRE(b.to_view() == R"({"items":[true,7,3.14,"text"]})");
 }
 
-TEST_CASE("BufferJsonBuilder: string escaping") {
+TEST_CASE("StaticJsonBuilder: string escaping") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("msg", string_view("line1\nline2\ttab\"quote\\backslash"));
     auto json = b.to_view();
     REQUIRE(json.find("\\n") != std::string::npos);
@@ -85,9 +85,9 @@ TEST_CASE("BufferJsonBuilder: string escaping") {
     REQUIRE(json.find("\\\\") != std::string::npos);
 }
 
-TEST_CASE("BufferJsonBuilder: reset reuses buffer") {
+TEST_CASE("StaticJsonBuilder: reset reuses buffer") {
     char buf[128];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("first", true);
     REQUIRE(b.to_view() == R"({"first":true})");
 
@@ -96,17 +96,17 @@ TEST_CASE("BufferJsonBuilder: reset reuses buffer") {
     REQUIRE(b.to_view() == R"({"second":false})");
 }
 
-TEST_CASE("BufferJsonBuilder: to_view returns string_view") {
+TEST_CASE("StaticJsonBuilder: to_view returns string_view") {
     char buf[128];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("x", int32_t{1});
     auto v = b.to_view();
     REQUIRE(v == R"({"x":1})");
 }
 
-TEST_CASE("BufferJsonBuilder: overflow truncates gracefully") {
+TEST_CASE("StaticJsonBuilder: overflow truncates gracefully") {
     char buf[16];  // Very small buffer
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("longkey", string_view("longvalue"));
     REQUIRE(b.overflow());
     // Should not crash, output is truncated
@@ -114,9 +114,9 @@ TEST_CASE("BufferJsonBuilder: overflow truncates gracefully") {
     REQUIRE(v.size() <= sizeof(buf));
 }
 
-TEST_CASE("BufferJsonBuilder: empty object") {
+TEST_CASE("StaticJsonBuilder: empty object") {
     char buf[64];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     REQUIRE(b.to_view() == "{}");
 }
 
@@ -262,11 +262,11 @@ TEST_CASE("JsmnJsonReader: object after nested array") {
 }
 
 // ---------------------------------------------------------------------------
-// BufferJsonBackend integration
+// StaticJsonBackend integration
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBackend: build and parse round-trip") {
-    BufferJsonBackend<256, 32> backend;
+TEST_CASE("StaticJsonBackend: build and parse round-trip") {
+    StaticJsonBackend<256, 32> backend;
 
     auto& builder = backend.get_builder();
     builder.add("req", string_view("card.version"));
@@ -281,8 +281,8 @@ TEST_CASE("BufferJsonBackend: build and parse round-trip") {
     REQUIRE(reader.get_string("device") == "dev:123");
 }
 
-TEST_CASE("BufferJsonBackend: get_builder resets between calls") {
-    BufferJsonBackend<256, 32> backend;
+TEST_CASE("StaticJsonBackend: get_builder resets between calls") {
+    StaticJsonBackend<256, 32> backend;
 
     auto& b1 = backend.get_builder();
     b1.add("first", true);
@@ -293,8 +293,8 @@ TEST_CASE("BufferJsonBackend: get_builder resets between calls") {
     REQUIRE(b2.to_view() == R"({"second":false})");
 }
 
-TEST_CASE("BufferJsonBackend: parse_response returns owned reader") {
-    BufferJsonBackend<256, 32> backend;
+TEST_CASE("StaticJsonBackend: parse_response returns owned reader") {
+    StaticJsonBackend<256, 32> backend;
 
     const char* json = R"({"val":42})";
     auto reader = backend.parse_response(string_view(json, strlen(json)));
@@ -302,8 +302,8 @@ TEST_CASE("BufferJsonBackend: parse_response returns owned reader") {
     REQUIRE(reader->get_int("val", 0) == 42);
 }
 
-TEST_CASE("BufferJsonBackend: create_builder returns owned builder") {
-    BufferJsonBackend<256, 32> backend;
+TEST_CASE("StaticJsonBackend: create_builder returns owned builder") {
+    StaticJsonBackend<256, 32> backend;
 
     auto builder = backend.create_builder();
     builder->add("key", string_view("val"));
@@ -312,12 +312,12 @@ TEST_CASE("BufferJsonBackend: create_builder returns owned builder") {
 
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder: control character escaping
+// StaticJsonBuilder: control character escaping
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: control characters pass through default case") {
+TEST_CASE("StaticJsonBuilder: control characters pass through default case") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     // \x01 is a control character not handled by the switch cases
     // It should pass through the default branch
     std::string val = "hello";
@@ -333,12 +333,12 @@ TEST_CASE("BufferJsonBuilder: control characters pass through default case") {
 
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder: overflow and reset cycle
+// StaticJsonBuilder: overflow and reset cycle
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: overflow then reset allows reuse") {
+TEST_CASE("StaticJsonBuilder: overflow then reset allows reuse") {
     char buf[20];  // Tiny buffer to force overflow
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
 
     // Fill with data that will overflow
     b.add("longkey", string_view("longvalue-overflow"));
@@ -542,12 +542,12 @@ TEST_CASE("JsmnJsonReader: get_bool on number returns default") {
 
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder: all escape sequences in one string
+// StaticJsonBuilder: all escape sequences in one string
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: all escape sequences covered") {
+TEST_CASE("StaticJsonBuilder: all escape sequences covered") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("s", string_view("a\"b\\c\nd\re\tf"));
     auto json = b.to_view();
     // All escape sequences should be present
@@ -560,24 +560,24 @@ TEST_CASE("BufferJsonBuilder: all escape sequences covered") {
 
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder: add_raw method
+// StaticJsonBuilder: add_raw method
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: add_raw inserts verbatim JSON") {
+TEST_CASE("StaticJsonBuilder: add_raw inserts verbatim JSON") {
     char buf[256];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add_raw("body", string_view("{\"temp\":22.5}"));
     REQUIRE(b.to_view() == R"({"body":{"temp":22.5}})");
 }
 
 
 // ---------------------------------------------------------------------------
-// BufferJsonBuilder: multiple to_view calls are idempotent
+// StaticJsonBuilder: multiple to_view calls are idempotent
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: to_view is idempotent") {
+TEST_CASE("StaticJsonBuilder: to_view is idempotent") {
     char buf[128];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("x", int32_t{1});
     auto v1 = b.to_view();
     auto v2 = b.to_view();
@@ -603,9 +603,9 @@ TEST_CASE("JsmnJsonReader: too few tokens reports error") {
 // Branch coverage: add_element(false) — line 87 false branch
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: add_element(false) in array") {
+TEST_CASE("StaticJsonBuilder: add_element(false) in array") {
     char buf[128];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.begin_array("arr");
     b.add_element(false);
     b.add_element(true);
@@ -809,9 +809,9 @@ TEST_CASE("JsmnJsonReader: find_value skips deeply nested objects") {
 // Branch coverage: overflow to_view returns capacity-1 length
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BufferJsonBuilder: overflow to_view returns truncated length") {
+TEST_CASE("StaticJsonBuilder: overflow to_view returns truncated length") {
     char buf[8];
-    BufferJsonBuilder b(buf, sizeof(buf));
+    StaticJsonBuilder b(buf, sizeof(buf));
     b.add("k", string_view("val"));
     REQUIRE(b.overflow());
     auto v = b.to_view();

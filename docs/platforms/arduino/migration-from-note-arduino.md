@@ -1483,7 +1483,7 @@ See [Known Issues](../../known-issues.md) for details on the Clang limitation.
 
 ## Gradual migration
 
-You don't have to port everything at once. note-cpp's buffered path
+You don't have to port everything at once. note-cpp's tree path
 supports a `request()` method that mirrors note-c's `J*` workflow,
 letting you migrate one request at a time:
 

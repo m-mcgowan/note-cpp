@@ -26,7 +26,7 @@ This index is the full doc tree, ordered by audience. **If you're new, start wit
 14. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
 15. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
 16. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
-17. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
+17. **[Transport layer](transport.md)** — architecture, streaming vs tree, Arduino setup
 18. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
 19. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
 20. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation

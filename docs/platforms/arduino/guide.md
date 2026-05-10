@@ -155,7 +155,7 @@ For severely constrained targets, use `NOTE_MINIMAL`:
 build_flags = -DNOTE_MINIMAL
 ```
 
-This strips buffered JSON, polymorphic dispatch, and optional features.
+This strips tree-mode JSON, polymorphic dispatch, and optional features.
 Use `StaticNotecard` for zero-vtable, zero-heap operation:
 
 ```cpp

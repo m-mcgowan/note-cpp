@@ -5,7 +5,7 @@
 This guide covers two questions that come up as soon as you go past "hello world":
 
 1. **"How long are response strings valid?"** — fields like `r.version` are views, not copies; they become invalid at some point.
-2. **"What memory knobs do I have if I'm flash/RAM-constrained?"** — backends, arenas, streaming vs. buffered.
+2. **"What memory knobs do I have if I'm flash/RAM-constrained?"** — backends, arenas, streaming vs. tree.
 
 The short version for both: **by default things work**. You only need this guide when the default isn't enough.
 
@@ -28,7 +28,7 @@ Response fields like `r.version`, `r.device`, and most string fields are `std::s
 
 Three rules:
 
-1. **Default (buffered, no arena):** views are valid **until the next `execute()` call**. This is the common case — read, use, move on.
+1. **Default (tree mode, no arena):** views are valid **until the next `execute()` call**. This is the common case — read, use, move on.
 2. **With an arena allocator:** views are copied into the arena and are valid **until you call `arena.reset()`**.
 3. **Streaming path (always uses an arena):** same as above — views are valid until the arena is reset.
 
@@ -74,18 +74,18 @@ note::MonotonicArena arena(buf, sizeof(buf));
 auto r = nc.execute(req, note::arena_allocator(arena));
 ```
 
-## Choosing a path: streaming vs. buffered
+## Choosing a path: streaming vs. tree
 
 `note-cpp` has two execution paths. Pick one based on your transport and memory constraints:
 
 - **Streaming path** — builds the request directly into the transport and parses the response with a SAX parser as bytes arrive. No request/response buffers needed. **Always zero heap.** Requires an arena (passed to the constructor).
-- **Buffered path** — builds the full request in a `JsonBackend`, sends it, reads the full response back, then parses. Simpler mental model. Heap allocation depends on the backend.
+- **Tree path** — builds the full request in a `JsonBackend`, sends it, reads the full response back, then parses into a walkable `JsonReader`. Simpler mental model. Heap allocation depends on the backend.
 
-See [transport.md](transport.md#streaming-vs-buffered) for a side-by-side comparison and when to choose each.
+See [transport.md](transport.md#streaming-vs-tree) for a side-by-side comparison and when to choose each.
 
 ## Backend memory profiles
 
-On the buffered path, your backend choice decides whether you allocate heap memory per request:
+On the tree path, your backend choice decides whether you allocate heap memory per request:
 
 | Backend | JSON build | JSON parse | Heap allocs per request |
 |---------|------------|------------|-------------------------|
@@ -99,7 +99,7 @@ For zero-alloc: streaming path, or `StaticJsonBackend`, or `CjsonArenaBackend`.
 
 ## Configuration recipes
 
-### Sink mode — zero heap (recommended for embedded)
+### Streaming mode — zero heap (recommended for embedded)
 
 No `JsonBackend`: requests build directly to the wire, responses
 SAX-parse into `Rsp::Sink` and (when set) `.into(struct)`.
@@ -135,7 +135,7 @@ auto r = api.card.version().execute();   // 0 heap allocs
 
 The two template parameters are: request/response buffer size, and jsmn token count. Pick values that fit your largest request and largest response.
 
-### Buffered path — with arena
+### Tree path — with arena
 
 ```cpp
 note::backends::StaticJsonBackend<512, 64> backend;
@@ -198,7 +198,7 @@ The integration tests override global `operator new`/`operator delete` to count 
 - [examples/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example of the patterns above
 - [response-lifetimes.md](response-lifetimes.md) — in-depth guide to `string_view` validity
 - [arena-sizing.md](arena-sizing.md) — computing arena size at compile time
-- [transport.md](transport.md#streaming-vs-buffered) — which path to pick
+- [transport.md](transport.md#streaming-vs-tree) — which path to pick
 - [json-backend.md](json-backend.md) — backend selection and customization
 - [binary-transfer.md](binary-transfer.md) — binary transfer memory model
 - `include/note/arena.hpp`, `include/note/allocator.hpp`, `include/note/string_pool.hpp`, `include/note/transport_hal.hpp`, `include/note/protocol.hpp`, `include/note/link/cobs.hpp`

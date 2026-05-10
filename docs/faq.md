@@ -4,7 +4,7 @@ Short answers to questions that come up before you've found the deeper doc. Each
 
 ## Do I need cJSON?
 
-No. Sink mode parses responses with a SAX pipeline directly into your typed `Response` (or your own struct via `.into(T&)`) — no JSON library linked, no tree built. You only need a `JsonBackend` (cJSON, nlohmann, or `StaticJsonBackend`) when you want `response.body()` to return a walkable tree; see [`json-backend.md`](json-backend.md) for the trade-off.
+No. Streaming mode parses responses with a SAX pipeline directly into your typed `Response` (or your own struct via `.into(T&)`) — no JSON library linked, no tree built. You only need a `JsonBackend` (cJSON, nlohmann, or `StaticJsonBackend`) when you want `response.body()` to return a walkable tree; see [`json-backend.md`](json-backend.md) for the trade-off.
 
 ## Do I need an arena?
 

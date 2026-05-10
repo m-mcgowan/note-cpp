@@ -113,7 +113,7 @@ d.on_timing = [](note::TimingEvent ev, note::string_view req, void*) {
 };
 ```
 
-Full event sequence for a buffered request:
+Full event sequence for a tree-path request:
 
 ```
 TransactionBegin  → BuildBegin → BuildEnd

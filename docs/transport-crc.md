@@ -34,7 +34,7 @@ feeds on bytes as they arrive, and a `CrcFieldSink` in the SAX sink chain
 extracts the CRC field. `Protocol` compares accumulated vs
 extracted values.
 
-**Buffered path** (`AbstractTransport`): CRC uses the in-place buffer
+**Tree path** (`AbstractTransport`): CRC uses the in-place buffer
 functions from `note/link/detail/crc32.hpp` — `crc_add()` appends
 CRC to the wire buffer, `crc_check_and_strip()` validates and removes it
 from the response.

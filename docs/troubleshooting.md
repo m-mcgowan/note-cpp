@@ -78,7 +78,7 @@ Fix: call `nc.reset()` to cycle the transport and clear CRC state, or destroy an
 
 ## My AVR build is overflowing flash
 
-Cause: the typed API plus a tree-mode JSON backend is roughly 25 KB on AVR; an Uno (ATmega328P) has 32 KB total. Without the right flags an 8-endpoint app spills over before it leaves room for application code. Fix: define `NOTE_MINIMAL`, which bundles JSONB on, sink mode (no JSON backend), no retry, and no request IDs:
+Cause: the typed API plus a tree-mode JSON backend is roughly 25 KB on AVR; an Uno (ATmega328P) has 32 KB total. Without the right flags an 8-endpoint app spills over before it leaves room for application code. Fix: define `NOTE_MINIMAL`, which bundles JSONB on, streaming mode (no JSON backend), no retry, and no request IDs:
 
 ```ini
 ; platformio.ini
@@ -93,7 +93,7 @@ Cause: the I2C bus needs pull-up resistors on both SDA and SCL, and the Notecard
 
 ## `response.body()` returns null
 
-Cause: you're running in [sink mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Sink-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in sink mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`transport.md` § JSON layer](transport.md#json-layer-the-actual-bufferedstreaming-choice) for the trade-off and [`body-values.md`](body-values.md) for typed body parsing.
+Cause: you're running in [streaming mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Streaming-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in streaming mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`transport.md` § JSON layer](transport.md#json-layer-streaming-or-tree) for the trade-off and [`body-values.md`](body-values.md) for typed body parsing.
 
 ## consteval validation rejects a string the Notecard accepts
 

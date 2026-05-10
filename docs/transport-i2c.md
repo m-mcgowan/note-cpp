@@ -9,7 +9,7 @@
 I2C bus. The library wraps your HAL in `link::I2cFramer<>`
 (which adds Notecard-specific I2C framing) and then in
 `Protocol` (which adds protocol-level CRC, retry, and
-session semantics). Either Notecard ctor — sink mode
+session semantics). Either Notecard ctor — streaming mode
 (`Notecard(transport, alloc)`) or tree mode
 (`Notecard(backend, transport)`) — works on the resulting stack;
 both go through the unified `ITransact` interface.
@@ -51,7 +51,7 @@ note::Protocol transport{i2c};
 note::backends::CjsonBackend backend;
 note::Notecard nc(backend, transport);
 
-// Or sink mode (.into(struct), no JsonBackend needed):
+// Or streaming mode (.into(struct), no JsonBackend needed):
 // note::Notecard nc(transport, note::Allocator{});
 ```
 

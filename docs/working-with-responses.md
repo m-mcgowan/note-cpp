@@ -149,7 +149,7 @@ for (auto& f : r.files) {
 Endpoints like `note.get` return a `body` field containing user data
 (sensor readings, configuration). Use `.into()` on the request to parse
 the body directly into a struct during streaming, or `body()` for raw
-reader access on the buffered path.
+reader access on the tree path.
 
 ### Typed body parsing (recommended)
 
@@ -207,12 +207,12 @@ if (result) {
 }
 ```
 
-This works on both the streaming and buffered paths and gives you full
+This works on both the streaming and tree paths and gives you full
 control over field-name mapping.
 
-### Raw Body Access (Buffered Path)
+### Raw body access (tree path)
 
-On the buffered parse path, the raw `JsonReader` is also available
+On the tree parse path, the raw `JsonReader` is also available
 directly on the typed response:
 
 ```cpp

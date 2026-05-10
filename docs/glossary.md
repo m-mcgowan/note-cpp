@@ -24,15 +24,15 @@ These are the terms used throughout this codebase's docs and headers — the lay
 - **Lambda request builder** — `nc.request("endpoint", [](auto& b) { ... })`. Hand-built JSON with the same retry/transport plumbing as the typed API; see [using-the-api.md § Lambda request builder](using-the-api.md#lambda-request-builder).
 - **Raw JSON** — `nc.transact(json_string, buf)`. Strings in, strings out — the thinnest wrapper. See [using-the-api.md § Raw JSON](using-the-api.md#raw-json).
 - **Focused operation** — one method per intent on a multi-purpose Notecard endpoint, e.g. `nc.note.read()` vs `nc.note.pop()` for `note.get`. Each operation exposes only the fields that apply, plus a retry-safety classification. See [using-the-api.md § Focused operations](using-the-api.md#focused-operations-on-multi-purpose-endpoints).
-- **Tree mode** — JSON layer strategy that parses each response into a `JsonReader` tree (`response.body()` returns a walkable pointer). Requires a `JsonBackend`. See [transport.md § JSON layer](transport.md#json-layer-the-actual-bufferedstreaming-choice).
-- **Sink mode** — JSON layer strategy that fires SAX events directly into the response sink, no intermediate tree. Smaller flash, no `JsonBackend` linked. See [transport.md § JSON layer](transport.md#json-layer-the-actual-bufferedstreaming-choice).
+- **Tree mode** — JSON layer strategy that parses each response into a `JsonReader` tree (`response.body()` returns a walkable pointer). Requires a `JsonBackend`. See [transport.md § JSON layer](transport.md#json-layer-streaming-or-tree).
+- **Streaming mode** — JSON layer strategy that fires SAX events directly into the response sink, no intermediate tree. Smaller flash, no `JsonBackend` linked. See [transport.md § JSON layer](transport.md#json-layer-streaming-or-tree).
 - **Arena** — a bump allocator (`MonotonicArena`) you hand a fixed buffer; it serves linear allocations and frees them all at once on `reset()`. The "keep response strings alive past the next call" mechanism. See [memory.md](memory.md).
 - **`Hal`** — platform byte conduit (`transmit`, `read`, `reset`, `millis`, `delay`). You implement this for your platform; the library does the rest. See [internal/streaming-transport.md § Architecture](internal/streaming-transport.md#architecture).
 - **`Protocol`** — the concrete Notecard wire protocol driver: CRC, init handshake, line termination, sequence numbers, framing over a `Hal`. See [internal/streaming-transport.md § Architecture](internal/streaming-transport.md#architecture).
 - **`ITransact`** — unified Notecard transaction interface: `transact(req, span)`, `transact(req, sink)`, `send(req)`. The contract a session class holds; `Protocol` implements it natively. See [internal/streaming-transport.md § Transport Interfaces](internal/streaming-transport.md#transport-interfaces).
 - **Session** — runtime object owning the transport, optional `JsonBackend`, retry policy, and inter-transaction timing. Where retry happens. The session classes (`Notecard`, `BareNotecard`, `StaticNotecard`) are peers, not stacked.
 - **Backend** (`JsonBackend`) — JSON tree-mode strategy (cJSON, nlohmann, fixed buffer + jsmn, cJSON-on-arena). See [json-backend.md](json-backend.md).
-- **Sink** (`JsonSink`) — SAX-event receiver from the streaming parser; the sink-mode counterpart to `JsonBackend`. Each typed `Response` defines one (`Rsp::Sink`); user code rarely writes one directly.
+- **Sink** (`JsonSink`) — SAX-event receiver from the streaming parser; the streaming-mode counterpart to `JsonBackend`. Each typed `Response` defines one (`Rsp::Sink`); user code rarely writes one directly.
 - **`StaticNotecard`** — peer session class that wires the transport and (optional) backend at compile time, no virtual dispatch. Smallest flash; no runtime swap.
 - **`BareNotecard`** — peer session class that strips retry and inter-transaction timing. Use when you handle those concerns yourself.
 - **`Api<>`** — the generated typed surface, templated on a session class. `nc.card.version()` etc. live here.
@@ -40,7 +40,7 @@ These are the terms used throughout this codebase's docs and headers — the lay
 - **`StringPool`** — interns response strings into the arena and guarantees null-termination. Every typed-response `string_view` field is backed by it. See [memory.md](memory.md).
 - **`ApiResult<Response>`** — what a typed `execute()` call returns. `if (r)` checks success; `r.error()` returns an `ErrorInfo` on failure. See [error-handling.md](error-handling.md).
 - **`Safety`** — per-operation retry classification: `ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`. The library uses it automatically; you can also static-assert it. See [error-handling.md](error-handling.md).
-- **`BodyValue`** — typed body field on responses. Carries the parsed `body` JSON; in tree mode walks via `JsonReader`, in sink mode populated via `.into(T&)`. See [body-values.md](body-values.md).
+- **`BodyValue`** — typed body field on responses. Carries the parsed `body` JSON; in tree mode walks via `JsonReader`, in streaming mode populated via `.into(T&)`. See [body-values.md](body-values.md).
 - **`JsonView`** — substring scanner over a raw JSON string buffer. Skips ~8 KB of flash on AVR vs the SAX sink path; trades robust parsing for size. See [using-the-api.md § Raw JSON](using-the-api.md#raw-json).
 - **JSONB** — compact binary encoding the Notecard accepts in place of JSON text. Auto-enabled by `NOTE_MINIMAL`. See [jsonb.md](jsonb.md).
 

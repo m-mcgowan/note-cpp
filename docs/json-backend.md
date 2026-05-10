@@ -9,11 +9,11 @@ A `JsonBackend` selects the **JSON layer** strategy: it tells the
 Notecard to use *tree mode* for response parsing — every response is
 parsed into a `JsonReader` tree that you can walk via
 `response.body()` after the call returns. Without a `JsonBackend` the
-Notecard runs in *sink mode* instead: SAX events fire directly into
+Notecard runs in *streaming mode* instead: SAX events fire directly into
 the response sink, no intermediate tree, and `.into(T&)` is the way
 to capture body data.
 
-> See [Transport / JSON layer](transport.md#json-layer-the-actual-bufferedstreaming-choice)
+> See [Transport / JSON layer](transport.md#json-layer-streaming-or-tree)
 > for the full mode comparison. Both modes give you the same typed
 > API surface (`api.note.read().into(struct).execute()`,
 > `nc.transact(json, buf)`, etc.) — the difference is whether
@@ -23,7 +23,7 @@ to capture body data.
 `CjsonBackend` (cJSON tree, heap-allocated) works everywhere and is
 the right default. Only read further if one of these applies:
 
-- You want sink mode (no JsonBackend) for the lowest-memory profile.
+- You want streaming mode (no JsonBackend) for the lowest-memory profile.
 - You're memory-constrained and need to avoid heap allocation during
   serialisation but still want tree mode (`StaticJsonBackend` /
   `CjsonArenaBackend`).
@@ -40,17 +40,17 @@ move on.
 | Situation | Backend | Heap? |
 |-----------|---------|-------|
 | Getting started / prototyping | `CjsonBackend` (default) | Yes |
-| Memory-constrained, no JsonReader needed | *(none — sink mode)* | No |
+| Memory-constrained, no JsonReader needed | *(none — streaming mode)* | No |
 | Memory-constrained, want tree, no external deps | `StaticJsonBackend<N,T>` | No |
 | Memory-constrained, prefer debuggable tree | `CjsonArenaBackend` | No (arena) |
 | Already using cJSON (ESP-IDF, note-c) | `CjsonBackend` | Yes |
 | Already using nlohmann-json | `NlohmannBackend` | Yes |
 
-For sink mode (no backend), construct the Notecard with the
+For streaming mode (no backend), construct the Notecard with the
 streaming-only ctor:
 
 ```cpp
-note::Notecard nc(transport, note::Allocator{});  // no backend → sink mode
+note::Notecard nc(transport, note::Allocator{});  // no backend → streaming mode
 ```
 
 `.into(T&)` populates user structs in this mode just as it does in

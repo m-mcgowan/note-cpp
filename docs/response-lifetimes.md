@@ -83,7 +83,7 @@ gate behind a macro is tracked as a follow-up design question.
 
 ## See also
 
-- [memory.md](memory.md) — full memory model, backend profiles, streaming vs. buffered
+- [memory.md](memory.md) — full memory model, backend profiles, streaming vs. tree
 - [arena-sizing.md](arena-sizing.md) — computing the right arena size at compile time
 - [examples/stdcpp/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example
 - `include/note/arena.hpp` — `MonotonicArena` implementation

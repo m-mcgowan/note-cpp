@@ -18,7 +18,7 @@ was constructed against:
 
 > Contributor Note: This is pinned in CI by `tests/test_transport_agnostic_api.cpp`, which pairs four call-site categories against both Notecard ctors:
 
-| § | Surface | Streaming | Buffered |
+| § | Surface | Streaming | Tree |
 |---|---|:---:|:---:|
 | 1 | `api.note.read().into(struct).execute()` | ✓ | ✓ |
 | 2 | `api.note.update(file, id).body(struct).execute()` | ✓ | ✓ |
@@ -28,17 +28,18 @@ was constructed against:
 If the high-level surface ever drifts apart between transports, one of
 those four pairs goes red.
 
-## JSON layer — the actual buffered/streaming choice
+## JSON layer — streaming or tree
 
-What people often call "buffered transport" vs "streaming transport"
-isn't really about *transport* — those terms describe the **JSON
-layer**: the strategy `Notecard` runs internally to turn response
-bytes into typed values (when using the typed API), or for generating or parsing the JSON data directly in the application.
+The choice between "tree" and "streaming" isn't really about *transport*
+— those terms describe the **JSON layer**: the strategy `Notecard` runs
+internally to turn response bytes into typed values (when using the
+typed API), or for generating or parsing the JSON data directly in the
+application.
 
 | Mode | How it parses | Enables | Memory profile |
 |------|---|---|---|
 | **Tree mode** | `JsonReader` walks a parsed tree | `response.body()` returns `JsonReader*` for ad-hoc walking | Builds a tree (jsmn tokens or cJSON nodes) sized to the response |
-| **Sink mode** | SAX events fire into `Rsp::Sink` | `.into(T&)` populates user struct directly | Zero intermediate tree |
+| **Streaming mode** | SAX events fire into `Rsp::Sink` | `.into(T&)` populates user struct directly | Zero intermediate tree |
 
 Both modes populate the typed `Response` struct identically. The
 mode is selected by *which `Notecard` ctor* you use:
@@ -48,12 +49,12 @@ mode is selected by *which `Notecard` ctor* you use:
 note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc(backend, transport);
 
-// Sink mode — no JsonBackend → smaller flash, .into(struct) for body.
+// Streaming mode — no JsonBackend → smaller flash, .into(struct) for body.
 note::Notecard nc(transport, note::Allocator{});
 ```
 
 `.into(T&)` works in both modes (transport-agnostic, see § 1 above).
-`response.body()` is tree-mode only — sink-mode has no tree to walk.
+`response.body()` is tree-mode only — streaming-mode has no tree to walk.
 
 ### Mode selection guide
 
@@ -63,7 +64,7 @@ Pick **tree mode** when:
 - You need ad-hoc JSON walking via `JsonReader`.
 - You're debugging wire traffic and want a tree to inspect.
 
-Pick **sink mode** when:
+Pick **streaming mode** when:
 - You're on a memory-constrained target — no tree, no JsonBackend
   pulled in, smaller flash.
 - All your body shapes are known statically (use `.into(T&)`).
@@ -71,7 +72,7 @@ Pick **sink mode** when:
 
 ### Comparison
 
-| Feature | Tree mode | Sink mode |
+| Feature | Tree mode | Streaming mode |
 |---------|:---------:|:---------:|
 | Typed `execute()` on requests | yes | yes |
 | Typed response fields | yes | yes |
@@ -105,14 +106,14 @@ See [JSON backend](json-backend.md) for configuration details.
 |-------|--------|
 | [Serial transport](transport-serial.md) | `SerialHal`, Arduino setup, protocol constants, binary streaming |
 | [I2C transport](transport-i2c.md) | `I2cHal`, MTU negotiation, priming query, Arduino setup |
-| [CRC](transport-crc.md) | Auto-detection, wire format, streaming vs buffered implementation |
+| [CRC](transport-crc.md) | Auto-detection, wire format, streaming vs tree implementation |
 | [Binary transfer](binary-transfer.md) | `card.binary` put/get, COBS, MD5 verification |
 | [JSONB wire format](jsonb.md) | Compact binary encoding (alternative to JSON text) |
 
 ## Arduino shorthand
 
 On Arduino, `note::arduino::Notecard` wraps the full stack behind
-`begin()`. Sink mode by default; pass a `JsonBackend&` to opt into
+`begin()`. Streaming mode by default; pass a `JsonBackend&` to opt into
 tree mode:
 
 ```cpp
@@ -121,15 +122,15 @@ tree mode:
 note::arduino::Notecard nc;
 
 void setup() {
-    nc.begin(Serial1, 9600);                // sink mode, serial
-    // or: nc.begin(Wire);                   // sink mode, I2C
-    // or: nc.begin(Wire, 0x17);             // sink mode, I2C with custom address
+    nc.begin(Serial1, 9600);                // streaming mode, serial
+    // or: nc.begin(Wire);                   // streaming mode, I2C
+    // or: nc.begin(Wire, 0x17);             // streaming mode, I2C with custom address
     // or: nc.begin(Serial1, 9600, backend); // tree mode (response.body() works)
     // or: nc.begin(Wire, backend);          // tree mode, I2C
 }
 ```
 
-The buffered begin overloads no longer take a separate `rsp_buf`
+The tree-mode begin overloads no longer take a separate `rsp_buf`
 argument — the Notecard owns a default response staging buffer
 (`NOTE_RSP_BUF_SIZE`, default 1024 bytes). Call
 `nc.set_response_buffer(span)` after `begin()` if you need a

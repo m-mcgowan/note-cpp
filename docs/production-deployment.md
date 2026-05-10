@@ -1,6 +1,6 @@
 # Production deployment
 
-Shipping a Notecard-equipped device into the field shifts the priorities. The library defaults are tuned for development — debug callbacks armed, retries generous, buffered JSON tree available so `response.body()` works in a debugger. Production wants the opposite: smaller binary, no listener overhead, predictable RAM, and clear hooks for the host's watchdog and field-debug story. This page collects the production-specific knobs and patterns in one place and links to the canonical docs for depth.
+Shipping a Notecard-equipped device into the field shifts the priorities. The library defaults are tuned for development — debug callbacks armed, retries generous, tree-mode JSON parsing available so `response.body()` works in a debugger. Production wants the opposite: smaller binary, no listener overhead, predictable RAM, and clear hooks for the host's watchdog and field-debug story. This page collects the production-specific knobs and patterns in one place and links to the canonical docs for depth.
 
 ## Compile-time flags
 
@@ -65,7 +65,7 @@ The Notecard's session state survives host resets — request IDs, queued Notes,
 - A `card.attn` arm is **not** guaranteed to persist across Notecard resets. If the host expects ATTN-driven wake, re-arm during host startup (the call is cheap, and `.rearm()` is idempotent — see [`card-attn-guide.md` § arm vs rearm](platforms/arduino/card-attn-guide.md#arm-vs-rearm)).
 - In-flight binary transfers do not survive a reset on either side; the verify step on the next attempt will detect the mismatch and the transfer can be retried from scratch. See [`binary-transfer.md`](binary-transfer.md).
 
-If your host reset was caused by an OOM or a stack overflow, the failure is upstream of `note-cpp` — the library uses zero heap by default in sink mode and ~800 B static RAM. See [`memory.md`](memory.md) for sizing guidance. If resets are correlated with cellular sync attempts, the cause is more likely brown-out from the cellular radio's TX peak current than anything in the library — check your power supply margin.
+If your host reset was caused by an OOM or a stack overflow, the failure is upstream of `note-cpp` — the library uses zero heap by default in streaming mode and ~800 B static RAM. See [`memory.md`](memory.md) for sizing guidance. If resets are correlated with cellular sync attempts, the cause is more likely brown-out from the cellular radio's TX peak current than anything in the library — check your power supply margin.
 
 ## What to leave on / off in production
 
@@ -74,8 +74,8 @@ A quick-decision aid. The full story for each flag is in [`feature-flags.md`](fe
 | Concern | Recommendation | Notes |
 |---------|----------------|-------|
 | Debug printing | **Off** (`NOTE_DEBUG_ENABLED=0` or `note::NoDebug` policy) | Or leave on with a bounded log-ring listener — your call. |
-| Tree-mode JSON backend | **Off** unless you actually call `response.body()` | Sink mode (no `JsonBackend`) is the lowest-memory path; typed responses and `req.into(T&)` work the same way. |
-| Heap | **Off** for embedded | Default behaviour in sink mode — zero allocation. See [`memory.md`](memory.md). |
+| Tree-mode JSON backend | **Off** unless you actually call `response.body()` | Streaming mode (no `JsonBackend`) is the lowest-memory path; typed responses and `req.into(T&)` work the same way. |
+| Heap | **Off** for embedded | Default behaviour in streaming mode — zero allocation. See [`memory.md`](memory.md). |
 | JSONB binary wire | **On** if size matters | Auto-enabled by `NOTE_MINIMAL`. Requires Notecard firmware 11.x+. |
 | Retry | **On** unless your app retries at the request level | The library's retry handles transient transport faults; replacing it is rarely worth the complexity. |
 | Strict body fields | **On** (default) | Catches schema drift at compile time. |

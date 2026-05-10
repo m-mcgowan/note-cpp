@@ -109,6 +109,72 @@ See the [getting started example](examples/stdcpp/getting-started.cpp) for a com
 > examples covering setup, hub.set, note.add, templates, error handling,
 > binary transfers, and more to help you migrate to note-cpp.
 
+## Streaming or tree
+
+`note-cpp` has two execution paths:
+
+- **Streaming** — SAX events parse the wire bytes directly into your typed response struct or sink. No JSON tree in memory. Zero heap.
+- **Tree** — a `JsonBackend` parses the response into an in-memory `JsonReader` you can query by key after the call returns.
+
+For most code, the choice is invisible. The same `nc.card.version().execute()` returns the same `r.version` either way:
+
+```cpp
+auto r = nc.card.version().execute();
+if (r) {
+    log(r.version);   // identical on both paths
+    log(r.device);
+}
+```
+
+`.into(struct)` for body parsing, body lambdas for request building, and the raw `nc.transact(json, buf)` API all behave identically on both paths.
+
+**The user-visible divergence is post-call body inspection.** Streaming commits at call time — you decide what to do with the body before sending the request, and SAX fires events into your sink as bytes arrive. Tree mode parks a parsed `JsonReader` on the response, so you can query body fields by name *after* the call returns:
+
+```cpp
+auto r = nc.note.get("data.qi").execute();
+
+// Tree mode — query the parsed JsonReader by key after the call:
+if (r && r.body()) {
+    double temp = r.body()->get_double("temperature");
+    int    hum  = r.body()->get_int("humidity");
+}
+
+// Streaming — r.body() is null. Commit a struct (or JsonSink) up front:
+struct Readings { float temperature; int humidity; NOTE_FIELDS(temperature, humidity); };
+Readings readings{};
+nc.note.get("data.qi").into(readings).execute();
+```
+
+If you know the body shape ahead of time, `.into(struct)` is the better idiom in either mode — it's faster, has lower memory cost, and works on the smallest targets.
+
+### Picking a backend
+
+Tree mode requires a `JsonBackend`. Streaming wants none. The wire-up:
+
+```cpp
+// Streaming — no backend, zero heap, smallest flash.
+note::Notecard nc(transport, note::Allocator{});
+
+// Tree, default — cJSON-backed; heap-allocated nodes, familiar from note-c.
+note::backends::CjsonBackend backend;
+note::Notecard nc(backend, transport);
+
+// Tree, zero-heap — fixed-size jsmn token view over the response bytes.
+note::backends::StaticJsonBackend<512, 64> backend;
+note::Notecard nc(backend, transport);
+
+// Tree, zero-heap with a real cJSON node graph — tree backed by an arena.
+note::MonotonicArena arena(arena_buf);
+note::backends::CjsonArenaBackend backend(arena);
+note::Notecard nc(backend, transport);
+
+// Tree, nlohmann/json — only worthwhile if the project already pulls it in.
+note::backends::NlohmannBackend backend;
+note::Notecard nc(backend, transport);
+```
+
+See [docs/json-backend.md](docs/json-backend.md) for the full backend comparison and [docs/transport.md](docs/transport.md) for when streaming vs tree fits a deployment.
+
 ## Features
 
 <details>
@@ -370,72 +436,6 @@ See [`docs/platforms/arduino/guide.md#binary-size-comparison`](docs/platforms/ar
 for full code patterns per row, [`docs/feature-flags.md`](docs/feature-flags.md) for the
 complete list of compile-time switches, and [`tools/binary-size-comparison/`](tools/binary-size-comparison/)
 for the benchmark harness that produced these numbers.
-
-## Streaming or tree
-
-`note-cpp` has two execution paths:
-
-- **Streaming** — SAX events parse the wire bytes directly into your typed response struct or sink. No JSON tree in memory. Zero heap.
-- **Tree** — a `JsonBackend` parses the response into an in-memory `JsonReader` you can query by key after the call returns.
-
-For most code, the choice is invisible. The same `nc.card.version().execute()` returns the same `r.version` either way:
-
-```cpp
-auto r = nc.card.version().execute();
-if (r) {
-    log(r.version);   // identical on both paths
-    log(r.device);
-}
-```
-
-`.into(struct)` for body parsing, body lambdas for request building, and the raw `nc.transact(json, buf)` API all behave identically on both paths.
-
-**The user-visible divergence is post-call body inspection.** Streaming commits at call time — you decide what to do with the body before sending the request, and SAX fires events into your sink as bytes arrive. Tree mode parks a parsed `JsonReader` on the response, so you can query body fields by name *after* the call returns:
-
-```cpp
-auto r = nc.note.get("data.qi").execute();
-
-// Tree mode — query the parsed JsonReader by key after the call:
-if (r && r.body()) {
-    double temp = r.body()->get_double("temperature");
-    int    hum  = r.body()->get_int("humidity");
-}
-
-// Streaming — r.body() is null. Commit a struct (or JsonSink) up front:
-struct Readings { float temperature; int humidity; NOTE_FIELDS(temperature, humidity); };
-Readings readings{};
-nc.note.get("data.qi").into(readings).execute();
-```
-
-If you know the body shape ahead of time, `.into(struct)` is the better idiom in either mode — it's faster, has lower memory cost, and works on the smallest targets.
-
-### Picking a backend
-
-Tree mode requires a `JsonBackend`. Streaming wants none. The wire-up:
-
-```cpp
-// Streaming — no backend, zero heap, smallest flash.
-note::Notecard nc(transport, note::Allocator{});
-
-// Tree, default — cJSON-backed; heap-allocated nodes, familiar from note-c.
-note::backends::CjsonBackend backend;
-note::Notecard nc(backend, transport);
-
-// Tree, zero-heap — fixed-size jsmn token view over the response bytes.
-note::backends::StaticJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);
-
-// Tree, zero-heap with a real cJSON node graph — tree backed by an arena.
-note::MonotonicArena arena(arena_buf);
-note::backends::CjsonArenaBackend backend(arena);
-note::Notecard nc(backend, transport);
-
-// Tree, nlohmann/json — only worthwhile if the project already pulls it in.
-note::backends::NlohmannBackend backend;
-note::Notecard nc(backend, transport);
-```
-
-See [docs/json-backend.md](docs/json-backend.md) for the full backend comparison and [docs/transport.md](docs/transport.md) for when streaming vs tree fits a deployment.
 
 ## Quality Assurance
 

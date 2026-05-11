@@ -102,66 +102,30 @@ build_flags = -DNOTE_USING_ATTN=0
 | `NOTE_API_VERSION` | Latest (currently `NOTE_VERSION(9, 1, 1)`) | Target firmware version. Fields added after this version produce `[[deprecated]]` warnings. |
 | `NOTE_API_STRICT` | off | Remove version-gated fields entirely (compile error instead of warning). |
 
-These flags control **per-field** visibility based on the firmware version that
-introduced each field. The Notecard API spec annotates when each field was
-added (`x-min-api-version`), and codegen wraps newer fields with version guards.
-
-**Default (no flags defined):** all fields available, no warnings.
-
-**Warn mode** (`-DNOTE_API_VERSION=NOTE_VERSION(7,0,0)`): fields added after
-firmware 7.0.0 produce deprecation warnings but remain visible — your IDE
-still shows them in autocomplete, and the code compiles.
-
-**Strict mode** (also define `-DNOTE_API_STRICT`): newer fields are compiled
-out entirely via `#if` guards. Accessing them is a compile error, not a
-warning. This is useful for production firmware that must not accidentally
-use features unavailable on the deployed Notecard.
+`NOTE_API_VERSION` gates **individual fields** based on the firmware version that introduced them (the spec's `x-min-api-version`). Without `NOTE_API_STRICT`, newer fields warn but stay callable; with strict mode, they're compiled out and using one is a compile error.
 
 ```ini
-# platformio.ini — warn about fields newer than firmware 7.2.1
+# Warn about fields newer than firmware 7.2.1
 build_flags = -DNOTE_API_VERSION=NOTE_VERSION(7,2,1)
 
 # Strict: error on fields newer than 7.2.1
 build_flags = -DNOTE_API_VERSION=NOTE_VERSION(7,2,1) -DNOTE_API_STRICT
 ```
 
-For **endpoint-level** filtering (entire endpoints, not individual fields),
-use the C++20 target filtering API instead — see the
-[Target Filtering](#target-filtering-c20) section.
+For **endpoint-level** filtering (entire endpoints, not individual fields), use the C++20 target filtering API — see below.
 
 ### Target filtering (C++20)
 
-Target filtering constrains the `Api` by hardware variant, firmware version,
-or both. Unlike the preprocessor flags above, this uses C++20 concepts and
-produces better compiler diagnostics.
+C++20 concepts let you constrain the `Api` by hardware variant and/or minimum firmware version. Better diagnostics than the preprocessor flags above; same opt-in to strict mode (warning becomes compile error).
 
 ```cpp
-// Hardware constraint — card.wifi warns on Cell target
-Api cell_api(nc, target<Hardware::Cell>());
-
-// Firmware constraint — card.illumination warns if firmware < 9.1.1
-Api old_api(nc, min_firmware<5, 0, 0>());
-
-// Combined — both checks
-Api both_api(nc, target<Hardware::WiFi, 9, 1, 1>());
+Api cell_api(nc, target<Hardware::Cell>());           // hardware
+Api old_api(nc, min_firmware<5, 0, 0>());             // firmware
+Api both_api(nc, target<Hardware::WiFi, 9, 1, 1>());  // both
+auto strict = target<Hardware::LoRa>().as_strict();   // strict variant
 ```
 
-**Warn mode** (default): unsupported endpoints produce `[[deprecated]]`
-warnings but remain callable.
-
-**Strict mode**: unsupported endpoints are removed via `requires` constraints —
-calling them is a compile error with a clear diagnostic.
-
-```cpp
-// Strict hardware target — card.sleep is a compile error on LoRa
-Api api(nc, Target<Hardware::LoRa, 0, 0, 0, true>{});
-
-// Or use .as_strict() on any target
-auto strict = target<Hardware::LoRa>().as_strict();
-```
-
-See [examples/target-filtering.cpp](../examples/stdcpp/target-filtering.cpp) for
-complete examples.
+Full walkthrough with all variants: [examples/target-filtering.cpp](../examples/stdcpp/target-filtering.cpp).
 
 ## Overriding `NOTE_MINIMAL` defaults
 
@@ -214,40 +178,7 @@ build_flags = -DNOTE_DEBUG_ENABLED=0 -DNOTE_EXTRAS=0
 
 ## API styles and flash cost
 
-`note-cpp` offers two usage styles for building requests:
-
-**Convenience groups** (`Api` factory):
-```cpp
-note::Api api(nc);
-api.hub.set().product("com.example").mode("periodic").execute();
-auto temp = api.card.temp().read().execute();
-```
-
-**Direct assignment**:
-```cpp
-note::api::HubSet req;
-req.product = "com.example";
-req.mode = "periodic";
-nc.execute(req);
-```
-
-Both styles produce the same wire format and compile to the same execute path.
-The convenience groups add a small amount of flash overhead for the factory
-structs and group wiring, which is typically negligible on 32-bit platforms.
-
-On very constrained targets (AVR Uno), the direct assignment style avoids
-this overhead entirely. Use `-DAPI_STYLE=2` in the binary size comparison
-example to see the difference.
-
-## Where flags are defined
-
-- **`include/note/note_config.hpp`** — `NOTE_MINIMAL` defaults
-- **`include/note/wire_format.hpp`** — `NOTE_JSONB` default (`NOTE_MINIMAL` → `1`)
-- **`include/note/compiler.hpp`** — `NOTE_SHORT_ERRORS`, `NOTE_ERR()` macro
-- **`include/note/error.hpp`** — `NOTE_PRINTABLE` default
-- **`include/note/lexer/json_lexer.hpp`** — `NOTE_UNICODE_ESCAPES` → `BasicEscapeDecoder`
-- **`include/note/static_notecard.hpp`** — `NOTE_NO_RETRY`, `NOTE_NO_REQUEST_IDS`
-- **`include/note/protocol.hpp`** — `NOTE_NO_CRC`, `NOTE_MINIMAL` (lookahead), `NOTE_DEBUG_ENABLED`
+The Api convenience groups (`api.hub.set().execute()`) add a small flash overhead for the factory structs and group wiring — negligible on 32-bit platforms, measurable on AVR Uno. The direct-assignment style (`nc.execute(req)` with a plain request struct) avoids it entirely. Use `-DAPI_STYLE=2` in the binary-size benchmark to see the delta; the full per-style writeup is in [using-the-api.md § Calling styles](using-the-api.md#calling-styles-within-the-typed-layer).
 
 ## Size impact summary (AVR ATmega328P, 8-endpoint app with body parsing)
 

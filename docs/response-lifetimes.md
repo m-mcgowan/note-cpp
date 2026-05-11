@@ -86,6 +86,3 @@ gate behind a macro is tracked as a follow-up design question.
 - [memory.md](memory.md) — full memory model, backend profiles, streaming vs. tree
 - [arena-sizing.md](arena-sizing.md) — computing the right arena size at compile time
 - [examples/stdcpp/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example
-- `include/note/arena.hpp` — `MonotonicArena` implementation
-- `include/note/string_pool.hpp` — the interning helper used by `execute()`
-- `include/note/allocator.hpp` — `Allocator` type and `arena_allocator()` adapter

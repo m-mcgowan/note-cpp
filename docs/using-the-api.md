@@ -222,7 +222,7 @@ The typed API accepts the same request five different ways. Pick the one that ma
 | Args struct (nested braces) | ✓ | ✓ | C++17 equivalent of designated init |
 | Direct struct construction | ✓ | ✓ | When you have a request struct from elsewhere |
 
-C++20 also adds `consteval` validation for enum fields like `mode` — passing an invalid string is a compile error on C++20, runtime error on C++17. Other than that, the surface is the same. See [§ Setting the C++ standard](#setting-the-c-standard) below for build flags per platform.
+C++20 also adds `consteval` validation for enum fields like `mode` — passing an invalid string is a compile error on C++20, runtime error on C++17. Other than that, the surface is the same. See [cpp-version-compatibility.md](cpp-version-compatibility.md#setting-the-standard-in-your-build) for build-flag snippets for PlatformIO (Arduino & ESP-IDF) and Zephyr.
 
 ### Fluent builder
 
@@ -374,50 +374,6 @@ if (rsp) {
 
 `.read()` selects the Read operation — `card.temp` is polymorphic (`Read`, `Configure`, `Stop`). On error, `rsp` is falsy and `rsp.error()` returns the `ErrorInfo`. See [working-with-responses.md](working-with-responses.md) for the full response model — presence checks, body parsing, error categories.
 
-### Setting the C++ standard
-
-The library requires C++17 or later. C++20 unlocks designated initializers, duck-typed args structs, and `consteval` enum validation; the rest of the surface is the same.
-
-#### PlatformIO (Arduino framework)
-
-```ini
-; platformio.ini
-[env:myboard]
-build_flags = -std=gnu++20    ; or gnu++23
-```
-
-Common platform defaults:
-- **ESP32 (pioarduino)**: defaults to `gnu++11`. Set `-std=gnu++23` for full C++20 features.
-- **nRF52/nRF53 (Arduino)**: defaults to `gnu++11`. Set `-std=gnu++17` or higher.
-- **STM32 (STM32duino)**: defaults to `gnu++14`. Set `-std=gnu++17` or higher.
-
-#### PlatformIO (ESP-IDF framework)
-
-```ini
-; platformio.ini — ESP-IDF uses CMake, not build_flags for C++ standard
-build_flags = -std=gnu++20
-```
-
-Or in your component's `CMakeLists.txt`:
-
-```cmake
-target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
-```
-
-#### Zephyr
-
-In `prj.conf` or your board's config:
-
-```
-CONFIG_STD_CPP20=y
-```
-
-Or in `CMakeLists.txt`:
-
-```cmake
-set(CMAKE_CXX_STANDARD 20)
-```
-
 ### IDE discoverability
 
 The API is designed for autocomplete-driven discovery:
@@ -567,82 +523,25 @@ nc.card.location.mode.delete_().execute();
 
 ## Escape hatches
 
-The typed API covers all the patterns documented in the official Blues Notecard [API schema](https://github.com/blues/notecard-schema). But the Notecard firmware may support mode combinations, field values, or new features that the typed API doesn't yet model. Three levels of escape get you out from under the typed layer in increasing order of bypass.
+The typed API covers everything in the official Blues Notecard [API schema](https://github.com/blues/notecard-schema), but the Notecard firmware may support mode combinations, field values, or new features the typed API doesn't yet model. The escape mechanisms are the same code paths covered in [§ The three layers](#the-three-layers); this section indexes them as a single comparison.
 
-### Three levels of escape
+| Need | Use | Where it's covered |
+|------|-----|---|
+| Standard operations | Focused API call (`nc.card.attn().arm()`) | [§ Typed API](#typed-api) |
+| Existing endpoint, unusual field combo | Raw string on the base `Request` type | [§ Unguided requests](#unguided-requests) |
+| New / unknown endpoint or field | `nc.request()` with builder lambda | [§ Lambda request builder](#lambda-request-builder) |
+| Fire-and-forget (no response) | `nc.command()` with builder lambda | as `request()` but sends `"cmd"` |
 
-#### 1. Raw string fields on typed requests
-
-Every typed request has field setters that accept `string_view`. You can pass any string — it goes directly to the wire with no validation:
-
-```cpp
-// Typed operation (validated):
-nc.card.attn().arm().connected().motion().execute();
-
-// Same request via raw string on the base Request type:
-note::api::CardAttn::Request req;
-req.mode = "arm,connected,motion,some_new_mode";
-req.execute();
-```
-
-The base `Request` type exposes all fields without operation filtering. This is useful when:
-
-- A new firmware version adds a mode the typed API doesn't cover yet.
-- You need a field combination that spans multiple operations.
-- You're prototyping and don't want type safety yet.
-
-This is the same mechanism described in [§ Unguided requests](#unguided-requests) above — listed here for completeness as the lightest of the three escapes.
-
-#### 2. Ad-hoc requests via `Notecard::request()`
-
-For endpoints or field combinations not in the generated types at all:
-
-Requires tree mode (Notecard constructed with a `JsonBackend`) — the returned `JsonReader*` is the tree the backend parsed the response into. Use it for entirely new request types or field combinations not yet in the generated API:
-
-```cpp
-auto result = nc.request("card.attn", [](note::JsonBuilder& b) {
-    b.add("mode", "some-future-mode");
-    b.add("seconds", 120);
-});
-if (result) {
-    auto& reader = *result.value();
-    auto set = reader.get_bool("set");
-}
-```
-
-This bypasses the generated types entirely — you build JSON by hand and parse the response manually. No type safety, but maximum flexibility.
-
-#### 3. Fire-and-forget commands
-
-```cpp
-nc.command("card.attn", [](note::JsonBuilder& b) {
-    b.add("mode", "disarm,-all");
-});
-```
-
-Same as `request()` but sends `"cmd"` instead of `"req"` — no response expected.
-
-### When to use each level
-
-| Need | Use |
-|------|-----|
-| Standard operations | Focused API call (`nc.card.attn().arm()`) |
-| Existing endpoint, unusual field combo | Raw string on `Request` type |
-| New/unknown endpoint or field | `nc.request()` with builder lambda |
-| Fire-and-forget | `nc.command()` with builder lambda |
-
-### Validation at each level
+Validation at each level — earlier is cheaper to catch:
 
 | Level | Compile-time | Runtime |
 |-------|-------------|---------|
 | Typed operation + flag methods | Field existence, flag scoping | None needed |
 | Typed operation + named constants | Named constant validity | None needed |
 | Typed operation + string literal (C++20 GCC) | `consteval` flag validation | None needed |
-| Raw string on Request | None | Notecard validates |
+| Raw string on `Request` | None | Notecard validates |
 | `request()` / `command()` | None | Notecard validates |
 
-The Notecard firmware always validates the request and returns an error if a field or mode is invalid. The typed API catches mistakes earlier — at compile time rather than on the device.
+The Notecard firmware always validates and returns an error if a field or mode is invalid. The typed API catches the same mistakes earlier — at compile time, on your machine, not in the field.
 
-## Reference
-
-For the full endpoint catalogue — every operation, every field, every response — see [`docs/api-reference.md`](api-reference.md). It's autogenerated from the OpenAPI spec on every codegen run, so it stays in lockstep with the typed API.
+For the full endpoint catalogue — every operation, every field, every response — see [api-reference.md](api-reference.md). It's autogenerated on every codegen run, so it stays in lockstep with the typed API.

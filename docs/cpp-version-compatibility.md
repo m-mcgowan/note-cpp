@@ -28,3 +28,48 @@ The core library works with C++17. Each successive standard unlocks additional f
 | **Standard library** | | | |
 | [`std::expected`](internal/cpp-version-blockers.md) (native, vs `tl::expected` fallback) | — | — | yes |
 | [`std::unreachable`](internal/cpp-version-blockers.md) (native, vs compiler builtins) | — | — | yes |
+
+## Setting the standard in your build
+
+The library requires C++17 or later. C++20 unlocks designated initializers, duck-typed args structs, and `consteval` enum validation; the rest of the surface is the same.
+
+### PlatformIO (Arduino framework)
+
+```ini
+; platformio.ini
+[env:myboard]
+build_flags = -std=gnu++20    ; or gnu++23
+```
+
+Common platform defaults:
+
+- **ESP32 (pioarduino)**: defaults to `gnu++11`. Set `-std=gnu++23` for full C++20 features.
+- **nRF52 / nRF53 (Arduino)**: defaults to `gnu++11`. Set `-std=gnu++17` or higher.
+- **STM32 (STM32duino)**: defaults to `gnu++14`. Set `-std=gnu++17` or higher.
+
+### PlatformIO (ESP-IDF framework)
+
+```ini
+; platformio.ini — ESP-IDF uses CMake, not build_flags for C++ standard
+build_flags = -std=gnu++20
+```
+
+Or in your component's `CMakeLists.txt`:
+
+```cmake
+target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
+```
+
+### Zephyr
+
+In `prj.conf` or your board's config:
+
+```
+CONFIG_STD_CPP20=y
+```
+
+Or in `CMakeLists.txt`:
+
+```cmake
+set(CMAKE_CXX_STANDARD 20)
+```

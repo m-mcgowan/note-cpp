@@ -205,12 +205,4 @@ Full breakdown: [docs/quality-assurance.md](docs/quality-assurance.md).
 
 ## Contributing
 
-Requires C++17 minimum. C++20 enables zero-overhead transport policies
-and compile-time validation of enum string fields.
-
-Bug reports, feature requests, and pull requests are welcome via
-[GitHub Issues](https://github.com/m-mcgowan/note-cpp/issues) and
-[Pull Requests](https://github.com/m-mcgowan/note-cpp/pulls).
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, building,
-testing, and code generation details.
+Bug reports and PRs welcome via [Issues](https://github.com/m-mcgowan/note-cpp/issues) and [Pull Requests](https://github.com/m-mcgowan/note-cpp/pulls). See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, building, testing, and codegen.

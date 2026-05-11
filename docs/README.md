@@ -45,6 +45,11 @@ This index is the full doc tree, ordered by audience. **If you're new, start wit
 30. **[Migrating from note-arduino](platforms/arduino/migration-from-note-arduino.md)** — side-by-side examples
 31. **[Migrating from note-c (host)](platforms/host/migration-from-note-c.md)** — host-side migration with bridge transport for incremental adoption
 
+## Reference
+
+- **[C++ version compatibility](cpp-version-compatibility.md)** — feature × C++17/20/23 matrix
+- **[Quality assurance](quality-assurance.md)** — test matrix, coverage numbers, doc verification
+
 ## Contributing
 
 Internal documentation for contributors:

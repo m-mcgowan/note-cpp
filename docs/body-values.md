@@ -129,56 +129,23 @@ as a string value).
 
 ## Conditional / schemaless bodies
 
-Not all bodies have a fixed structure. Sensor readings may include
-optional fields depending on what's available — GPS when locked,
-battery when low, etc. This is a key Notecard feature.
+Not all bodies have a fixed structure. Sensor readings may include optional fields depending on what's available — GPS when locked, battery when low. The Notecard accepts any body shape, no schema needed (though [templates](#template-registration) optimize bandwidth when the shape *is* known).
 
-### JsonBuf (recommended for conditional content)
+`JsonBuf` and the builder lambda both support conditional fields — just wrap `.add()` calls in `if`:
 
 ```cpp
 note::JsonBuf<128> body;
 body.add("temp", temp);
-if (have_gps) {
-    body.add("lat", lat);
-    body.add("lon", lon);
-}
-if (battery < 20) {
-    body.add("low_battery", true);
-}
+if (have_gps)     { body.add("lat", lat); body.add("lon", lon); }
+if (battery < 20) { body.add("low_battery", true); }
 body.close();
 
 nc.note.add().file("sensors.qo").body(body.view()).execute();
 ```
 
-### Builder lambdas
+The builder lambda mirrors this — the `note::body([&](note::JsonBuilder& b) { ... })` form takes the same `if`-guarded `b.add(...)` calls. Both approaches guarantee balanced braces and correct comma placement regardless of which branches execute.
 
-```cpp
-nc.note.add()
-    .file("sensors.qo")
-    .body(note::body([&](note::JsonBuilder& b) {
-        b.add("temp", temp);
-        if (have_gps) {
-            b.add("lat", lat);
-            b.add("lon", lon);
-        }
-        if (battery < 20) {
-            b.add("low_battery", true);
-        }
-    }))
-    .execute();
-```
-
-All three approaches guarantee valid JSON regardless of which branches
-execute. Keys are always quoted, commas always correct, objects always
-closed.
-
-Note: `json_fmt` doesn't support conditional fields — the format
-structure is fixed at compile time. For variable-shape bodies, use
-`JsonBuf` or the builder lambda.
-
-The Notecard accepts any body shape — no schema registration
-needed (though [templates](#template-registration) optimize bandwidth
-when the shape is known).
+`json_fmt` doesn't support conditional fields — the format structure is fixed at compile time. For variable-shape bodies, use `JsonBuf` or the builder lambda.
 
 ## Sending typed bodies
 
@@ -203,19 +170,7 @@ req.execute();
 
 ## Receiving typed bodies
 
-Parse a response body directly into your struct with `.into()`:
-
-```cpp
-Readings data;
-auto r = api.note.read("data.qi").into(data).execute();
-if (r) {
-    printf("temp=%.1f humidity=%d\n", data.temperature, data.humidity);
-}
-```
-
-The body is parsed during the SAX streaming pass — primitive fields
-(`float`, `int32_t`, `bool`) are written directly into the struct with
-zero arena cost. String fields are interned into the arena.
+Use `.into(struct)` on the request to parse a response body directly into the same struct you'd send. Full treatment — including the lambda-builder alternative for fields with wire-name mismatches, and tree-mode `r.body()->get_double(...)` access — lives in [working-with-responses.md § Body responses](working-with-responses.md#body-responses--nested-objects).
 
 ## Template registration
 

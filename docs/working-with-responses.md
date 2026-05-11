@@ -108,41 +108,15 @@ for (auto& file : r.files) {
 
 ## String fields are null-terminated
 
-All response string fields (`string_view`) are backed by null-terminated
-storage. The `string_view::data()` pointer is a valid C string:
+All response string fields are backed by null-terminated storage — `.data()` is a valid C string. `string_view::size()` excludes the terminator, but `data()[size()]` is `'\0'`. Guaranteed for everything interned via `StringPool` (which is every string field on a typed response).
 
 ```cpp
 auto r = nc.card.version().execute();
-
-// Works with C string functions
 printf("version: %s\n", r.version.data());
-strcmp(r.device.data(), "dev:12345");
-
-// Array elements too
-for (auto& f : r.files) {
-    printf("  file: %s\n", f.data());
-}
+for (auto& f : r.files) printf("  file: %s\n", f.data());
 ```
 
-This is guaranteed for all strings interned via the `StringPool` (which
-includes every string field in typed responses). The `string_view` length
-does not include the null terminator — `size()` returns the string length,
-and `data()[size()]` is `'\0'`.
-
-<details><summary><strong>Arduino</strong>: printing with data()</summary>
-
-With null-terminated strings, `Serial.print(f.data())` works as an
-alternative to `Serial.println(printable(f))` for array elements and
-other bare `string_view` values:
-
-```cpp
-for (auto& f : r.files) {
-    Serial.print("  file: ");
-    Serial.println(f.data());  // works — null-terminated
-}
-```
-
-</details>
+On Arduino, `Serial.print(f.data())` works as an alternative to `Serial.println(printable(f))` for array elements.
 
 ## Body responses — nested objects
 
@@ -273,68 +247,18 @@ if (r) {
 
 ## Response lifetimes
 
-Response fields are views into the transport buffer. For `string_view`
-fields, the view is valid until the next `execute()` call on the same
-Notecard. For non-string fields (int, bool, double), the value is copied.
+Response `string_view` fields point into the transport buffer and are valid until the next `execute()` call. Non-string fields are copied. To make views outlive the next call, attach an arena — see [response-lifetimes.md](response-lifetimes.md) for sizing, the arena lifecycle, and the full set of patterns.
 
-```cpp
-auto r = nc.card.version().execute();
-auto ver = r.version;   // valid now
+## Raw access
 
-nc.hub.set().execute();  // transport buffer reused
-// ver is now dangling — don't read it
-```
-
-To extend string lifetimes, use an arena allocator:
-
-```cpp
-char pool[256];
-note::MonotonicArena arena(pool);
-nc.set_allocator(note::arena_allocator(arena));
-
-auto r = nc.card.version().execute();
-auto ver = r.version;  // interned into arena — survives buffer reuse
-```
-
-See [Response Lifetimes](response-lifetimes.md) for details.
-
-## Error responses
-
-The Notecard signals errors with `{"err":"message"}`. The typed API
-captures this as an `ErrorInfo`:
-
-```cpp
-auto r = nc.card.version().execute();
-if (!r) {
-    auto& err = r.error();
-    Serial.print("Code: ");
-    Serial.println(static_cast<int>(err.code));
-    Serial.print("Message: ");
-    Serial.println(err.message);
-}
-```
-
-Error codes distinguish transport failures (`SendFailed`, `ResponseLost`)
-from Notecard errors (`Notecard`). See [Error Handling](error-handling.md).
-
-## The raw escape hatch
-
-For responses the typed API doesn't fully cover, use `BareNotecard` for
-raw JSON passthrough:
-
-```cpp
-note::BareNotecard bare(transport);
-char buf[512];
-auto rsp = bare.transact(R"({"req":"card.version"})", buf);
-if (rsp) {
-    // *rsp is the raw JSON response string
-    Serial.println(*rsp);
-}
-```
-
-Or on a `Notecard` that also uses the typed API:
+For responses the typed API doesn't fully cover — new fields the codegen doesn't know about, or one-off lookups — drop to the raw `transact()` and parse the JSON yourself:
 
 ```cpp
 char buf[512];
 auto rsp = nc.transact(R"({"req":"card.version"})", buf);
+if (rsp) {
+    // *rsp is the raw JSON response string
+}
 ```
+
+See [using-the-api.md § Escape hatches](using-the-api.md#escape-hatches) for the full set of escape levels (raw fields, lambda builders, fire-and-forget commands).

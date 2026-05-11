@@ -6,13 +6,11 @@
 ![Header Only](https://img.shields.io/badge/header--only-yes-green)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Header-only, zero dependencies (just the standard library). Works with C++17, C++20, and C++23 — each version unlocks additional features. Compatibility tested on the most popular embedded platforms using PlatformIO.
+Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Header-only, zero dependencies beyond the standard library. C++17, C++20, and C++23 — each unlocks additional features.
 
-> **Community project.** Not affiliated with or supported by Blues Inc. Notecard is a trademark of Blues Inc.
+> **Community project.** Not affiliated with or supported by Blues Inc. Notecard is a trademark of Blues Inc. Familiarity with the [Notecard](https://blues.com/blog/getting-started-with-the-notecard/) and its [API](https://dev.blues.io/api-reference/notecard-api/introduction/) is assumed.
 
-## Quick Start
-
-This section assumes you are familiar with the [Blues Notecard](https://blues.com/blog/getting-started-with-the-notecard/) and its [API](https://dev.blues.io/api-reference/notecard-api/introduction/).
+## Quick start
 
 ### Arduino
 
@@ -49,18 +47,7 @@ target_link_libraries(my_app PRIVATE note-cpp)
 
 ## Examples
 
-Once set up, the typed API is the same on every platform:
-
-<!-- snippet:fluent-api examples/arduino/readme_snippets/readme_snippets.ino:39-43 -->
-```cpp
-nc.hub.set()
-   .product("com.example.app")
-   .mode("periodic")
-   .outbound(60_mins)
-   .execute();
-```
-
-Or use direct assignment:
+The typed API is the same on every platform. Direct assignment is an alternative to the fluent style shown above:
 
 <!-- snippet:direct-assignment examples/arduino/readme_snippets/readme_snippets.ino:47-51 -->
 ```cpp
@@ -71,7 +58,7 @@ req.outbound = 60_mins;
 req.execute();
 ```
 
-Supports sending type-safe notes with body structs — define once, use for send, receive, and template registration:
+Body structs work for send, receive, and template registration:
 
 <!-- snippet:body-struct-def examples/arduino/readme_snippets/readme_snippets.ino:17-21 -->
 <!-- snippet:body-send examples/arduino/readme_snippets/readme_snippets.ino:55-59 -->
@@ -89,7 +76,7 @@ nc.note.add()
    .execute();
 ```
 
-Read responses with typed fields:
+Responses carry typed fields and a truthy operator:
 
 <!-- snippet:read-response examples/arduino/readme_snippets/readme_snippets.ino:74-80 -->
 ```cpp
@@ -102,12 +89,7 @@ if (rsp) {
 }
 ```
 
-See the [getting started example](examples/stdcpp/getting-started.cpp) for a complete walkthrough.
-
-> **Coming from note-arduino / note-c?** The
-> [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side
-> examples covering setup, hub.set, note.add, templates, error handling,
-> binary transfers, and more to help you migrate to note-cpp.
+Full walkthrough: [examples/stdcpp/getting-started.cpp](examples/stdcpp/getting-started.cpp). Migrating from note-arduino / note-c? The [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side examples.
 
 ## Streaming or tree
 
@@ -149,31 +131,18 @@ If you know the body shape ahead of time, `.into(struct)` is the better idiom in
 
 ### Picking a backend
 
-Tree mode requires a `JsonBackend`. Streaming wants none. The wire-up:
+Tree mode needs a `JsonBackend`. Streaming doesn't. The two defaults:
 
 ```cpp
 // Streaming — no backend, zero heap, smallest flash.
 note::Notecard nc(transport, note::Allocator{});
 
-// Tree, default — cJSON-backed; heap-allocated nodes, familiar from note-c.
+// Tree, default — cJSON-backed, heap-allocated nodes, familiar from note-c.
 note::backends::CjsonBackend backend;
-note::Notecard nc(backend, transport);
-
-// Tree, zero-heap — fixed-size jsmn token view over the response bytes.
-note::backends::StaticJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);
-
-// Tree, zero-heap with a real cJSON node graph — tree backed by an arena.
-note::MonotonicArena arena(arena_buf);
-note::backends::CjsonArenaBackend backend(arena);
-note::Notecard nc(backend, transport);
-
-// Tree, nlohmann/json — only worthwhile if the project already pulls it in.
-note::backends::NlohmannBackend backend;
 note::Notecard nc(backend, transport);
 ```
 
-See [docs/json-backend.md](docs/json-backend.md) for the full backend comparison and [docs/transport.md](docs/transport.md) for when streaming vs tree fits a deployment.
+Other tree backends — `StaticJsonBackend` (zero-heap, fixed jsmn token view), `CjsonArenaBackend` (cJSON over an arena), `NlohmannBackend` — sit behind the same `Notecard(backend, transport)` ctor; see [docs/json-backend.md](docs/json-backend.md) for the full comparison and [docs/transport.md](docs/transport.md) for when each fits.
 
 ## What's in the library
 
@@ -188,13 +157,9 @@ See [docs/json-backend.md](docs/json-backend.md) for the full backend comparison
 
 [C++ version compatibility matrix](docs/cpp-version-compatibility.md) — what's available on C++17, what unlocks on C++20/23.
 
-## How It Scales
+## How it scales
 
-`note-cpp` is built to meet the target where it is — from an
-ATmega328P (32 KB flash / 2 KB RAM) up to ESP32, Cortex-M, and
-desktop-class hosts — without different APIs or separate libraries.
-The same typed API surface compiles everywhere; you dial resource
-use by choosing how much of the stack to pull in.
+Same typed API from ATmega328P (32 KB flash / 2 KB RAM) up to ESP32, Cortex-M, and desktop hosts. You dial resource use by choosing how much of the stack to pull in.
 
 ### Target tiers
 
@@ -207,9 +172,7 @@ use by choosing how much of the stack to pull in.
 
 ### The full progression (Arduino Uno, 8-endpoint app)
 
-Each row peels off one layer of abstraction — showing how much flash
-(and RAM) you get back by dropping to a lower-level API. Pick the
-highest row that fits your target.
+Each row peels off one more layer; the typed API (rows 1–2) is what most users want, rows 3–5 trade DX for flash. All five styles share the same transport and can mix in one image — the compiler drops what you don't call.
 
 | # | Style | Flash | Δ flash vs typed | RAM |
 |---|---|---|---|---|
@@ -220,20 +183,9 @@ highest row that fits your target.
 | 4 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (RAM keys) | 11,110 B | **−13,964 B** | 696 B |
 | 5 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (`F()` flash keys) | **11,078 B** | **−13,996 B** | **680 B** |
 
-\*note-c's RAM excludes a ~371 B heap peak; every `note-cpp` row uses
-zero heap.
+\*note-c's RAM excludes a ~371 B heap peak; every `note-cpp` row uses zero heap.
 
-The typed API (rows 1 – 2) comes with the best developer experience and
-comfortably fits targets with ≥ 32 KB flash / ≥ 1 KB RAM. Rows 3 – 5 peel
-off progressively more of the library's defaults, trading DX for
-footprint. All five styles share the same transport, CRC handling, and
-segmented TX/RX — you can mix them in one firmware image, and the
-compiler drops what you don't use.
-
-See [`docs/platforms/arduino/guide.md#binary-size-comparison`](docs/platforms/arduino/guide.md#binary-size-comparison)
-for full code patterns per row, [`docs/feature-flags.md`](docs/feature-flags.md) for the
-complete list of compile-time switches, and [`tools/binary-size-comparison/`](tools/binary-size-comparison/)
-for the benchmark harness that produced these numbers.
+Per-row code patterns: [Arduino guide § Binary size comparison](docs/platforms/arduino/guide.md#binary-size-comparison). Compile-time switches: [docs/feature-flags.md](docs/feature-flags.md). Benchmark harness: [tools/binary-size-comparison/](tools/binary-size-comparison/).
 
 ## Documentation
 

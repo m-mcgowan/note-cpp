@@ -69,11 +69,11 @@ No `JsonBackend`. No `std::string`. No `operator new`. Requests stream directly 
 
 On AVR, this path produces a 28,760-byte binary (89% of 32 KB flash) with zero heap.
 
-### Buffered path (tests/compat)
+### Tree path (tests/compat)
 
 ```cpp
 note::backends::StaticJsonBackend<512, 64> backend;
-MockTransport transport;                            // ITransact (buffered)
+MockTransport transport;                            // ITransact (span-shaped)
 note::Notecard nc(backend, transport);
 note::Api api(nc);
 ```

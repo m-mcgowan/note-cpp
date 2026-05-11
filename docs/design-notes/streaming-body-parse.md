@@ -97,7 +97,7 @@ api.note.pop().into(data).execute();     // short for api.note.get().pop().into(
 
 For body-having endpoints, calling the factory without `.body()` is still
 valid — body events are simply discarded during parse. The response
-contains only the non-body fields. For the buffered parse path, `body()`
+contains only the non-body fields. For the tree parse path, `body()`
 returns a `JsonReader*` which can be used with `note::parse<T>()`.
 
 ```cpp
@@ -105,7 +105,7 @@ returns a `JsonReader*` which can be used with `note::parse<T>()`.
 auto result = api.note.read().execute();
 result.time;      // available
 
-// Buffered path: manual parse via JsonReader
+// Tree path: manual parse via JsonReader
 if (auto* b = result.body()) {
     auto data = note::parse<SensorData>(*b);
 }
@@ -397,7 +397,7 @@ write a custom serialization sink/source.
   or should `StructSink` work generically via the existing field
   iteration? The latter avoids changing the macro.
 
-- For the buffered `Notecard` path (JsonReader-based), `.body(ref)` can
+- For the tree-mode `Notecard` path (JsonReader-based), `.body(ref)` can
   fall back to `parse<T>(reader.get_object("body"))` — the existing
   mechanism. Only the streaming path benefits from `StructSink<T>`.
   Should both paths be unified, or is the fallback acceptable?

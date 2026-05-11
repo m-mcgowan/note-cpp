@@ -59,7 +59,7 @@ The library uses a layered architecture — each layer has one job, and the laye
 2. **`link::SerialFramer<Policy>` / `link::I2cFramer<Policy>`** — Notecard wire framing over a byte `Hal`. Handles segment pacing, chunking, drain/reset windows, and I2C MTU negotiation. Owns the `PacingPolicy` — wire-level timing fields (`segment_*`, `intra_timeout_ms`, `reset_*`); runtime-mutable or compile-time `[[no_unique_address]]`. These are themselves `Hal`s — the layer above sees a framing-aware byte conduit.
 3. **`Protocol`** — full Notecard wire protocol over a framing `Hal`: CRC validation, init handshake, line termination, sequence numbers. The only concrete protocol driver. No retry — retry lives at the session layer.
 4. **`ITransact`** — unified Notecard transaction interface. Three operations: `transact(req, span)` → `string_view`, `transact(req, sink)` → SAX events, and `send(req)` (fire-and-forget). Buffered vs streaming are *response presentations* (overloads), not sibling transports. `Protocol` implements `ITransact` natively. This is the contract a session class holds; the session itself is layer 6.
-5. **JSON layer** — turns response bytes into typed values. Tree mode (`JsonBackend` walks a parsed tree) or sink mode (SAX events fire into `Rsp::Sink`). See [docs/transport.md](../transport.md) for the user-facing mode-selection guide.
+5. **JSON layer** — turns response bytes into typed values. Tree mode (`JsonBackend` walks a parsed tree) or streaming mode (SAX events fire into `Rsp::Sink`). See [docs/transport.md](../transport.md) for the user-facing mode-selection guide.
 6. **Session — `Notecard` (or peer: `BareNotecard`, `StaticNotecard`)** — runtime object holding an `ITransact&`, an optional `JsonBackend&`, a `RetryPolicy`, and inter-transaction timing. Exposes `transact(json, buf)`, `send(json)`, `execute(req)`. Retry happens here, gated by per-request `Safety`. The three session classes are *peers* (alternative entry points), not stacked — pick one; each carries its own retry, so there's no retry-of-retry by construction.
 7. **`Api<Session>`** — generated typed surface (`api.note.read().into(struct).execute()`, `api.card.attn.arm().execute()`). Each builder's `.execute()` dispatches to the bound session's `execute(req)` — so typed and raw paths share one retry/transport pipeline.
 8. **`NotecardApi` (convenience bundle)** — single object bundling a default `Notecard` + `Api<>` so callers don't have to construct both. The 99% case.
@@ -88,7 +88,7 @@ flowchart TD
     NCI2C["<b>link::I2cFramer</b><br/>Notecard wire framing over I2C"]
     Proto["<b>Protocol</b><br/>wire protocol: CRC, init handshake,<br/>line termination, sequence numbers"]
     ITrans["<b>ITransact</b><br/>unified transaction interface:<br/>transact (span | sink), send"]
-    JsonLayer["<b>JSON layer</b><br/>response bytes → typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
+    JsonLayer["<b>JSON layer</b><br/>response bytes → typed values<br/>tree-mode (JsonBackend) or streaming-mode (Rsp::Sink)"]
     Session["<b>Session — Notecard</b><br/>peers: BareNotecard, StaticNotecard<br/>holds transport + backend + RetryPolicy<br/>execute / transact / send (retry happens here)"]
     Api["<b>Api&lt;Session&gt;</b> (generated typed surface)<br/><code>api.note.read().into(struct).execute()</code>"]
     Raw["<b>Raw JSON</b> on the session<br/><code>nc.transact(json, buf)</code>, <code>nc.send(json)</code>"]

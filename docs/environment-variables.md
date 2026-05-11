@@ -5,21 +5,18 @@ device can read to fetch runtime configuration without reflashing firmware.
 Values can be set at the device, fleet, or project level in Notehub, and
 a full precedence hierarchy resolves which value wins on any given read.
 
-For conceptual background — what env vars are, where they live, the
-hierarchy, reserved `_`-prefix system variables — read Blues' docs:
+For a conceptual background — what env vars are, where they live, the
+hierarchy, reserved `_`-prefix system variables - please see
 
-- [**Understanding Environment Variables**](https://dev.blues.io/guides-and-tutorials/notecard-guides/understanding-environment-variables/)
-  — Blues' developer guide.
-- [**env Requests API reference**](https://dev.blues.io/api-reference/notecard-api/env-requests/)
-  — wire-protocol reference for `env.get`, `env.set`, `env.default`,
-  `env.modified`, `env.template`.
+- [**Understanding Environment Variables**](https://dev.blues.io/guides-and-tutorials/notecard-guides/understanding-environment-variables/) — Blues developer guide.
+- [**env Requests API reference**](https://dev.blues.io/api-reference/notecard-api/env-requests/) — wire-protocol reference for `env.get`, `env.set`, `env.default`, `env.modified`, `env.template`.
 
 This page focuses on the **C++ patterns** for using env vars from
-`note-cpp`: the four modes of `env.get`, streaming body parse into a
-struct, the JSON-layer trade-offs between sink mode and tree mode,
-and the compile-time behaviour of the typed API.
+`note-cpp` and the various modes of `env.get`, streaming into a
+struct, the JSON-layer trade-offs between streaming mode and tree
+mode, and the compile-time behaviour of the typed API.
 
-Full runnable example: [`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp).
+See [`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp) for a full runnable example.
 
 ## 1. Read a single variable
 
@@ -170,7 +167,7 @@ See [json-builder.md](json-builder.md) for the full `JsonBuf` /
 `.into(T&)` is part of the high-level API contract — pass a struct
 describing the body fields you care about, and the response populates
 it. The mechanism doesn't depend on the JSON layer; both tree mode
-(JsonBackend supplied) and sink mode (no backend) run the same
+(JsonBackend supplied) and streaming mode (no backend) run the same
 body-event dispatch. The example
 [`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp)
 uses one of each to demonstrate parity, and
@@ -178,9 +175,9 @@ uses one of each to demonstrate parity, and
 
 `response.body()` (returning a `JsonReader*` to walk dynamic shapes)
 remains a tree-mode-only facility because it needs a `JsonBackend` to
-materialise a tree. In sink mode, `body()` returns `nullptr` — body
-fields are dispatched as events at parse time, so `.into(T&)` is the
-way to capture them.
+materialise a tree. In streaming mode, `body()` returns `nullptr` —
+body fields are dispatched as events at parse time, so `.into(T&)` is
+the way to capture them.
 
 For dynamic body shapes (keys not known at compile time) — or any
 case where you just want the raw response bytes — `nc.transact(json,
@@ -203,7 +200,7 @@ if (rsp) {
 A typed `body()` returning a `JsonReader*` is a separate facility —
 it's populated only by the tree-mode `Notecard(JsonBackend&,
 ITransact&)` ctor, which needs a `JsonBackend` (cJSON, nlohmann/json,
-or `BufferJsonBackend` for zero-heap). Tree mode is gated by
+or `StaticJsonBackend` for zero-heap). Tree mode is gated by
 `NOTE_NO_BUFFERED`, which `NOTE_MINIMAL=1` enables by default — so on
 AVR-class builds it is compiled out entirely and `.into(T&)` (or the
 `transact` + `scan` pattern above) is the only option.

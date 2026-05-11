@@ -30,11 +30,7 @@ those four pairs goes red.
 
 ## JSON layer — streaming or tree
 
-The choice between "tree" and "streaming" isn't really about *transport*
-— those terms describe the **JSON layer**: the strategy `Notecard` runs
-internally to turn response bytes into typed values (when using the
-typed API), or for generating or parsing the JSON data directly in the
-application.
+The streaming-vs-tree choice is a JSON-layer concern, not a transport one: it controls how `Notecard` turns response bytes into typed values.
 
 | Mode | How it parses | Enables | Memory profile |
 |------|---|---|---|
@@ -86,19 +82,9 @@ Pick **streaming mode** when:
 | Requires `JsonBackend` | yes | no |
 | Zero-heap capable | depends on backend | yes |
 
-Define `NOTE_NO_BUFFERED` to remove tree mode entirely (~2-4 KB flash
-savings). Set automatically by `NOTE_MINIMAL`.
+Define `NOTE_NO_BUFFERED` to remove tree mode entirely (~2-4 KB flash savings). Set automatically by `NOTE_MINIMAL`.
 
-### JSON backend selection (tree mode only)
-
-| Backend | Heap | Best for |
-|---------|:----:|----------|
-| `CjsonBackend` | yes | Migration from note-c |
-| `NlohmannBackend` | yes | Projects already using nlohmann/json |
-| `StaticJsonBackend<N, M>` | no | Fixed-size buffer, no heap |
-| `CjsonArenaBackend` | no (arena) | Tree debuggability + bounded memory |
-
-See [JSON backend](json-backend.md) for configuration details.
+For the tree-mode backend matrix (`CjsonBackend`, `StaticJsonBackend`, `CjsonArenaBackend`, `NlohmannBackend`) — when each fits and how to wire it up — see [json-backend.md](json-backend.md).
 
 ## Transport guides
 

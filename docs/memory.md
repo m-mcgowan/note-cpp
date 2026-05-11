@@ -150,41 +150,11 @@ auto r = api.card.version().execute();   // 0 heap allocs, strings in arena
 // r.version valid until arena.reset()
 ```
 
-## Advanced: binary transfer buffers
+## Beyond this page
 
-Binary transfer (`.data()` / `.into()`) follows the same caller-owns-memory model as the rest of the library. COBS encoding streams from the source buffer directly to the transport; decoding writes into the destination buffer in place. No scratch buffer required.
+Binary transfer follows the same caller-owns-buffer model — `.data()` / `.into()` on `card.binary.{put,get}` take your buffer, and COBS encoding/decoding happens in place with no scratch allocation. Full treatment in [binary-transfer.md](binary-transfer.md), including the `set_cobs_buffer()` hook for stack-constrained targets.
 
-```cpp
-uint8_t buf[1024];
-auto rsp = api.card.binary.get(buf, sizeof(buf)).execute();
-// rsp.buffer is a span into buf, sized to the decoded payload length.
-```
-
-For stack-constrained targets, register a COBS working buffer once at startup so every binary call uses it:
-
-```cpp
-static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
-nc.set_cobs_buffer(cobs_buf, sizeof(cobs_buf));
-```
-
-Use `note::cobs_encoded_size(n)` to check capacity at compile time:
-
-```cpp
-constexpr size_t raw_len = 1024;
-static_assert(note::cobs_encoded_size(raw_len) <= MAX_NOTECARD_BINARY);
-```
-
-## Advanced: streaming SAX parser internals
-
-The streaming path parses JSON incrementally via `sax_parse_streaming()`. The parser takes a caller-provided buffer and partitions it into read, key-scratch, and value-scratch regions:
-
-```cpp
-char buf[384];
-note::SaxStreamBuf sbuf(buf);
-auto err = note::sax_parse_streaming(read_fn, timeout_ms, sbuf, sink);
-```
-
-Default overloads use 384 bytes on the stack. All memory is caller-provided or stack — no heap. See [streaming-transport.md](internal/streaming-transport.md) for the full design.
+The streaming SAX parser's internals — `sax_parse_streaming()`, the 384-byte default `SaxStreamBuf`, the read/key/value scratch partitioning — are documented in [internal/streaming-transport.md](internal/streaming-transport.md).
 
 ## Allocation proof
 
@@ -201,4 +171,3 @@ The integration tests override global `operator new`/`operator delete` to count 
 - [transport.md](transport.md#streaming-vs-tree) — which path to pick
 - [json-backend.md](json-backend.md) — backend selection and customization
 - [binary-transfer.md](binary-transfer.md) — binary transfer memory model
-- `include/note/arena.hpp`, `include/note/allocator.hpp`, `include/note/string_pool.hpp`, `include/note/transport_hal.hpp`, `include/note/protocol.hpp`, `include/note/link/cobs.hpp`

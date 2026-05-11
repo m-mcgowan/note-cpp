@@ -1,39 +1,8 @@
 # JSON Backend
 
-The Notecard uses JSON as its wire format. From your application's
-perspective this is an implementation detail — you work with
-meaningfully typed request and response structs, and `note-cpp`
-handles the JSON details internally.
+A `JsonBackend` selects tree mode: every response is parsed into a `JsonReader` you can walk via `response.body()`. Without a `JsonBackend` the Notecard runs in streaming mode — SAX events fire directly into the response sink, and `.into(T&)` is how you capture body data. See [transport.md § JSON layer](transport.md#json-layer-streaming-or-tree) for the full mode comparison; both modes give you the same typed API surface and the same `nc.transact()` raw path.
 
-A `JsonBackend` selects the **JSON layer** strategy: it tells the
-Notecard to use *tree mode* for response parsing — every response is
-parsed into a `JsonReader` tree that you can walk via
-`response.body()` after the call returns. Without a `JsonBackend` the
-Notecard runs in *streaming mode* instead: SAX events fire directly into
-the response sink, no intermediate tree, and `.into(T&)` is the way
-to capture body data.
-
-> See [Transport / JSON layer](transport.md#json-layer-streaming-or-tree)
-> for the full mode comparison. Both modes give you the same typed
-> API surface (`api.note.read().into(struct).execute()`,
-> `nc.transact(json, buf)`, etc.) — the difference is whether
-> `response.body()` returns a walkable tree or `nullptr`.
-
-**Short answer:** you almost never need to choose a backend.
-`CjsonBackend` (cJSON tree, heap-allocated) works everywhere and is
-the right default. Only read further if one of these applies:
-
-- You want streaming mode (no JsonBackend) for the lowest-memory profile.
-- You're memory-constrained and need to avoid heap allocation during
-  serialisation but still want tree mode (`StaticJsonBackend` /
-  `CjsonArenaBackend`).
-- You already have a JSON library linked (cJSON, nlohmann-json) and
-  want to reuse it instead of pulling in a second one.
-- You're debugging wire traffic and want a tree-based backend because
-  it's easier to inspect in a debugger.
-
-If none of those apply, skip to [Configuration](#configuration) and
-move on.
+**Short answer:** you almost never need to choose a backend. `CjsonBackend` (cJSON tree, heap-allocated) works everywhere and is the right default. Read on only if you're on a memory-constrained target, debugging wire traffic and want a tree to inspect, or already pulling in cJSON or nlohmann.
 
 ## Which backend should I use?
 

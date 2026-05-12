@@ -70,7 +70,7 @@ Build: `cmake -S . -B build && cmake --build build`. The runnable companion to t
 
 ### ESP-IDF
 
-ESP-IDF uses the same setup as the [stdcpp / CMake host](#stdcpp-cmake-host) section above — add `note-cpp` as a CMake subdirectory and link it. ESP-IDF already bundles cJSON, so `CjsonBackend` reuses it. For the C++ standard, set `target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)` in your component's `CMakeLists.txt` (C++17 minimum, C++20 unlocks designated initializers and `consteval` validation — see [using-the-api.md § Setting the C++ standard](using-the-api.md#setting-the-c-standard)).
+ESP-IDF uses the same setup as the [stdcpp / CMake host](#stdcpp-cmake-host) section above — add `note-cpp` as a CMake subdirectory and link it. ESP-IDF already bundles cJSON, so `CjsonBackend` reuses it. For the C++ standard, set `target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)` in your component's `CMakeLists.txt` (C++17 minimum, C++20 unlocks designated initializers and `consteval` validation — see [cpp-version-compatibility.md § Setting the standard in your build](cpp-version-compatibility.md#setting-the-standard-in-your-build)).
 
 The HAL implementation for ESP-IDF UART/I2C drivers is yours to wire (the same `note::Hal` interface used by the Arduino bindings).
 

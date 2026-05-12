@@ -162,28 +162,9 @@ Zero runtime cost — the string is measured and emitted at compile time.
 See [json-builder.md](json-builder.md) for the full `JsonBuf` /
 `json<>` API including the runtime-values variant.
 
-## `.into()` works in every JSON-layer mode
+## Dynamic body keys (`env.get` with all variables)
 
-`.into(T&)` is part of the high-level API contract — pass a struct
-describing the body fields you care about, and the response populates
-it. The mechanism doesn't depend on the JSON layer; both tree mode
-(JsonBackend supplied) and streaming mode (no backend) run the same
-body-event dispatch. The example
-[`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp)
-uses one of each to demonstrate parity, and
-`tests/test_transport_agnostic_api.cpp` pins the contract in CI.
-
-`response.body()` (returning a `JsonReader*` to walk dynamic shapes)
-remains a tree-mode-only facility because it needs a `JsonBackend` to
-materialise a tree. In streaming mode, `body()` returns `nullptr` —
-body fields are dispatched as events at parse time, so `.into(T&)` is
-the way to capture them.
-
-For dynamic body shapes (keys not known at compile time) — or any
-case where you just want the raw response bytes — `nc.transact(json,
-buf)` works in both modes. Pair it with `note::scan::*` from
-[json_scan.hpp](../include/note/json_scan.hpp) to walk the response
-without pulling in a `JsonBackend`:
+`.into(struct)` and tree-mode `r.body()` cover most response shapes — see [working-with-responses.md § Body responses](working-with-responses.md#body-responses--nested-objects) for the canonical treatment. For `env.get` with no `name` argument the body keys aren't known at compile time, so `.into(struct)` doesn't apply. Either walk a tree-mode `JsonReader` by key, or — for the streaming-mode / no-backend path — use `nc.transact()` plus `note::scan::*`:
 
 ```cpp
 char buf[256];
@@ -197,13 +178,7 @@ if (rsp) {
 }
 ```
 
-A typed `body()` returning a `JsonReader*` is a separate facility —
-it's populated only by the tree-mode `Notecard(JsonBackend&,
-ITransact&)` ctor, which needs a `JsonBackend` (cJSON, nlohmann/json,
-or `StaticJsonBackend` for zero-heap). Tree mode is gated by
-`NOTE_NO_BUFFERED`, which `NOTE_MINIMAL=1` enables by default — so on
-AVR-class builds it is compiled out entirely and `.into(T&)` (or the
-`transact` + `scan` pattern above) is the only option.
+On AVR-class builds (`NOTE_MINIMAL` sets `NOTE_NO_BUFFERED=1`), tree mode is compiled out — the `transact` + `scan` pattern above is the only option for dynamic keys.
 
 ## C++ level
 

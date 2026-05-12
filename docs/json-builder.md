@@ -151,4 +151,4 @@ At compile time, overflow causes a compile error via `static_assert`.
 - **Low-level transport** where you want zero-allocation JSON
 - **Embedded targets** with no heap, although the out of the box experience makes this unnecessary.
 
-For most application code, use the [typed API](../README.md#generated-api-types) instead — it handles JSON building internally and gives you type safety on top.
+For most application code, use the [typed API](using-the-api.md) instead — it handles JSON building internally and gives you type safety on top.

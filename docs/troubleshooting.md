@@ -65,7 +65,7 @@ void setup() {
 }
 ```
 
-See the [Arduino guide § Setup](platforms/arduino/guide.md#setup). The pioarduino platform also defaults to `gnu++11`; if you want C++20 features, [`using-the-api.md` § Setting the C++ standard](using-the-api.md#setting-the-c-standard) covers the build flags.
+See the [Arduino guide § Setup](platforms/arduino/guide.md#setup). The pioarduino platform also defaults to `gnu++11`; if you want C++20 features, [`cpp-version-compatibility.md` § Setting the standard in your build](cpp-version-compatibility.md#setting-the-standard-in-your-build) covers the build flags.
 
 ## I'm seeing `send_failed[timeout]` after it was working
 

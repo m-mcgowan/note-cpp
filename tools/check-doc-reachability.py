@@ -25,9 +25,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # Entrypoints: docs reachable from these are considered "reached".
+#   README.md         — user-facing entry
+#   docs/README.md    — canonical user-facing index
+#   CONTRIBUTING.md   — contributor entry; links to internal/ docs
 ENTRYPOINTS = [
     ROOT / "README.md",
     ROOT / "docs" / "README.md",
+    ROOT / "CONTRIBUTING.md",
 ]
 
 # Default-excluded paths (working artifacts, generated sites, contributor docs).

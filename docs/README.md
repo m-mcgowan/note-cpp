@@ -68,6 +68,8 @@ Internal documentation for contributors working on `note-cpp` itself:
 - **[Documentation generation](doxygen/documentation.md)** — Doxygen site
 - **[Retry design](internal/retry-design.md)** — transport retry and safety levels
 - **[Streaming transport](internal/streaming-transport.md)** — SAX pipeline internals
+- **[Strict body-field validation](internal/strict-body-fields.md)** — `NOTE_STRICT_BODY_FIELDS` mechanism, design and validation paths
+- **[Custom field transforms](internal/custom-field-transforms.md)** — design notes for body-struct conversion across the note-cpp / embedded-config-cpp / note-cpp-app family
 - **[Release checklist](internal/release-checklist.md)**
 
 ## Examples

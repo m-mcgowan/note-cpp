@@ -32,6 +32,11 @@ if [ -f "$ARENA_DOC" ]; then
         "$ROOT/notecard-api.openapi.json" --check "$ARENA_DOC"
 fi
 
+# Verify every user-facing doc is reachable from README.md
+echo "=== Doc reachability ==="
+python3 "$ROOT/tools/check-doc-reachability.py" --strict
+echo "  OK"
+
 # Verify internal markdown links
 echo "=== Markdown link check ==="
 LINK_ERRORS=0

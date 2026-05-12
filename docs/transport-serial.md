@@ -1,4 +1,4 @@
-# Serial Transport
+# Serial transport
 
 **Header:** `note/link/serial.hpp`
 **Ported from:** note-c `n_serial.c` + `n_request.c`

@@ -161,7 +161,7 @@ struct Readings {
 };
 ```
 
-### Custom Body Parsing via Lambda Builder
+### Custom body parsing via lambda builder
 
 When the body fields do not map cleanly to a struct — for example, when
 wire names differ from your variable names, or the body shape is dynamic —

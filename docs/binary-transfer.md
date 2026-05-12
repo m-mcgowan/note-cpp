@@ -1,4 +1,4 @@
-# Binary Transfer
+# Binary transfer
 
 The Notecard supports transferring raw binary data between the host MCU and the
 Notecard's binary store via a COBS-encoded channel. `note-cpp` handles one segment

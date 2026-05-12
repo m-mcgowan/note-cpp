@@ -1,8 +1,8 @@
-# Memory Management with Arenas
+# Memory management with arenas
 
 `note-cpp` uses a `MonotonicArena` for dynamic memory during response parsing — string fields are interned into the arena rather than heap-allocated. This gives you full control over memory usage with zero heap allocations.
 
-## Arena Sizing
+## Arena sizing
 
 Each generated `Response` struct carries a `static constexpr max_arena_size` — the minimum arena buffer needed to hold all string data from that response type. Use this to statically size your arena:
 
@@ -40,7 +40,7 @@ function rounds `n` up to the next multiple of 16:
 arena_cost(n) = (n + 15) & ~15    // 0 → 0, 1..16 → 16, 17..32 → 32, ...
 ```
 
-## String Length Assumptions
+## String length assumptions
 
 Default maximum lengths by wire name, used when `x-max-length` is not set in the
 spec. Fields not listed use the default of **48 bytes**.

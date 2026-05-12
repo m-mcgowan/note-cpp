@@ -1,4 +1,4 @@
-# Body Values and Note Templates
+# Body values and Note templates
 
 Notecard Notes carry a JSON body — sensor readings, configuration, user
 data. `note-cpp` provides several ways to set the body, ranked from most

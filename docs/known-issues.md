@@ -1,4 +1,4 @@
-# Known Issues
+# Known issues
 
 ## Apple Clang: no compile-time validation of string literal assignment
 

@@ -1,9 +1,8 @@
 # ATTN Pin
 
-The `card.attn` API controls the Notecard's ATTN pin, which can wake a sleeping
-host MCUor interrupt an awake one when events occur (file changes, connectivity, motion, etc.).
+The `card.attn` API controls the Notecard's ATTN pin, which can wake a sleeping host MCU or interrupt an awake one when events occur (file changes, connectivity, motion, etc.).
 
-## Quick Reference
+## Quick reference
 
 ```cpp
 #include <note/api.hpp>
@@ -23,7 +22,7 @@ nc.card.attn().disarm().execute();
 auto rsp = nc.card.attn().query().execute();
 ```
 
-## Operation Types
+## Operation types
 
 Each `card.attn` mode has a dedicated operation type — see [Focused operations](../../using-the-api.md#focused-operations-on-multi-purpose-endpoints) for the broader pattern. The factory method builds the
 correct wire format automatically.
@@ -40,7 +39,7 @@ correct wire format automatically.
 | `.off()` | (off=true) | Disable all ATTN processing |
 | `.on()` | (on=true) | Re-enable ATTN processing after `.off()` |
 
-## Trigger Flags
+## Trigger flags
 
 Trigger flags control which events fire the ATTN pin. Use named methods or
 flag constants:
@@ -99,7 +98,7 @@ void on_attn_fired() {
 }
 ```
 
-## Watching Specific Files
+## Watching specific files
 
 The `files` trigger fires when any of the named Notefiles are modified.
 Specify which files to watch:
@@ -112,7 +111,7 @@ nc.card.attn().arm(note::attn::files)
     .execute();
 ```
 
-## Sleep with Payload
+## Sleep with payload
 
 The host MCU can store a payload in Notecard memory before sleeping, then
 retrieve it after waking:
@@ -133,7 +132,7 @@ if (rsp) {
 }
 ```
 
-## Disable ATTN Processing
+## Disable ATTN processing
 
 To completely stop ATTN monitoring (not just clear triggers):
 
@@ -145,7 +144,7 @@ nc.card.attn().on().execute();    // re-enable
 Unlike `disarm()` which clears triggers but leaves processing enabled,
 `off()` stops all ATTN processing. The setting is retained across restarts.
 
-## Raw Request Escape Hatch
+## Raw request escape hatch
 
 For modes or combinations not covered by the operation types, use the base
 `Request` type with the mode string directly:

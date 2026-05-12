@@ -1,4 +1,4 @@
-# Feature Flags
+# Feature flags
 
 `note-cpp` uses compile-time feature flags to customize the library for your platform. Flags fall into two categories:
 
@@ -19,7 +19,7 @@ line without a value (e.g. `-DNOTE_MINIMAL`), most compilers default to
 `1`, so command-line usage is fine. The explicit `=1`/`=0` convention
 matters when defining flags in source code.
 
-## Flash Size Reduction with `NOTE_MINIMAL`
+## Flash-size reduction with `NOTE_MINIMAL`
 
 For constrained platforms (AVR, Cortex-M0), define `NOTE_MINIMAL` to
 set all size-saving defaults at once. This trades some features (CRC, retry, tree path, ad-hoc fields) for a significantly smaller binary:

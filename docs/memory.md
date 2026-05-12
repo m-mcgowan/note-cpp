@@ -1,4 +1,4 @@
-# Memory Management
+# Memory management
 
 `note-cpp` can run with **zero heap allocations** in steady state — important on embedded targets without a heap, or where you just don't want to pay for `malloc` on every request.
 

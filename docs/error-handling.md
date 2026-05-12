@@ -1,4 +1,4 @@
-# Error Handling
+# Error handling
 
 Every `note-cpp` operation returns a result type that is truthy on success. On failure, `error()` gives you a structured `ErrorInfo` with a phase-based error code, an optional diagnostic cause, and a human-readable message.
 

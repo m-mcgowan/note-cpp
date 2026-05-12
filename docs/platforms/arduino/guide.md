@@ -1,4 +1,4 @@
-# Arduino Guide
+# Arduino guide
 
 ## Setup
 
@@ -79,7 +79,7 @@ if (r) {
 > is preferred for typed output; use `printf` for format strings, or
 > `.c_str()` / `.data()` when a `const char*` is needed.
 
-## Error Handling
+## Error handling
 
 ```cpp
 auto r = nc.hub.set().product("com.example").execute();
@@ -101,7 +101,7 @@ Serial.println(err);
 
 See [Error Handling](../../error-handling.md) for the full reference.
 
-## Duration Literals
+## Duration literals
 
 Time literals are available without `using` declarations (imported
 by `note.hpp`):
@@ -120,7 +120,7 @@ nc.card.attn().arm()
 
 Available: `_s` / `_seconds`, `_mins` / `_minutes`, `_hours`, `_days`.
 
-## ATTN Pin (Interrupts)
+## ATTN pin (interrupts)
 
 ```cpp
 nc.card.attn().arm()

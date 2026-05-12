@@ -3,7 +3,7 @@
 note-cpp provides structured debug observability: wire data, timing,
 memory, and transport events. Zero overhead when unused.
 
-## Quick Start
+## Quick start
 
 ```cpp
 // Arduino — one line to see all wire traffic
@@ -16,7 +16,7 @@ nc.setDebugOutput(Serial);
 // << {"version":"notecard-7.2.1","device":"dev:123"}
 ```
 
-## Three Modes
+## Three modes
 
 ### 1. Default — runtime debug available (recommended)
 
@@ -53,7 +53,7 @@ NoDebug to save flash. To enable debug on AVR for development:
 build_flags = -DNOTE_MINIMAL -DNOTE_DEBUG_ENABLED=1
 ```
 
-## Debug Categories
+## Debug categories
 
 Select what you want to see with category flags:
 
@@ -75,7 +75,7 @@ nc.setDebugOutput(Serial, note::DebugAll);
 | `DebugMemory` | `[M]` | Allocations and frees (pointer + size) |
 | `DebugTransport` | `[!]` | Retries, CRC mismatches, timeouts, send failures |
 
-## Custom Listeners
+## Custom listeners
 
 For structured debug handling (logging to SD card, sending to a
 dashboard, etc.), create a `DebugListener`:
@@ -98,7 +98,7 @@ d.on_timing = [](note::TimingEvent ev, note::string_view req, void* ctx) {
 nc.set_debug(d);
 ```
 
-### Timing Events
+### Timing events
 
 Timing events are markers — the listener captures its own timestamp
 (e.g. `millis()`) on receipt. This decouples the library from any
@@ -128,7 +128,7 @@ On retry:
 RetryBegin → ResetBegin → ResetEnd → TransmitBegin → ...
 ```
 
-### Transport Events
+### Transport events
 
 Structured events for protocol-level diagnostics:
 
@@ -140,7 +140,7 @@ Structured events for protocol-level diagnostics:
 | `Timeout` | attempt number | Response read timed out |
 | `SendFailed` | attempt number | HAL transmit failed |
 
-### Memory Events
+### Memory events
 
 Track allocator activity (useful for heap profiling):
 
@@ -153,7 +153,7 @@ d.on_free = [](void* ptr, size_t size, void*) {
 };
 ```
 
-## Zero Overhead
+## Zero overhead
 
 When no debug listener is registered (the default), all debug call
 sites compile to a null-pointer check that the optimizer eliminates:

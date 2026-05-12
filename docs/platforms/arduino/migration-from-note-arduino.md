@@ -325,10 +325,7 @@ req.execute();
 
 ### Why three ways?
 
-They're different tools for different shapes of code. Fluent chains are concise when configuring and executing in
-one statement. Direct assignment is natural when fields come from variables
-or conditional logic. Designated initializers read like data, not procedure
-— brief and clear when the values are known at the call site.
+Different shapes of code want different patterns. The intros above (fluent for one-shot configure-and-execute, direct assignment for conditional logic, designated initializers for declarative call sites) cover the common picks. Full treatment with all five styles (positional shorthand, args struct, direct struct construction) is in [using-the-api.md § Calling styles](../../using-the-api.md#calling-styles-within-the-typed-layer).
 
 ## Sending sensor data (note.add)
 
@@ -1351,44 +1348,14 @@ nc.card.binary.put()
 
 ## Firmware version and SKU safety
 
-note-c has no awareness of which Notecard firmware version you're targeting
-or which hardware variant you're running on. If you use a field that was
-added in firmware 6.2.3 on a device running 5.0, the Notecard silently
-ignores it. If you call `card.wifi` on a cellular Notecard, you get a
-runtime error.
+note-c has no awareness of which Notecard firmware version you're targeting or which hardware variant you're running on. If you use a field that was added in firmware 6.2.3 on a device running 5.0, the Notecard silently ignores it. If you call `card.wifi` on a cellular Notecard, you get a runtime error.
 
 note-cpp catches both at compile time:
 
-**Firmware version gating** — fields added in newer firmware versions are
-marked with `[[deprecated]]` when you target an older version. Define
-`NOTE_API_VERSION` to your minimum supported firmware, and the compiler
-warns you about fields that won't work:
+- **Firmware version gating** — define `NOTE_API_VERSION` to your minimum supported firmware; fields newer than that produce `[[deprecated]]` warnings (or compile errors with `NOTE_API_STRICT`).
+- **Hardware targeting (C++20)** — constrain your `Api` to a hardware variant (`Hardware::WiFi`, `Hardware::Cell`, …); incompatible endpoints warn or compile-error.
 
-```cpp
-#define NOTE_API_VERSION NOTE_VERSION(5, 0, 0)
-#include <note/api.hpp>
-
-nc.hub.set()
-    .product("com.example.app")
-    .details("...")     // warning: requires firmware >= 6.2.3
-    .execute();
-```
-
-With `NOTE_API_STRICT` defined, the warning becomes a compile error.
-
-**Hardware targeting** (C++20) — constrain your `Api` to a specific Notecard
-variant. Endpoints that don't support that hardware produce warnings (or
-errors in strict mode):
-
-```cpp
-Api<Hardware::WiFi> nc(notecard);
-nc.card.wifi();   // OK — WiFi endpoint on WiFi hardware
-nc.card.sleep();  // OK — universal endpoint
-// nc.card.lora(); // warning: not available on WiFi
-```
-
-Neither of these has an equivalent in note-c — there, incompatible requests
-compile silently and fail at runtime on the device.
+Build-flag snippets and the C++20 `target<>` / `min_firmware<>` surface: [feature-flags.md § API version gating](../../feature-flags.md#api-version-gating-and-strict-mode) and [§ Target filtering](../../feature-flags.md#target-filtering-c20). Neither has a note-c equivalent — incompatible requests compile silently and fail at runtime on the device.
 
 ## What to expect
 
@@ -1461,25 +1428,9 @@ both libraries have similar per-request heap usage.
 
 ### AVR support
 
-note-cpp runs on AVR (ATmega328P) with the streaming transport path.
-Uses `StaticNotecard` for zero-vtable dispatch and `avr-libstdcpp` for
-standard library headers. See `tools/binary-size-comparison/` for
-the full PlatformIO configuration. Key build flags:
+note-cpp runs on AVR (ATmega328P) via the streaming transport path with `StaticNotecard` for zero-vtable dispatch. Build flags, PlatformIO config, and the binary-size matrix across all four API styles live in [avr-guide.md](avr-guide.md). The umbrella `NOTE_MINIMAL` flag bundles the AVR-relevant defaults; individual flags are documented in [feature-flags.md](../../feature-flags.md).
 
-- `NOTE_NO_STD_STRING` — excludes `std::string`/`std::functional` paths
-- `NOTE_NO_MD5`, `NOTE_NO_CRC` — excludes lookup tables
-- `NOTE_EXTRAS=0` — disables dynamic fields (saves ~168 bytes per request)
-- `NOTE_SHORT_ERRORS=1` — collapses error messages to save flash
-
-### Controlling binary size
-
-Features are controlled structurally (template parameters, linker
-`--gc-sections`) rather than a single preprocessor flag. For the
-lowest memory path, `sax_parse_streaming()` parses responses
-incrementally with only a small scratch buffer (`SaxStreamBuf`,
-default 384 bytes on the stack).
-
-See [Known Issues](../../known-issues.md) for details on the Clang limitation.
+See [Known issues](../../known-issues.md) for details on the Apple Clang limitation.
 
 ## Gradual migration
 
@@ -1521,85 +1472,9 @@ transfers, body structs) when you're comfortable.
 
 ### Running note-cpp alongside note-c
 
-For large projects where you can't swap the library all at once, you can
-run note-cpp on top of note-c's existing transport. Implement
-`ITransact` and delegate each request to
-`NoteRequestResponseJSON()`:
+For projects too large to swap all at once, note-cpp can sit on top of note-c's existing transport via a bridge `ITransact` that delegates each request to `NoteRequestResponseJSON()`. Both libraries share the same Notecard connection — existing `NoteNewRequest` / `J*` code keeps working while you migrate request sites one at a time, then cut the bridge over to a native note-cpp transport when you're done.
 
-<!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp:23-23 -->
-```cpp
-extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
-```
-
-<!-- snippet:bridge-transport examples/stdcpp/note-c-bridge.cpp:34-78 -->
-```cpp
-/// Delegates every request to note-c's NoteRequestResponseJSON so note-c
-/// owns the serial/I2C bus and note-cpp sits on top with its typed API.
-class NoteCTransport : public note::ITransact {
-    std::string rsp_buf_;
-public:
-    using note::ITransact::transact;
-    using note::ITransact::send;
-
-    note::Result<note::string_view> transact(note::string_view req,
-                                             note::span<char> buf, uint32_t) override {
-        std::string req_str(req.data(), req.size());
-        char* rsp = NoteRequestResponseJSON(req_str.c_str());
-        if (rsp == nullptr) {
-            return note::make_error(note::Error::ResponseLost, "no response");
-        }
-        rsp_buf_ = rsp;
-        std::free(rsp);
-        if (rsp_buf_.size() >= buf.size())
-            return note::make_error(note::Error::Overflow, NOTE_ERR("response exceeds buffer"));
-        std::memcpy(buf.data(), rsp_buf_.data(), rsp_buf_.size());
-        return note::string_view(buf.data(), rsp_buf_.size());
-    }
-    note::Result<void> send(note::string_view req) override {
-        std::string req_str(req.data(), req.size());
-        char* rsp = NoteRequestResponseJSON(req_str.c_str());
-        if (rsp != nullptr) std::free(rsp);
-        return {};
-    }
-    void reset() override {}
-    void abort() override {}
-
-    // Minimal Hal stub — note-c owns the actual hardware, so the bridge's
-    // Hal is purely a placeholder so the inherited Notecard timing path
-    // has something valid to call. Returning 0/no-op is safe because all
-    // wire bytes go through NoteRequestResponseJSON above.
-    struct NoopHal : note::Hal {
-        bool transmit(const uint8_t*, size_t) override { return true; }
-        note::Result<size_t> read(uint8_t*, size_t, uint32_t) override { return note::Result<size_t>{size_t{0}}; }
-        bool reset() override { return true; }
-        bool write_line_terminator() override { return true; }
-        uint32_t millis() override { return 0; }
-        void delay(uint32_t) override {}
-    } hal_;
-    note::Hal& hal() override { return hal_; }
-};
-```
-
-Wire it into a `Notecard` + `Api`:
-
-<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp:82-91 -->
-```cpp
-int main() {
-    MockBackend backend;
-    NoteCTransport transport;
-    note::Notecard nc(backend, transport);
-    note::Api api(nc);
-
-    // Typed API calls route through note-c's existing transport.
-    api.hub.set().product("com.example.app").mode("periodic").execute();
-    return 0;
-}
-```
-
-Both libraries share a single Notecard connection — no hardware
-conflicts. Existing `NoteNewRequest` / `J*` code continues to work
-unchanged. The complete working example is at
-[`examples/stdcpp/note-c-bridge.cpp`](examples/stdcpp/note-c-bridge.cpp).
+The full bridge transport implementation (NoteCTransport class, no-op Hal stub, wiring example, and the cut-over migration arc) lives in [migration-from-note-c.md § Bridge mode](../host/migration-from-note-c.md#bridge-mode-incremental-migration) — that doc is the canonical home for the pattern since the bridge is host-side regardless of which library you're migrating *from*. Runnable example: [`examples/stdcpp/note-c-bridge.cpp`](../../../examples/stdcpp/note-c-bridge.cpp).
 
 ## Migration checklist
 

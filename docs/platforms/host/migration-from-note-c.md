@@ -42,7 +42,7 @@ note::Api api(nc);
 api.hub.set().product("com.example.app").mode("periodic").execute();
 ```
 
-There are no global function pointers — every Notecard owns its transport and backend. See [`docs/getting-started.md` § stdcpp / CMake host](../../getting-started.md#stdcpp--cmake-host) for the canonical setup walkthrough.
+There are no global function pointers — every Notecard owns its transport and backend. See [`docs/getting-started.md` § stdcpp / CMake host](../../getting-started.md#stdcpp-cmake-host) for the canonical setup walkthrough.
 
 > **POSIX shortcut.** On Linux/macOS/BSD, `#include <note/posix.hpp>` collapses the four-object setup to `note::posix::Notecard nc; nc.begin("/dev/ttyUSB0", 9600);` — see [`examples/stdcpp/posix-hardware.cpp`](../../../examples/stdcpp/posix-hardware.cpp) for a runnable example that talks to real hardware over USB-serial or I2C.
 
@@ -246,7 +246,7 @@ api.card.attn().arm()
 </td></tr>
 </table>
 
-`Arm`, `Rearm`, `Disarm`, `Sleep`, `Watchdog`, `Off`, `On` are distinct types — each exposes only the fields that apply to that operation, so you can't accidentally set `payload` on a disarm or `start` on an arm. See [the Arduino guide's ATTN sections](../arduino/migration-from-note-arduino.md#attn-pin--arming-for-interrupts) for sleep/retrieve patterns and array-field iteration; the ATTN API surface is identical on host.
+`Arm`, `Rearm`, `Disarm`, `Sleep`, `Watchdog`, `Off`, `On` are distinct types — each exposes only the fields that apply to that operation, so you can't accidentally set `payload` on a disarm or `start` on an arm. See [the Arduino guide's ATTN sections](../arduino/migration-from-note-arduino.md#attn-pin-arming-for-interrupts) for sleep/retrieve patterns and array-field iteration; the ATTN API surface is identical on host.
 
 ### env.get — read an environment variable
 

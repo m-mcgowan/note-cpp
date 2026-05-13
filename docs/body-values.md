@@ -170,7 +170,7 @@ req.execute();
 
 ## Receiving typed bodies
 
-Use `.into(struct)` on the request to parse a response body directly into the same struct you'd send. Full treatment — including the lambda-builder alternative for fields with wire-name mismatches, and tree-mode `r.body()->get_double(...)` access — lives in [working-with-responses.md § Body responses](working-with-responses.md#body-responses--nested-objects).
+Use `.into(struct)` on the request to parse a response body directly into the same struct you'd send. Full treatment — including the lambda-builder alternative for fields with wire-name mismatches, and tree-mode `r.body()->get_double(...)` access — lives in [working-with-responses.md § Body responses](working-with-responses.md#body-responses-nested-objects).
 
 ## Template registration
 

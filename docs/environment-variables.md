@@ -164,7 +164,7 @@ See [json-builder.md](json-builder.md) for the full `JsonBuf` /
 
 ## Dynamic body keys (`env.get` with all variables)
 
-`.into(struct)` and tree-mode `r.body()` cover most response shapes — see [working-with-responses.md § Body responses](working-with-responses.md#body-responses--nested-objects) for the canonical treatment. For `env.get` with no `name` argument the body keys aren't known at compile time, so `.into(struct)` doesn't apply. Either walk a tree-mode `JsonReader` by key, or — for the streaming-mode / no-backend path — use `nc.transact()` plus `note::scan::*`:
+`.into(struct)` and tree-mode `r.body()` cover most response shapes — see [working-with-responses.md § Body responses](working-with-responses.md#body-responses-nested-objects) for the canonical treatment. For `env.get` with no `name` argument the body keys aren't known at compile time, so `.into(struct)` doesn't apply. Either walk a tree-mode `JsonReader` by key, or — for the streaming-mode / no-backend path — use `nc.transact()` plus `note::scan::*`:
 
 ```cpp
 char buf[256];

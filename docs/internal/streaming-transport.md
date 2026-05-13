@@ -1,12 +1,19 @@
 # Streaming Transport
 
 The transport layer exposes a single session interface — `ITransact` —
-implemented natively by `Protocol` (streaming, zero-buffer) and by buffered
-transports (test fakes, the note-c bridge) that override only the
-string_view-shaped virtuals and inherit `ITransact`'s materialise-and-forward
-defaults for the `RequestSource` shape. The streaming path is the primary
-design; the buffered path exists for test harnesses and for transports that
-don't naturally split send/read.
+implemented natively by `Protocol` (streaming, zero-buffer) and by
+string-shaped transports (test fakes, the note-c bridge) that override only
+the `string_view`-shaped virtuals and inherit `ITransact`'s
+materialise-and-forward defaults for the `RequestSource` shape. The streaming
+path is the primary design; the string-shaped path exists for test harnesses
+and for transports that don't naturally split send/read.
+
+> **Naming note.** "String-shaped" here refers to the transport's *input
+> contract* — it receives a fully built `string_view` request rather than a
+> streaming `RequestSource`. This is a separate axis from the user-facing
+> response-mode distinction ([tree mode vs streaming mode](../transport.md#json-layer-streaming-or-tree)).
+> Earlier drafts of this doc called these transports "buffered"; that term was
+> dropped to avoid collision with the renamed user-facing terminology.
 
 ## Transport Interfaces
 
@@ -39,14 +46,14 @@ Requests are streamed via a `RequestSource` (or BuildFn callable) that paints
 JSON bytes through a `StreamingJsonBuilder` over the wire. Responses are
 SAX-parsed directly from the wire into a `JsonSink&`. No intermediate buffers.
 
-### Buffered transports
+### String-shaped transports
 
 Test transports (`note::test::CallbackTransport`, `MockTransport`,
 `ScriptedTransport`) and the note-c bridge derive from `ITransact`
-directly and override only the string_view-shaped virtuals. The
+directly and override only the `string_view`-shaped virtuals. The
 `RequestSource` virtuals on `ITransact` carry default impls that
 materialise the source into a stack scratch buffer, append the closing
-`}`, and forward to the matching string_view virtual — so buffered
+`}`, and forward to the matching `string_view` virtual — so string-shaped
 transports satisfy the full `ITransact` API without per-class
 boilerplate beyond their own `transact(string_view, span<char>, t)`
 and `send(string_view)` overrides.
@@ -58,7 +65,7 @@ The library uses a layered architecture — each layer has one job, and the laye
 1. **`Hal`** — platform byte conduit. `transmit`, `read`, `reset`, `millis`, `delay`, `write_line_terminator`. No protocol logic; just moves bytes. You implement this for your platform (or extend `arduino::SerialHal` / `arduino::I2cHal`).
 2. **`link::SerialFramer<Policy>` / `link::I2cFramer<Policy>`** — Notecard wire framing over a byte `Hal`. Handles segment pacing, chunking, drain/reset windows, and I2C MTU negotiation. Owns the `PacingPolicy` — wire-level timing fields (`segment_*`, `intra_timeout_ms`, `reset_*`); runtime-mutable or compile-time `[[no_unique_address]]`. These are themselves `Hal`s — the layer above sees a framing-aware byte conduit.
 3. **`Protocol`** — full Notecard wire protocol over a framing `Hal`: CRC validation, init handshake, line termination, sequence numbers. The only concrete protocol driver. No retry — retry lives at the session layer.
-4. **`ITransact`** — unified Notecard transaction interface. Three operations: `transact(req, span)` → `string_view`, `transact(req, sink)` → SAX events, and `send(req)` (fire-and-forget). Buffered vs streaming are *response presentations* (overloads), not sibling transports. `Protocol` implements `ITransact` natively. This is the contract a session class holds; the session itself is layer 6.
+4. **`ITransact`** — unified Notecard transaction interface. Three operations: `transact(req, span)` → `string_view`, `transact(req, sink)` → SAX events, and `send(req)` (fire-and-forget). The span and sink forms are *response presentations* (overloads on the same interface), not sibling transports. `Protocol` implements `ITransact` natively. This is the contract a session class holds; the session itself is layer 6.
 5. **JSON layer** — turns response bytes into typed values. Tree mode (`JsonBackend` walks a parsed tree) or streaming mode (SAX events fire into `Rsp::Sink`). See [docs/transport.md](../transport.md) for the user-facing mode-selection guide.
 6. **Session — `Notecard` (or peer: `BareNotecard`, `StaticNotecard`)** — runtime object holding an `ITransact&`, an optional `JsonBackend&`, a `RetryPolicy`, and inter-transaction timing. Exposes `transact(json, buf)`, `send(json)`, `execute(req)`. Retry happens here, gated by per-request `Safety`. The three session classes are *peers* (alternative entry points), not stacked — pick one; each carries its own retry, so there's no retry-of-retry by construction.
 7. **`Api<Session>`** — generated typed surface (`api.note.read().into(struct).execute()`, `api.card.attn.arm().execute()`). Each builder's `.execute()` dispatches to the bound session's `execute(req)` — so typed and raw paths share one retry/transport pipeline.
@@ -135,7 +142,7 @@ include/note/link/
     detail/crc32.hpp       CRC32, crc_add, crc_check_and_strip
 ```
 
-> **Naming note.** `IBufferedTransport` (the transitional bridge class) has been dropped. `ITransact` carries default impls for the `RequestSource` overloads that materialise into a stack scratch buffer and forward to the buffered `transact(req, span, t)` virtual, so transports that only support pre-built strings inherit the bridges automatically — derive from `ITransact` directly and override the string_view-shaped virtuals.
+> **Naming note.** `IBufferedTransport` (the transitional bridge class) has been dropped. `ITransact` carries default impls for the `RequestSource` overloads that materialise into a stack scratch buffer and forward to the `transact(string_view, span, t)` virtual, so transports that only support pre-built strings inherit the bridges automatically — derive from `ITransact` directly and override the `string_view`-shaped virtuals.
 
 ## Usage
 
@@ -209,7 +216,7 @@ note::Notecard nc(transport, note::arena_allocator(arena));  // zero heap
 
 No `JsonBackend` required. No `std::string` linked. No `operator new`.
 
-### Non-Arduino — buffered path (tests/compat)
+### Non-Arduino — string-shaped transport path (tests/compat)
 
 ```cpp
 note::backends::StaticJsonBackend<512, 64> backend;
@@ -223,7 +230,7 @@ nc.set_allocator(note::Allocator{});                // optional: arena or heap
 | Constructor | Transport | Backend | Heap |
 |---|---|---|---|
 | `Notecard(Protocol&, Allocator)` | Streaming | None needed | Zero (arena) |
-| `Notecard(JsonBackend&, ITransact&)` | Buffered | Required | Depends on backend |
+| `Notecard(JsonBackend&, ITransact&)` | String-shaped | Required | Depends on backend |
 | `Notecard(JsonBackend*, ITransact&, Allocator)` | Unified | Optional | Depends on backend / arena |
 
 The streaming-only constructor is the recommended path for production.
@@ -231,8 +238,10 @@ It requires no `JsonBackend` — requests build directly into the transport,
 responses SAX-parse directly from the wire. The allocator provides backing
 storage for string interning (typically a `MonotonicArena`).
 
-The buffered constructor exists for test harnesses (where `CallbackTransport`
-+ `MockBackend` is convenient) and for I2C (where `I2cFramer` still extends
+The `(JsonBackend&, ITransact&)` constructor pairs a string-shaped
+transport with a backend that owns the request and response buffers —
+the convenient shape for test harnesses (where `CallbackTransport`
++ `MockBackend` is natural) and for I2C (where `I2cFramer` still extends
 `AbstractTransport`).
 
 ## How execute() Selects the Path
@@ -242,7 +251,7 @@ The buffered constructor exists for test harnesses (where `CallbackTransport`
 | Constructor used | Allocator set | Path |
 |---|---|---|
 | `ITransact` (Protocol-typed) | Yes (required) | **Full streaming** — SAX parse from transport, zero buffer |
-| `ITransact` (buffered subclass) | Optional | **Fully buffered** — `transact()` with caller-supplied buffer |
+| `ITransact` (string-shaped subclass) | Optional | **String-shaped** — `transact(string_view, span<char>, t)` with caller-supplied buffer |
 
 The full streaming path:
 1. `StreamingJsonBuilder` writes request bytes directly to `Hal::transmit()`
@@ -288,12 +297,13 @@ Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md]
 | `JsonbParser` | Reads opcodes, dispatches `SaxEvent`s through `SaxDispatch` |
 | `CobsDecodingReader` | `ReadFn` adapter — COBS-decodes wire bytes, strips `:}` trailer |
 
-### Path 2: Fully buffered (via buffered `ITransact` subclass)
+### Path 2: String-shaped transport (via `string_view`-shaped `ITransact` subclass)
 
 Active when `Notecard` was constructed with `(JsonBackend&, ITransact&)` —
-the buffered-only convenience ctor — and the transport overrides only
-the string_view-shaped virtuals (e.g. `note::test::CallbackTransport`,
-the note-c bridge, integration test fakes).
+the convenience ctor that pairs a backend with a string-shaped transport —
+and the transport overrides only the `string_view`-shaped virtuals
+(e.g. `note::test::CallbackTransport`, the note-c bridge, integration
+test fakes).
 
 - **Send:** the configured `JsonBackend`'s builder paints a complete
   request into a caller-supplied `span<char>`; the transport's
@@ -304,7 +314,7 @@ the note-c bridge, integration test fakes).
   generated `Rsp::parse(reader)` walks fields out of the tree.
 - The `RequestSource` virtuals on `ITransact` carry default impls that
   materialise the source into a stack scratch buffer and forward to
-  the matching string_view virtual, so buffered transports satisfy
+  the matching `string_view` virtual, so string-shaped transports satisfy
   the full `ITransact` API without per-class boilerplate.
 
 ### Binary path (`write` / `read` + COBS)
@@ -330,7 +340,7 @@ In the JSON streaming path, CRC is handled entirely by `Protocol`:
 Auto-detection: `crc_enabled` flips to `true` when the first valid CRC
 field is found in a response. All subsequent responses must have CRC.
 
-In the buffered path, CRC uses the in-place buffer functions (`crc_add`,
+On the string-shaped path, CRC uses the in-place buffer functions (`crc_add`,
 `crc_check_and_strip`) as before.
 
 ## `NOTE_NO_STD_STRING` Guard
@@ -339,7 +349,7 @@ The streaming path (`Hal` + `Protocol` + `ITransact`) has no dependency
 on `<string>` or `<functional>`. It compiles cleanly with
 `NOTE_NO_STD_STRING` defined.
 
-The buffered path runs over caller-supplied `span<char>` buffers — no
+The string-shaped path runs over caller-supplied `span<char>` buffers — no
 `std::string` in the core. Only specific JSON backends bring in
 `<string>` (cJSON's wrapper, nlohmann's, etc.) and only when those
 backends are linked. AVR builds (which exercise the full streaming

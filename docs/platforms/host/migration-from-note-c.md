@@ -50,6 +50,7 @@ There are no global function pointers — every Notecard owns its transport and 
 
 If your existing project already wires `NoteSetFnI2C`/`NoteSetFnSerial` correctly and you don't want to rewrite the transport layer, you can plug `note-cpp`'s typed API on top of note-c's transport. The bridge implements `note::ITransact` by delegating each request to note-c's `NoteRequestResponseJSON`:
 
+<!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp:26-26 -->
 ```cpp
 extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
 ```
@@ -85,9 +86,10 @@ public:
 
 Wire it up the same way as a real transport (the runnable example uses `MockBackend` so it compiles standalone; in your project, swap in `CjsonBackend` or another real backend):
 
+<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp:85-94 -->
 ```cpp
 int main() {
-    MockBackend backend;            // → note::backends::CjsonBackend in your project
+    MockBackend backend;
     NoteCTransport transport;
     note::Notecard nc(backend, transport);
     note::Api api(nc);

@@ -30,61 +30,11 @@ those four pairs goes red.
 
 ## JSON layer — streaming or tree
 
-The streaming-vs-tree choice is a JSON-layer concern, not a transport one: it controls how `Notecard` turns response bytes into typed values.
+The transport stack delivers response bytes to the JSON layer, which turns those bytes into typed values. There are two strategies the JSON layer can use, and the choice is decided once at `Notecard` construction time. In **streaming mode**, a SAX parser fires events directly into your typed response struct; nothing is held in memory after the call. In **tree mode**, a `JsonBackend` builds a walkable `JsonReader` on the response that you can query by key after the call returns.
 
-| Mode | How it parses | Enables | Memory profile |
-|------|---|---|---|
-| **Tree mode** | `JsonReader` walks a parsed tree | `response.body()` returns `JsonReader*` for ad-hoc walking | Builds a tree (jsmn tokens or cJSON nodes) sized to the response |
-| **Streaming mode** | SAX events fire into `Rsp::Sink` | `.into(T&)` populates user struct directly | Zero intermediate tree |
+For most of the typed API the choice is invisible: the request builders, the response field accessors, `.into(struct)` body parsing, raw `nc.transact()`, and binary transfers all behave identically in either mode. The modes diverge on post-call body inspection (`response.body()`), the lambda request builder (`nc.request(...)`), and on whether a `JsonBackend` needs to be linked at all.
 
-Both modes populate the typed `Response` struct identically. The
-mode is selected by *which `Notecard` ctor* you use:
-
-```cpp
-// Tree mode — JsonBackend supplied → response.body() works.
-note::backends::StaticJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);
-
-// Streaming mode — no JsonBackend → smaller flash, .into(struct) for body.
-note::Notecard nc(transport, note::Allocator{});
-```
-
-`.into(T&)` works in both modes (transport-agnostic, see § 1 above).
-`response.body()` is tree-mode only — streaming-mode has no tree to walk.
-
-### Mode selection guide
-
-Pick **tree mode** when:
-- You're migrating from note-c — the `request()` lambda builder matches
-  the familiar "build JSON, send, parse" pattern.
-- You need ad-hoc JSON walking via `JsonReader`.
-- You're debugging wire traffic and want a tree to inspect.
-
-Pick **streaming mode** when:
-- You're on a memory-constrained target — no tree, no JsonBackend
-  pulled in, smaller flash.
-- All your body shapes are known statically (use `.into(T&)`).
-- You don't need `response.body()` for any endpoint.
-
-### Comparison
-
-| Feature | Tree mode | Streaming mode |
-|---------|:---------:|:---------:|
-| Typed `execute()` on requests | yes | yes |
-| Typed response fields | yes | yes |
-| `.into(T&)` body parse into struct | yes | yes |
-| `.body(T&)` send struct as body | yes | yes |
-| `nc.transact(json, buf)` raw JSON | yes | yes |
-| Binary transfers (COBS) | yes | yes |
-| Error handling (`ApiResult`) | yes | yes |
-| `request()` lambda builder | yes | — |
-| `response.body() -> JsonReader*` | yes | — |
-| Requires `JsonBackend` | yes | no |
-| Zero-heap capable | depends on backend | yes |
-
-Define `NOTE_NO_BUFFERED` to remove tree mode entirely (~2-4 KB flash savings). Set automatically by `NOTE_MINIMAL`.
-
-For the tree-mode backend matrix (`CjsonBackend`, `StaticJsonBackend`, `CjsonArenaBackend`, `NlohmannBackend`) — when each fits and how to wire it up — see [json-backend.md](json-backend.md).
+For the full comparison, selection guide, and backend matrix, see [streaming-and-tree.md](streaming-and-tree.md).
 
 ## Transport guides
 

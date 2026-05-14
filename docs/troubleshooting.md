@@ -93,7 +93,7 @@ Cause: the I2C bus needs pull-up resistors on both SDA and SCL, and the Notecard
 
 ## `response.body()` returns null
 
-Cause: you're running in [streaming mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Streaming-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in streaming mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`transport.md` § JSON layer](transport.md#json-layer-streaming-or-tree) for the trade-off and [`body-values.md`](body-values.md) for typed body parsing.
+Cause: you're running in [streaming mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Streaming-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in streaming mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`streaming-and-tree.md`](streaming-and-tree.md) for the trade-off between the two modes, and [`body-values.md`](body-values.md) for typed body parsing.
 
 ## consteval validation rejects a string the Notecard accepts
 

@@ -11,7 +11,7 @@ and for transports that don't naturally split send/read.
 > **Naming note.** "String-shaped" here refers to the transport's *input
 > contract* — it receives a fully built `string_view` request rather than a
 > streaming `RequestSource`. This is a separate axis from the user-facing
-> response-mode distinction ([tree mode vs streaming mode](../transport.md#json-layer-streaming-or-tree)).
+> response-mode distinction ([tree mode vs streaming mode](../streaming-and-tree.md)).
 > Earlier drafts of this doc called these transports "buffered"; that term was
 > dropped to avoid collision with the renamed user-facing terminology.
 

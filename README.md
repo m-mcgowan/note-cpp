@@ -30,7 +30,7 @@ nc.hub.set()
     .execute();
 ```
 
-Install from GitHub: **Sketch → Include Library → Add .ZIP Library** and point to this repository's ZIP download, or add `https://github.com/m-mcgowan/note-cpp.git` as a library dependency in PlatformIO.
+Install from GitHub: **Sketch → Include Library → Add .ZIP Library** and point to this repository's ZIP download.
 
 ### PlatformIO
 
@@ -47,7 +47,7 @@ target_link_libraries(my_app PRIVATE note-cpp)
 
 ## Examples
 
-The typed API is the same on every platform. Direct assignment is an alternative to the fluent style shown above:
+The typed API is the same on every platform. As an alternative to the fluent style shown above, you can also use assignment to set request properties.
 
 <!-- snippet:direct-assignment examples/arduino/readme_snippets/readme_snippets.ino:47-51 -->
 ```cpp
@@ -58,7 +58,7 @@ req.outbound = 60_mins;
 req.execute();
 ```
 
-Body structs work for send, receive, and template registration:
+Your own custom structs allow you to send and receive arbitrary bodies (say, with `note.add`). The same struct is used for sending and receiving notes (or environment variables), as well as for `note.template` registration.
 
 <!-- snippet:body-struct-def examples/arduino/readme_snippets/readme_snippets.ino:17-21 -->
 <!-- snippet:body-send examples/arduino/readme_snippets/readme_snippets.ino:55-59 -->
@@ -89,60 +89,7 @@ if (rsp) {
 }
 ```
 
-Full walkthrough: [examples/stdcpp/getting-started.cpp](examples/stdcpp/getting-started.cpp). Migrating from note-arduino / note-c? The [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side examples.
-
-## Streaming or tree
-
-`note-cpp` has two execution paths:
-
-- **Streaming** — SAX events parse the wire bytes directly into your typed response struct or sink. No JSON tree in memory. Zero heap.
-- **Tree** — a `JsonBackend` parses the response into an in-memory `JsonReader` you can query by key after the call returns.
-
-For most code, the choice is invisible. The same `nc.card.version().execute()` returns the same `r.version` either way:
-
-```cpp
-auto r = nc.card.version().execute();
-if (r) {
-    log(r.version);   // identical on both paths
-    log(r.device);
-}
-```
-
-`.into(struct)` for body parsing, body lambdas for request building, and the raw `nc.transact(json, buf)` API all behave identically on both paths.
-
-**The user-visible divergence is post-call body inspection.** Streaming commits at call time — you decide what to do with the body before sending the request, and SAX fires events into your sink as bytes arrive. Tree mode parks a parsed `JsonReader` on the response, so you can query body fields by name *after* the call returns:
-
-```cpp
-auto r = nc.note.get("data.qi").execute();
-
-// Tree mode — query the parsed JsonReader by key after the call:
-if (r && r.body()) {
-    double temp = r.body()->get_double("temperature");
-    int    hum  = r.body()->get_int("humidity");
-}
-
-// Streaming — r.body() is null. Commit a struct (or JsonSink) up front:
-struct Readings { float temperature; int humidity; NOTE_FIELDS(temperature, humidity); };
-Readings readings{};
-nc.note.get("data.qi").into(readings).execute();
-```
-
-If you know the body shape ahead of time, `.into(struct)` is the better idiom in either mode — it's faster, has lower memory cost, and works on the smallest targets.
-
-### Picking a backend
-
-Tree mode needs a `JsonBackend`. Streaming doesn't. The two defaults:
-
-```cpp
-// Streaming — no backend, zero heap, smallest flash.
-note::Notecard nc(transport, note::Allocator{});
-
-// Tree, default — cJSON-backed, heap-allocated nodes, familiar from note-c.
-note::backends::CjsonBackend backend;
-note::Notecard nc(backend, transport);
-```
-
-Other tree backends — `StaticJsonBackend` (zero-heap, fixed jsmn token view), `CjsonArenaBackend` (cJSON over an arena), `NlohmannBackend` — sit behind the same `Notecard(backend, transport)` ctor; see [docs/json-backend.md](docs/json-backend.md) for the full comparison and [docs/transport.md](docs/transport.md) for when each fits.
+Full walkthrough: [examples/stdcpp/getting-started.cpp](examples/stdcpp/getting-started.cpp). If you are migrating from note-arduino / note-c, the [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side examples.
 
 ## What's in the library
 
@@ -153,6 +100,7 @@ Other tree backends — `StaticJsonBackend` (zero-heap, fixed jsmn token view), 
 - **[Error handling](docs/error-handling.md)** — truthy responses on success, structured `ErrorInfo` on failure; per-request safety classification (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) informs retry.
 - **[Target filtering](docs/feature-flags.md#target-filtering-c20) (C++20)** — constrain the API by hardware variant (WiFi/Cell/Skylo/LoRa) and/or minimum firmware version; unsupported endpoints become compiler warnings (or errors in strict mode).
 - **[Wire protocols](docs/transport.md)** — header-only serial ([`SerialFramer`](docs/transport-serial.md)) and I2C ([`I2cFramer`](docs/transport-i2c.md)) with CRC auto-detection, segmented TX/RX, retry, auto-reset. Binary transfer (`card.binary.put`/`get`) uses COBS framing internally.
+- **[Streaming and tree modes](docs/streaming-and-tree.md)** — two JSON-parsing strategies that share the bulk of the typed API; tree mode keeps a walkable `JsonReader` on the response, while streaming mode reads the wire directly into your typed struct with no tree in memory.
 - **[JSONB wire format](docs/jsonb.md)** — optional `NOTE_JSONB` swaps JSON text for compact binary opcodes; reduces flash on constrained targets.
 
 [C++ version compatibility matrix](docs/cpp-version-compatibility.md) — what's available on C++17, what unlocks on C++20/23.

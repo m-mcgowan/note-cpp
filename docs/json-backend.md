@@ -1,6 +1,6 @@
 # JSON Backend
 
-A `JsonBackend` selects tree mode: every response is parsed into a `JsonReader` you can walk via `response.body()`. Without a `JsonBackend` the Notecard runs in streaming mode — SAX events fire directly into the response sink, and `.into(T&)` is how you capture body data. See [transport.md § JSON layer](transport.md#json-layer-streaming-or-tree) for the full mode comparison; both modes give you the same typed API surface and the same `nc.transact()` raw path.
+A `JsonBackend` selects tree mode: every response is parsed into a `JsonReader` you can walk via `response.body()`. Without a `JsonBackend` the Notecard runs in streaming mode — SAX events fire directly into the response sink, and `.into(T&)` is how you capture body data. See [streaming-and-tree.md](streaming-and-tree.md) for the full mode comparison; both modes give you the same typed API surface and the same `nc.transact()` raw path.
 
 **Short answer:** you almost never need to choose a backend. `CjsonBackend` (cJSON tree, heap-allocated) works everywhere and is the right default. Read on only if you're on a memory-constrained target, debugging wire traffic and want a tree to inspect, or already pulling in cJSON or nlohmann.
 

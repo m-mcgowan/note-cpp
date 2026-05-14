@@ -46,7 +46,7 @@ flowchart TB
     App --> Typed --> Proto --> Hal
 ```
 
-`note-cpp` ships a built-in Arduino HAL, selected automatically when `ARDUINO` is defined. For other platforms (Zephyr, ESP-IDF, POSIX, bare-metal), integrate via the callback HAL — a small read/write/delay interface. See [`docs/transport.md`](../transport.md) for the user-facing setup.
+`note-cpp` ships a built-in Arduino HAL, selected automatically when `ARDUINO` is defined. For other platforms (Zephyr, ESP-IDF, POSIX, bare-metal), integrate via the callback HAL — a small read/write/delay interface. The user-facing setup is documented in the [Arduino guide](../platforms/arduino/guide.md) for Arduino targets and in [Getting started](../getting-started.md) for host / RTOS / bare-metal targets.
 
 `note-cpp` has two construction paths, matching the two transport interfaces:
 
@@ -80,7 +80,21 @@ note::Api api(nc);
 
 Requires a `JsonBackend` for request building and response parsing. Used by `CallbackTransport` in test harnesses and by `I2cFramer` (which still extends `AbstractTransport`).
 
-Both paths expose the same `Notecard` / `Api` interface — the API layer is agnostic to the transport underneath.
+Both paths expose the same `Notecard` / `Api` interface — the API layer is mode-agnostic. The same call yields equivalent results regardless of whether the `Notecard` was constructed in streaming mode or tree mode:
+
+- **Typed API** (`api.note.read().into(struct).execute()`, `api.note.update(file, id).body(struct).execute()`).
+- **Raw JSON API** (`nc.transact(json, buf)`, `nc.send(json)`).
+
+This invariant is pinned in CI by `tests/test_transport_agnostic_api.cpp`, which pairs four call-site categories against both `Notecard` constructors:
+
+| § | Surface | Streaming | Tree |
+|---|---|:---:|:---:|
+| 1 | `api.note.read().into(struct).execute()` | ✓ | ✓ |
+| 2 | `api.note.update(file, id).body(struct).execute()` | ✓ | ✓ |
+| 3 | `nc.transact(json, buf)` | ✓ | ✓ |
+| 4 | `nc.send(json)` | ✓ | ✓ |
+
+If the high-level surface ever drifts apart between modes, one of those four pairs goes red. (The test file is named `test_transport_agnostic_api.cpp` because the streaming / tree distinction was originally called the "transport" axis; the file name predates the rename and still works.)
 
 ## Layer 1: Wire-mapped requests
 

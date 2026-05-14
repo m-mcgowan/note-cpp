@@ -53,7 +53,7 @@ details belong in git commit messages and design docs, not here.
 ### Added
 - 74 auto-generated endpoint types with [fluent builder API](docs/using-the-api.md#calling-styles-within-the-typed-layer)
 - [`ApiResult<T>`](docs/working-with-responses.md) dot-access for response fields
-- [Native serial and I2C transport](docs/transport.md) with CRC32, retry, and chunking
+- Native [serial](docs/transport-serial.md) and [I2C](docs/transport-i2c.md) transport with CRC32, retry, and chunking
 - [Type-safe duration units](docs/duration-units.md): `Seconds`, `Minutes`, `Hours`
 - [`VoltageVariable`](docs/internal/custom-field-transforms.md) builder for structured voltage thresholds
 - [`JsonBuf`](docs/body-values.md) constexpr JSON builder; [`json_fmt`](docs/body-values.md) compile-time validated templates (C++20)

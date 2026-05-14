@@ -2,6 +2,8 @@
 
 ## Setup
 
+`note::arduino::Notecard` wraps the full transport stack behind `begin()`, so a typical sketch only needs to pick a serial or I2C transport and call the right overload:
+
 ```cpp
 #include <note.hpp>
 
@@ -22,6 +24,18 @@ void setup() {
         .execute();
 }
 ```
+
+The full set of `begin()` overloads covers both transports and both JSON-layer modes. The default is streaming mode (no `JsonBackend` linked, no tree in memory); passing a `JsonBackend&` opts into tree mode so that `response.body()` works. See [streaming-and-tree.md](../../streaming-and-tree.md) for the mode comparison.
+
+```cpp
+nc.begin(Serial1, 9600);                // streaming mode, serial
+nc.begin(Wire);                         // streaming mode, I2C
+nc.begin(Wire, 0x17);                   // streaming mode, I2C with custom address
+nc.begin(Serial1, 9600, backend);       // tree mode, serial (response.body() works)
+nc.begin(Wire, backend);                // tree mode, I2C
+```
+
+The tree-mode `begin()` overloads do not take a separate response-buffer argument. `Notecard` owns a default response staging buffer of `NOTE_RSP_BUF_SIZE` bytes (1024 by default). If your largest expected response exceeds that, call `nc.set_response_buffer(span)` after `begin()` with a buffer of your own.
 
 `note.hpp` imports `Notecard`, duration literals (`15_mins`, `5_s`), and
 other common names into the global namespace. See

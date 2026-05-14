@@ -121,6 +121,6 @@ Defining `NOTE_NO_BUFFERED` removes tree mode entirely (a saving of roughly 2 to
 ## See also
 
 - [json-backend.md](json-backend.md) — backend selection in depth, including memory sizing and customization.
-- [transport.md](transport.md) — the transport stack underneath the JSON layer (HAL, framers, CRC, retry).
+- [transport-serial.md](transport-serial.md) and [transport-i2c.md](transport-i2c.md) — the wire transports underneath the JSON layer.
 - [memory.md](memory.md) — overall memory model, arena sizing, and the streaming vs tree trade-off at the allocation level.
 - [working-with-responses.md](working-with-responses.md) — patterns for reading response data in both modes.

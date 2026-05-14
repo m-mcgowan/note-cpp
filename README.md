@@ -99,7 +99,7 @@ Full walkthrough: [examples/stdcpp/getting-started.cpp](examples/stdcpp/getting-
 - **[Duration units](docs/duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with safe implicit conversion to smaller units; wrong direction is a compile error.
 - **[Error handling](docs/error-handling.md)** — truthy responses on success, structured `ErrorInfo` on failure; per-request safety classification (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) informs retry.
 - **[Target filtering](docs/feature-flags.md#target-filtering-c20) (C++20)** — constrain the API by hardware variant (WiFi/Cell/Skylo/LoRa) and/or minimum firmware version; unsupported endpoints become compiler warnings (or errors in strict mode).
-- **[Wire protocols](docs/transport.md)** — header-only serial ([`SerialFramer`](docs/transport-serial.md)) and I2C ([`I2cFramer`](docs/transport-i2c.md)) with CRC auto-detection, segmented TX/RX, retry, auto-reset. Binary transfer (`card.binary.put`/`get`) uses COBS framing internally.
+- **Wire protocols** — header-only [serial (`SerialFramer`)](docs/transport-serial.md) and [I2C (`I2cFramer`)](docs/transport-i2c.md) with CRC auto-detection, segmented TX/RX, retry, auto-reset. Binary transfer (`card.binary.put`/`get`) uses COBS framing internally.
 - **[Streaming and tree modes](docs/streaming-and-tree.md)** — two JSON-parsing strategies that share the bulk of the typed API; tree mode keeps a walkable `JsonReader` on the response, while streaming mode reads the wire directly into your typed struct with no tree in memory.
 - **[JSONB wire format](docs/jsonb.md)** — optional `NOTE_JSONB` swaps JSON text for compact binary opcodes; reduces flash on constrained targets.
 

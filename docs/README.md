@@ -45,7 +45,6 @@ Lookup material — keep tab-handy, scan as needed.
 Understanding-oriented — read when you want to know *why* the library is shaped the way it is.
 
 - **[Using the API](using-the-api.md)** — calling styles, three layers (typed → lambda → raw), focused operations, escape hatches
-- **[Transport layer](transport.md)** — the transport stack (HAL, framers, CRC, retry), Arduino setup
 - **[Streaming and tree modes](streaming-and-tree.md)** — the two JSON-parsing strategies, what they share, where they diverge
 - **[JSON backends](json-backend.md)** — `CjsonBackend`, `StaticJsonBackend`, `NlohmannBackend`, when to pick which
 - **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes

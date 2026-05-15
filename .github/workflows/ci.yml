@@ -122,15 +122,21 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
+      # Use `pio test --without-uploading --without-testing` rather than
+      # `pio run`: `pio run` only compiles src/, so test/*.cpp (the actual
+      # integration tests) get skipped silently. The build-only form of
+      # `pio test` exercises the test/ tree without needing hardware.
       - name: Build integration firmware (serial)
         run: |
           NOTECARD_SERIAL_RX=38 NOTECARD_SERIAL_TX=39 \
-          pio run -d tests/integration/firmware -e serial
+          pio test -d tests/integration/firmware -e serial \
+              --without-uploading --without-testing
 
       - name: Build integration firmware (i2c)
         run: |
           NOTECARD_I2C_SDA=14 NOTECARD_I2C_SCL=21 \
-          pio run -d tests/integration/firmware -e i2c
+          pio test -d tests/integration/firmware -e i2c \
+              --without-uploading --without-testing
 
       - name: Build Arduino migration example
         run: pio run -d examples/arduino/migration

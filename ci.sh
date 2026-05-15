@@ -908,11 +908,16 @@ run_quick() {
     if command -v pio >/dev/null 2>&1; then
         ci_stage "PIO integration build"
         local PIO_DIR="$ROOT/tests/integration/firmware"
+        # Use `pio test --without-uploading --without-testing` rather than
+        # `pio run`: `pio run` only compiles src/, so the integration test
+        # files under test/ are skipped silently. The build-only form of
+        # `pio test` exercises the test/ tree without needing hardware.
         for env in serial i2c; do
             echo "  Building $env..."
             NOTECARD_SERIAL_RX=38 NOTECARD_SERIAL_TX=39 \
             NOTECARD_I2C_SDA=14 NOTECARD_I2C_SCL=21 \
-            pio run -d "$PIO_DIR" -e "$env" > /dev/null 2>&1
+            pio test -d "$PIO_DIR" -e "$env" \
+                --without-uploading --without-testing > /dev/null 2>&1
             echo "  $env: OK"
         done
 

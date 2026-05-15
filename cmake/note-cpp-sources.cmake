@@ -140,6 +140,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_note_c_bridge.cpp
     test_notecard.cpp
     test_notecard_streaming.cpp
+    test_ping.cpp
     test_property_functor.cpp
     test_setup.cpp
     test_streaming_builder.cpp

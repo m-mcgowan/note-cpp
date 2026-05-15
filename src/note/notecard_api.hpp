@@ -140,6 +140,12 @@ public:
         return nc_.send(json);
     }
 
+    /// One-shot `echo` connectivity probe. Forwarded to Notecard::ping;
+    /// see the description there for the wire shape and timing.
+    Result<void> ping(uint32_t timeout_ms = 500) {
+        return nc_.ping(timeout_ms);
+    }
+
     Notecard& notecard() { return nc_; }
 };
 
@@ -194,6 +200,11 @@ public:
     /// Validated JSON fire-and-forget — see C++20 overload above.
     Result<void> send(string_view json) {
         return nc().send(json);
+    }
+
+    /// One-shot `echo` connectivity probe — see C++20 overload above.
+    Result<void> ping(uint32_t timeout_ms = 500) {
+        return nc().ping(timeout_ms);
     }
 
     Notecard& notecard() { return nc(); }

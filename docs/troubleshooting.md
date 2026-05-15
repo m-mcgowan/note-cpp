@@ -10,6 +10,8 @@ This page is "I tried something and it didn't work." Each entry pairs a symptom 
 - **I2C wiring incomplete.** The Notecard does not pull SDA/SCL high on its own — see [§ My I2C transactions hang](#my-i2c-transactions-hang) below.
 - **Notecard not powered or in deep sleep.** A Notecard that lost power mid-session won't ack. Cycle `V+`/`GND` and retry.
 
+For a fast, low-overhead "is the Notecard reachable at all?" check, call `nc.ping()`. It sends a single `echo` request with a 16-character random nonce and confirms the same nonce comes back. There is no retry, no CRC, and no transport reset on failure, so the call returns quickly (default timeout 500 ms) and tells you whether the link is alive without disturbing any in-flight state. A truthy `ping()` paired with a still-failing application call points the investigation at the application surface; a falsy `ping()` points at the link itself, and you can fall through to wire tracing.
+
 Enable wire tracing (`NOTE_DEBUG_ENABLED=1` plus a debug listener — see [`debugging.md`](debugging.md)) and watch the bytes; if nothing leaves the host the cause is local, if bytes leave but no response arrives the cause is wiring or power.
 
 ## My response is empty, or fields are zero-length

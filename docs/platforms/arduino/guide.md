@@ -41,6 +41,8 @@ The tree-mode `begin()` overloads do not take a separate response-buffer argumen
 other common names into the global namespace. See
 [namespace imports](../../feature-flags.md#namespace-imports) to customize.
 
+To confirm the Notecard is reachable before issuing application requests, call `nc.ping()`. It sends a one-shot `echo` probe with a random nonce, returns truthy if the Notecard echoes the nonce back within the default 500 ms timeout, and never retries or resets the transport on failure. The probe is documented in more detail under [troubleshooting.md § no response from the Notecard](../../troubleshooting.md#im-getting-no-response-from-the-notecard).
+
 ## Printing
 
 Most `note-cpp` types are Arduino `Printable` — use `Serial.print()` directly:

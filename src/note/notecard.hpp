@@ -691,6 +691,75 @@ public:
         return result;
     }
 
+    /// Send a one-shot `echo` probe and confirm the Notecard is reachable.
+    ///
+    /// The request is `{"req":"echo","text":"<16-char nonce>"}`. The
+    /// Notecard echoes the nonce back in the response's `text` field;
+    /// `ping()` succeeds only if the response nonce matches the request
+    /// nonce byte-for-byte.
+    ///
+    /// This is intentionally a stripped-down transaction: a single
+    /// attempt, a short fixed default timeout, no retry on failure, no
+    /// CRC field, and no transport reset. The probe therefore stays
+    /// safe to call at any point in the lifecycle, including before any
+    /// other transaction has run.
+    ///
+    /// Returns success when the nonce matches; a transport error when
+    /// the transport itself failed; or `Error::Json` when the response
+    /// is missing a `text` field or its `text` value does not match the
+    /// sent nonce.
+    Result<void> ping(uint32_t timeout_ms = 500) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+
+        if (ping_prng_ == 0)
+            ping_prng_ = 0x2545F491u ^ hal().millis();
+
+        char nonce[16];
+        for (int i = 0; i < 16; ++i) {
+            uint32_t x = ping_prng_;
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            ping_prng_ = x;
+            nonce[i] = static_cast<char>('A' + (x % 26));
+        }
+
+        // Hand-build the request so we do not pull in snprintf on AVR.
+        // Shape: {"req":"echo","text":"NNNN...NNNN"}
+        constexpr char kPrefix[] = R"({"req":"echo","text":")";
+        constexpr char kSuffix[] = R"("})";
+        constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
+        constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
+        char req[kPrefixLen + 16 + kSuffixLen];
+        memcpy(req, kPrefix, kPrefixLen);
+        memcpy(req + kPrefixLen, nonce, 16);
+        memcpy(req + kPrefixLen + 16, kSuffix, kSuffixLen);
+
+        enforce_timing();
+        char rsp_buf[64];
+        auto rv = transport_->transact(string_view(req, sizeof(req)),
+                                       span<char>(rsp_buf, sizeof(rsp_buf)),
+                                       timeout_ms);
+        record_timing();
+        if (!rv) return Unexpected(rv.error());
+
+        // The Notecard returns canonical JSON with no whitespace or
+        // escapes, so a substring match on "text":"<nonce>" is enough
+        // and avoids pulling in a SAX parser here.
+        string_view rsp = *rv;
+        constexpr string_view key = R"("text":")";
+        auto pos = rsp.find(key);
+        if (pos == string_view::npos)
+            return make_error(Error::Json, NOTE_ERR("ping: response missing text field"));
+        pos += key.size();
+        if (pos + 16 > rsp.size())
+            return make_error(Error::Json, NOTE_ERR("ping: response text too short"));
+        if (memcmp(rsp.data() + pos, nonce, 16) != 0)
+            return make_error(Error::Json, NOTE_ERR("ping: nonce mismatch"));
+        return Result<void>{};
+    }
+
     /// In-place variant — `buf` is used both to render the request *and* to
     /// receive the response. The lambda receives a writer (`auto& w`) with
     /// the same `add()` / `begin_object()` / `close()` shape as `JsonBuf`.
@@ -1244,6 +1313,11 @@ private:
     TransactionTiming timing_{};
     uint32_t next_request_id_ = 1;
     bool request_ids_enabled_ = true;
+    // xorshift32 state for the ping() nonce generator. Zero means
+    // "uninitialised"; ping() seeds it lazily from the host clock on
+    // first use so two Notecards constructed in quick succession do
+    // not share a sequence.
+    uint32_t ping_prng_ = 0;
 #if !NOTE_NO_MD5
     // Static, shared across all Notecards: avoids a self-reference inside
     // Notecard (pointer to own member), which broke every move-assignment

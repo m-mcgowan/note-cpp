@@ -141,9 +141,10 @@ public:
     }
 
     /// One-shot `echo` connectivity probe. Forwarded to Notecard::ping;
-    /// see the description there for the wire shape and timing.
-    Result<void> ping(uint32_t timeout_ms = 500) {
-        return nc_.ping(timeout_ms);
+    /// see the description there for the wire shape, timing, and the
+    /// meaning of `seed_fn`.
+    Result<void> ping(uint32_t timeout_ms = 500, PingSeedFn seed_fn = nullptr) {
+        return nc_.ping(timeout_ms, seed_fn);
     }
 
     Notecard& notecard() { return nc_; }
@@ -203,8 +204,8 @@ public:
     }
 
     /// One-shot `echo` connectivity probe — see C++20 overload above.
-    Result<void> ping(uint32_t timeout_ms = 500) {
-        return nc().ping(timeout_ms);
+    Result<void> ping(uint32_t timeout_ms = 500, PingSeedFn seed_fn = nullptr) {
+        return nc().ping(timeout_ms, seed_fn);
     }
 
     Notecard& notecard() { return nc(); }

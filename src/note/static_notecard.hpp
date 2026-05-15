@@ -308,6 +308,56 @@ public:
                                           timeout_ms);
     }
 
+    /// One-shot `echo` connectivity probe. Mirror of `Notecard::ping()` —
+    /// see the description there for the wire shape, timing, error
+    /// semantics, and the meaning of `seed_fn`. The two implementations
+    /// are deliberately kept in sync so the user-facing surface is the
+    /// same on both Notecard variants.
+    Result<void> ping(uint32_t timeout_ms = 500, PingSeedFn seed_fn = nullptr) {
+        uint32_t seed = (seed_fn ? seed_fn() : stack_.transport.hal().millis()) ^ 0x2545F491u;
+
+        char nonce[16];
+        for (int i = 0; i < 16; ++i) {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            nonce[i] = static_cast<char>('A' + (seed % 26));
+        }
+
+        constexpr char kPrefix[] = R"({"req":"echo","text":")";
+        constexpr char kSuffix[] = R"("})";
+        constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
+        constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
+        char req[kPrefixLen + 16 + kSuffixLen];
+        memcpy(req, kPrefix, kPrefixLen);
+        memcpy(req + kPrefixLen, nonce, 16);
+        memcpy(req + kPrefixLen + 16, kSuffix, kSuffixLen);
+
+#if !NOTE_NO_RETRY
+        enforce_timing();
+#endif
+        char rsp_buf[64];
+        auto rv = stack_.transport.transact_raw(string_view(req, sizeof(req)),
+                                                rsp_buf, sizeof(rsp_buf),
+                                                timeout_ms);
+#if !NOTE_NO_RETRY
+        record_timing();
+#endif
+        if (!rv) return Unexpected(rv.error());
+
+        string_view rsp = *rv;
+        constexpr string_view key = R"("text":")";
+        auto pos = rsp.find(key);
+        if (pos == string_view::npos)
+            return make_error(Error::Json, NOTE_ERR("ping: response missing text field"));
+        pos += key.size();
+        if (pos + 16 > rsp.size())
+            return make_error(Error::Json, NOTE_ERR("ping: response text too short"));
+        if (memcmp(rsp.data() + pos, nonce, 16) != 0)
+            return make_error(Error::Json, NOTE_ERR("ping: nonce mismatch"));
+        return Result<void>{};
+    }
+
 private:
     using InplaceBuilder = void(*)(JsonRender& w, const void* ctx);
 

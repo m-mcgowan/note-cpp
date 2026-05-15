@@ -10,6 +10,9 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+### Added
+- `nc.ping()` — a one-shot connectivity probe that sends a nonce-bearing `echo` request and confirms the Notecard echoes the same nonce back. The call is deliberately stripped down: a single attempt, a short fixed default timeout (500 ms), and no retry, CRC, or transport reset on failure. The probe is safe to call at any point in the lifecycle, including before any other transaction has run. Available on both `note::Notecard` (polymorphic) and `note::StaticNotecard` (singleton / AVR). See [troubleshooting.md](docs/troubleshooting.md#im-getting-no-response-from-the-notecard) for guidance on using it as a triage step.
+
 ## [0.2.0] - 2026-04-21
 
 ### Added

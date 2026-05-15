@@ -88,7 +88,7 @@ TEST_CASE("ping: propagates transport errors") {
     CHECK_FALSE(rv);
 }
 
-TEST_CASE("ping: successive calls produce different nonces") {
+TEST_CASE("ping: different seeds produce different nonces") {
     std::string first_request;
     std::string second_request;
     int call = 0;
@@ -104,9 +104,17 @@ TEST_CASE("ping: successive calls produce different nonces") {
             return string_view(rsp_buf, static_cast<size_t>(n));
         });
 
+    // The default seed is hal().millis(), which is 0 under the mocked
+    // transport, so two consecutive calls would otherwise share a nonce.
+    // Inject a counter-based seed to make consecutive nonces predictable
+    // and confirm they differ.
+    static uint32_t counter;
+    counter = 1;
+    auto seed = []() -> uint32_t { return counter++; };
+
     Notecard nc(nullptr, t);
-    auto a = nc.ping();
-    auto b = nc.ping();
+    auto a = nc.ping(500, seed);
+    auto b = nc.ping(500, seed);
     REQUIRE(a);
     REQUIRE(b);
     auto first_nonce  = extract_nonce(first_request);

@@ -32,15 +32,15 @@ using Api = note::Api<>;
 
 // I2C Fixture with direct HAL access for binary tests.
 struct I2cFixture {
-    Esp32I2cHal hal{notecardWire()};
+    NotecardI2cHal hal{notecardWire()};
     note::link::I2cFramer<> transport{hal};
     note::backends::CjsonBackend backend;
-    note::Notecard<> notecard{backend, transport};
+    note::Notecard notecard{backend, transport};
     Api nc{notecard};
 };
 
 /// Chunked I2C binary transmit.
-bool i2c_binary_transmit(Esp32I2cHal& hal, const uint8_t* data, size_t len) {
+bool i2c_binary_transmit(NotecardI2cHal& hal, const uint8_t* data, size_t len) {
     const size_t mtu = hal.max_transfer();
     size_t offset = 0;
     while (offset < len) {
@@ -52,7 +52,7 @@ bool i2c_binary_transmit(Esp32I2cHal& hal, const uint8_t* data, size_t len) {
 }
 
 /// Chunked I2C binary receive with available-bytes polling.
-size_t i2c_binary_receive(Esp32I2cHal& hal, uint8_t* buf, size_t buf_size, uint32_t timeout_ms) {
+size_t i2c_binary_receive(NotecardI2cHal& hal, uint8_t* buf, size_t buf_size, uint32_t timeout_ms) {
     const size_t mtu = hal.max_transfer();
     size_t received = 0;
     uint32_t avail = 0;

@@ -16,6 +16,7 @@
 #include <note/backends/cjson.hpp>
 #include <note/link/i2c.hpp>
 #include <note/link/cobs.hpp>
+#include <note/protocol.hpp>
 #include "../include/md5.hpp"
 
 #include <algorithm>
@@ -30,10 +31,14 @@ namespace {
 
 using Api = note::Api<>;
 
-// I2C Fixture with direct HAL access for binary tests.
+// I2C Fixture with direct HAL access for binary tests. The full stack is
+// Hal → framer → Protocol → Notecard, matching test_serial.cpp. I2cFramer
+// is a `note::Hal` (byte conduit with framing), so the Notecard's
+// ITransact slot needs a `note::Protocol` wrapping the framer.
 struct I2cFixture {
     NotecardI2cHal hal{notecardWire()};
-    note::link::I2cFramer<> transport{hal};
+    note::link::I2cFramer<> framer{hal};
+    note::Protocol transport{framer};
     note::backends::CjsonBackend backend;
     note::Notecard notecard{backend, transport};
     Api nc{notecard};

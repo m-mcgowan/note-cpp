@@ -46,6 +46,7 @@ units_b	test_migration_support.cpp
 units_b	test_notecard.cpp
 units_b	test_notecard_move_semantics.cpp
 units_b	test_notecard_streaming.cpp
+units_b	test_ping.cpp
 units_b	test_property_functor.cpp
 units_b	test_retry.cpp
 units_b	test_samples.cpp

@@ -603,6 +603,46 @@ TEST_CASE("transact(json) auto-sizes response") {
     CHECK(rsp->view().find("version") != note::string_view::npos);
 }
 
+// ─── ping ──────────────────────────────────────────────────────────────
+
+TEST_CASE("ping confirms connectivity to the live Notecard") {
+    auto& nc = notecard_nc();
+    auto rv = nc.ping();
+    if (!rv) { MESSAGE("ping error: ", note::to_string(rv.error())); }
+    REQUIRE(rv);
+}
+
+TEST_CASE("ping is repeatable across consecutive calls") {
+    auto& nc = notecard_nc();
+    auto a = nc.ping();
+    auto b = nc.ping();
+    auto c = nc.ping();
+    if (!a) { MESSAGE("first ping error: ",  note::to_string(a.error())); }
+    if (!b) { MESSAGE("second ping error: ", note::to_string(b.error())); }
+    if (!c) { MESSAGE("third ping error: ",  note::to_string(c.error())); }
+    CHECK(a);
+    CHECK(b);
+    CHECK(c);
+}
+
+TEST_CASE("ping with custom timeout") {
+    auto& nc = notecard_nc();
+    auto rv = nc.ping(2000);
+    if (!rv) { MESSAGE("ping(2000) error: ", note::to_string(rv.error())); }
+    REQUIRE(rv);
+}
+
+TEST_CASE("ping leaves typed requests working afterwards") {
+    auto& nc = notecard_nc();
+    auto& api = notecard_api();
+    auto rv = nc.ping();
+    REQUIRE(rv);
+    auto ver = api.card.version().execute();
+    if (!ver) { MESSAGE("card.version after ping error: ", note::to_string(ver.error())); }
+    REQUIRE(ver);
+    CHECK(!note::string_view(ver.version).empty());
+}
+
 TEST_CASE("send(json) fire-and-forget") {
     auto& nc = notecard_nc();
     auto r = nc.send(R"({"cmd":"hub.set","product":"com.example.integration-test"})");

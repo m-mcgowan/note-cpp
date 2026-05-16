@@ -143,6 +143,15 @@ NFEOF
         export CPP17_DONE=1
     fi
 
+    # GCC build matrix — mirrors the GH `build` matrix (g++-12/-13/-14)
+    # so warning-as-error rot that Apple Clang accepts (e.g. static_arena
+    # `-Werror=uninitialized`) surfaces locally before push.
+    if [ "${GCC_MATRIX_DONE:-}" != "1" ]; then
+        echo
+        run_gcc_matrix
+        export GCC_MATRIX_DONE=1
+    fi
+
     # Build and run unit tests
     echo
     ci_stage "Unit tests"
@@ -332,6 +341,53 @@ VEOF
     # Final stage timing
     ci_stage "Done"
     printf "\nAll checks passed for %s in %ds.\n\n" "$CXX" $(( $(date +%s) - _ci_run_start ))
+}
+
+run_gcc_matrix() {
+    # Build + run unit tests under each available GCC. Mirrors the GH
+    # `build` matrix (g++-12/-13/-14), which is the gate that surfaced
+    # the static_arena `-Werror=uninitialized` regression. Apple Clang
+    # is forgiving where GCC isn't; without this stage, GCC-only rot
+    # only fails after we've spent CI minutes.
+    #
+    # Each compiler gets its own /tmp build dir so the existing default
+    # (Apple Clang) artifacts stay intact. cmake reconfigures inexpensively
+    # on warm dirs after the first run.
+    local found=0
+    local seen=""
+    for gxx in /usr/local/bin/g++-* /opt/homebrew/bin/g++-* \
+               /usr/bin/g++-12 /usr/bin/g++-13 /usr/bin/g++-14 /usr/bin/g++-15; do
+        [ -x "$gxx" ] || continue
+        local base="${gxx##*/}"
+        # Skip libexec/symlink dupes by basename (e.g. /usr/local/bin/g++-13
+        # vs /opt/homebrew/bin/g++-13).
+        case "$seen" in *"|$base|"*) continue;; esac
+        seen="$seen|$base|"
+        local ver
+        ver=$("$gxx" -dumpversion 2>/dev/null | cut -d. -f1)
+        [ "${ver:-0}" -lt 12 ] && continue
+        local std=23
+        [ "$ver" -lt 13 ] && std=20
+        ci_stage "GCC matrix: $base (-std=c++${std})"
+        local build_dir="/tmp/note-cpp-build-${base}"
+        cmake -B "$build_dir" -S "$ROOT/tests" \
+            -DCMAKE_CXX_COMPILER="$gxx" \
+            -DCMAKE_CXX_STANDARD=$std \
+            >/dev/null 2>&1
+        nice cmake --build "$build_dir" --target note-cpp-tests --parallel \
+            >/tmp/gcc-matrix-${base}.log 2>&1 || {
+                echo "  $base build FAILED — see /tmp/gcc-matrix-${base}.log"
+                tail -30 "/tmp/gcc-matrix-${base}.log"
+                exit 1
+            }
+        "$build_dir/note-cpp-tests" >/dev/null
+        echo "  $base -std=c++${std}: OK"
+        found=$((found+1))
+    done
+    if [ "$found" -eq 0 ]; then
+        echo "  Skipping GCC matrix (no g++-{12,13,14,15} in PATH)."
+        echo "  Install: 'brew install gcc' (macOS) or 'apt-get install g++-13' (Ubuntu)."
+    fi
 }
 
 discover_compilers() {
@@ -921,6 +977,19 @@ run_quick() {
             echo "  $env: OK"
         done
 
+        # Arduino examples that need PIO (not arduino-cli) — mirrors the
+        # GH `pio-build` job's `pio run -d examples/arduino/{migration,
+        # note-arduino-bridge}` steps. These pull note-arduino as a
+        # dependency, so they live under PIO rather than the arduino-cli
+        # matrix.
+        for ex_dir in migration note-arduino-bridge; do
+            local ex_path="$ROOT/examples/arduino/$ex_dir"
+            [ -d "$ex_path" ] || continue
+            echo "  Building examples/arduino/$ex_dir..."
+            pio run -d "$ex_path" > /dev/null 2>&1
+            echo "  $ex_dir: OK"
+        done
+
         # AVR build + size regression gate. Catches Harvard-architecture
         # / 8-bit-only breaks (PROGMEM regressions, missing pgmspace.h
         # guards) AND unintended size growth — flash/RAM are tight on AVR
@@ -941,64 +1010,16 @@ run_quick() {
     ci_stage "JSON backend integration tests"
     run_integrations
 
-    # GCC + -std=c++23 gate. The system compiler on macOS is Apple Clang
-    # which is forgiving where g++-13 (the GitHub CI gate) is not — most
-    # famously the consteval/constexpr divergence around BodyValue. Run
-    # a syntax check + build a tight set of TUs that exercise the
-    # affected paths so local --quick stays in sync with remote CI.
-    if [ "${GCC_CPP23_DONE:-}" != "1" ]; then
-        local g23=""
-        for g in g++-13 g++-14 g++-15; do
-            for p in /usr/local/bin /opt/homebrew/bin /usr/bin ""; do
-                local cand="${p:+$p/}$g"
-                if command -v "$cand" >/dev/null 2>&1; then
-                    g23="$cand"; break 2
-                fi
-            done
-        done
-        if [ -n "$g23" ]; then
-            ci_stage "GCC c++23 syntax + BodyValue gate ($g23)"
-            local FLAGS="-std=c++23 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror"
-            $g23 $FLAGS $INCLUDE -fsyntax-only -x c++ - <<'GCCEOF'
-#include <note/notecard.hpp>
-#include <note/notecard_api.hpp>
-#include <note/api.hpp>
-#include <note/body.hpp>
-#include <note/transact.hpp>
-#include <note/link/serial.hpp>
-#include <note/link/i2c.hpp>
-#include <note/json_buf.hpp>
-GCCEOF
-            echo "  c++23 public headers OK"
-
-            # Constexpr BodyValue: the canonical g++-13 c++23 trip-wire.
-            $g23 $FLAGS $INCLUDE -fsyntax-only -x c++ - <<'BVEOF'
-#include <note/body.hpp>
-constexpr note::BodyValue v = "{\"x\":1}";
-static_assert(static_cast<bool>(v));
-BVEOF
-            echo "  constexpr BodyValue OK"
-
-            # Inherited BodyValue ctor (PR 102933 trip-wire). Endpoint requests
-            # carry a `body_t : BodyValue` that pulls the consteval template in
-            # via `using BodyValue::BodyValue;`. This *inherited* form breaks on
-            # GCC 13.x even when the direct ctor above compiles cleanly. The
-            # check has to use a derived struct — naked BodyValue won't catch
-            # the regression.
-            $g23 $FLAGS $INCLUDE -fsyntax-only -x c++ - <<'IBVEOF'
-#include <note/api/note_add.hpp>
-void f() {
-    note::api::NoteAdd req;
-    req.body = "{\"temp\":22.5}";
-}
-IBVEOF
-            echo "  inherited BodyValue ctor OK"
-        else
-            echo
-            echo "  Skipping GCC c++23 gate (no g++-13/14/15 in PATH)."
-            echo "  Install: 'brew install gcc' or 'apt-get install g++-13'."
-        fi
-        export GCC_CPP23_DONE=1
+    # GCC build matrix — strict superset of the previous narrow GCC c++23
+    # syntax gate. Builds + runs the unit-test binary under each installed
+    # GCC (g++-12/-13/-14/-15), which is what surfaced the
+    # `static_arena.hpp -Werror=uninitialized` regression that Apple Clang
+    # silently accepts. The BodyValue consteval / inherited-ctor cases
+    # this used to syntax-check are exercised here too via the actual
+    # test TUs.
+    if [ "${GCC_MATRIX_DONE:-}" != "1" ]; then
+        run_gcc_matrix
+        export GCC_MATRIX_DONE=1
     fi
 
     ci_stage "Done"

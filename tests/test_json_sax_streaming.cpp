@@ -7,6 +7,7 @@
 
 #include <note/json_sax_streaming.hpp>
 
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>

@@ -1,6 +1,7 @@
 #include <doctest.h>
 #include <note/json_sax.hpp>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 

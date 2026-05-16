@@ -8,6 +8,7 @@
 #include <note/lexer/sax_adapter.hpp>
 #include <note/link/cobs.hpp>
 
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>

@@ -33,7 +33,13 @@ public:
         "in the set has a void response, so no arena is needed. Drop the arena "
         "entirely, or add a request type with a non-void response.");
 
-    StaticArena() : arena_(buf_) {}
+    // GCC 13+ flags `arena_(buf_)` (calling the `char(&)[N]` overload) as
+    // "member buf_ used uninitialized" because reference-binding to the
+    // array makes GCC's flow analysis treat the contents as a read. The
+    // pointer+capacity overload uses array-to-pointer decay, which only
+    // takes the address — no read, no warning — and avoids the memset
+    // cost of `buf_[size]{}` value-init on AVR.
+    StaticArena() : arena_(buf_, size) {}
 
     // Implicit conversion so StaticArena drops into existing APIs that take
     // a MonotonicArena&.

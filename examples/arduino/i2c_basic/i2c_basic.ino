@@ -12,6 +12,7 @@
 // (search "nonstd-lite-bundle") — must precede <note.hpp>.
 #include <nonstd-lite.hpp>
 #endif
+#include <Wire.h>
 #include <note.hpp>
 
 

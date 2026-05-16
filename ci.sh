@@ -350,6 +350,17 @@ run_gcc_matrix() {
     # is forgiving where GCC isn't; without this stage, GCC-only rot
     # only fails after we've spent CI minutes.
     #
+    # No-op under CI: the GH workflow already runs each compiler as its
+    # own matrix entry, so this stage would (a) duplicate work and (b)
+    # attempt to use GCCs that aren't fully provisioned in entries
+    # targeting a different compiler (e.g. the clang++-18 job only
+    # installs clang-18 + libc++; g++-12 is on the runner but its dev
+    # libs may not match).
+    if [ "${CI:-}" = "true" ]; then
+        echo "  Skipping GCC matrix (CI=true — GH workflow runs the matrix itself)."
+        return 0
+    fi
+
     # Each compiler gets its own /tmp build dir so the existing default
     # (Apple Clang) artifacts stay intact. cmake reconfigures inexpensively
     # on warm dirs after the first run.

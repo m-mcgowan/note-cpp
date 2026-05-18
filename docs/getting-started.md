@@ -48,7 +48,6 @@ A minimal `main.cpp` — replace `MySerialHal` with whatever talks to your hardw
 ```cpp
 #include <note/notecard.hpp>
 #include <note/api.hpp>
-#include <note/backends/cjson.hpp>
 #include <note/link/serial.hpp>
 #include <note/protocol.hpp>
 
@@ -56,15 +55,16 @@ int main() {
     MySerialHal hal;                                 // your serial HAL impl
     note::link::SerialFramer serial_hal(hal);        // note::Hal — wire framing
     note::Protocol transport(serial_hal);            // ITransact — wire protocol
-    note::backends::CjsonBackend backend;            // tree-mode JSON backend
 
-    note::Notecard nc(backend, transport);
+    note::Notecard nc(transport);                    // streaming — no JSON backend needed
     note::Api api(nc);
 
     auto r = api.card.version().execute();
     if (r) std::printf("Notecard %.*s\n", (int)r.version.size(), r.version.data());
 }
 ```
+
+Streaming is the recommended default — typed response fields, struct body parsing via `.into(struct)`, and the rest of the API surface work without a JSON tree-mode backend linked, and the wire response can be arbitrarily large. Switch to tree mode (`Notecard nc(backend, transport);` with a `note::backends::CjsonBackend backend;`) only when you need `response.body()` for ad-hoc field walks or the `nc.request("endpoint", [&](auto& b){ … })` lambda builder — see [`docs/streaming-and-tree.md`](streaming-and-tree.md) for the full tradeoff.
 
 Build: `cmake -S . -B build && cmake --build build`. The runnable companion to this section is [`examples/stdcpp/getting-started.cpp`](../examples/stdcpp/getting-started.cpp), which uses a mock transport so you can experiment without hardware. See [`examples/stdcpp/README.md`](../examples/stdcpp/README.md) for the full example index.
 
@@ -76,7 +76,7 @@ The HAL implementation for ESP-IDF UART/I2C drivers is yours to wire (the same `
 
 ## Your first request
 
-> Throughout the rest of this page, `nc` is the API surface. On Arduino, that's the `Notecard nc;` you declared. On stdcpp/ESP-IDF, after `Notecard nc(backend, transport); Api api(nc);` you write `api.card.version()` instead — the calls are identical, the receiver isn't. See [using-the-api.md](using-the-api.md) for the full picture.
+> Throughout the rest of this page, `nc` is the API surface. On Arduino, that's the `Notecard nc;` you declared. On stdcpp/ESP-IDF, after `Notecard nc(transport); Api api(nc);` you write `api.card.version()` instead — the calls are identical, the receiver isn't. See [using-the-api.md](using-the-api.md) for the full picture.
 
 Walking through one full request — `card.version`, the simplest readable Notecard endpoint — top to bottom:
 

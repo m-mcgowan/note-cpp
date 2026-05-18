@@ -246,7 +246,9 @@ public:
         auto rv = transact_(request, timeout_ms);
         if (!rv) return Unexpected(rv.error());
         if (rv->size() >= buf.size())
-            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+            return make_error(Error::Overflow, NOTE_ERR(
+                "response exceeds buffer; enlarge with nc.set_response_buffer() "
+                "or wire .into(JsonSink&) for streaming"));
         std::memcpy(buf.data(), rv->data(), rv->size());
         return string_view(buf.data(), rv->size());
     }

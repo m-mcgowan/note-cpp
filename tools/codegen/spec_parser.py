@@ -272,6 +272,20 @@ def _extract_response_description(operation: dict) -> str:
     return resp_200.get("description", "")
 
 
+def _combine_summary_description(summary: str, description: str) -> str:
+    """Combine OpenAPI summary + description into a single doc string.
+
+    OpenAPI 3.x convention: summary is brief, description is the longer form.
+    Upstream spec carries summary only; overlays can add description prose
+    (e.g. usage notes) without overwriting the upstream summary.
+    """
+    summary = summary.strip()
+    description = description.strip()
+    if summary and description:
+        return summary + "\n\n" + description
+    return description or summary
+
+
 def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
     """Extract response properties from the 200 response.
 
@@ -437,7 +451,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         binary_buffer=_parse_binary_buffer(op.get("x-binary-buffer")),
         skus=op.get("x-skus", []),
         min_api_version=op.get("x-min-api-version"),
-        description=op.get("summary", ""),
+        description=_combine_summary_description(op.get("summary", ""), op.get("description", "")),
         legacy_struct_name=legacy_struct_name,
         toggle_pairs=toggle_pairs,
         action_methods=action_methods,

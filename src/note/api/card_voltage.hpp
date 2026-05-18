@@ -381,7 +381,7 @@ struct CardVoltage {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
@@ -425,7 +425,7 @@ struct CardVoltage {
                 return rsp;
             }
 #pragma GCC diagnostic pop
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -538,7 +538,7 @@ struct CardVoltage {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -1008,7 +1008,7 @@ struct CardVoltage {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
@@ -1052,7 +1052,7 @@ struct CardVoltage {
                 return rsp;
             }
 #pragma GCC diagnostic pop
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -1165,7 +1165,7 @@ struct CardVoltage {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif

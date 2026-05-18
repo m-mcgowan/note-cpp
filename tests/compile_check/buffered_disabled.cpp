@@ -1,9 +1,9 @@
-// Compile check: the library must compile cleanly with NOTE_NO_BUFFERED.
+// Compile check: the library must compile cleanly with NOTE_NO_JSON_TREE.
 // Verifies that the typed API (execute, response fields, body structs)
-// works without the buffered path (no request() lambda, no transact(),
-// no JsonReader tree access).
+// works without the JSON tree-mode path (no JsonReader access via body(),
+// no body_or_error(), no parse(reader_) factory).
 
-#define NOTE_NO_BUFFERED 1
+#define NOTE_NO_JSON_TREE 1
 #include <note/api.hpp>
 
 void test() {

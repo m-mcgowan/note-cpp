@@ -2340,6 +2340,15 @@ public:
 
         /// Returns a single environment variable, or all variables according to
         /// precedence rules.
+        ///
+        /// When called without a `name` (or `names`), `env.get` returns the
+        /// full environment-variable set known to the Notecard. The response
+        /// size scales with the Notehub project and may exceed the default
+        /// response buffer, surfacing as `Error::Overflow`. For this shape,
+        /// prefer the streaming `.into(JsonSink&)` overload — body events
+        /// stream off the wire and the env set can be arbitrarily large. As an
+        /// alternative, `Notecard::set_response_buffer()` can enlarge the
+        /// staging buffer if a bounded response is acceptable.
         auto get() { return create_<api::EnvGet>(); }
 
         /// Get the time of the update to any environment variable managed by
@@ -2665,20 +2674,20 @@ public:
 
 #if __cplusplus >= 202002L
         /// Add a "device health" log message to send to Notehub on the next
-        /// sync via the healthhost.qo Notefile.
+        /// sync via the _health_host.qo Notefile.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::HubLog>())
         auto log() { return create_<api::HubLog>(); }
 
         /// Add a "device health" log message to send to Notehub on the next
-        /// sync via the healthhost.qo Notefile.
+        /// sync via the _health_host.qo Notefile.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::HubLog>() && !T_::strict)
         [[deprecated("hub.log is not available on this target")]]
         auto log() { return create_<api::HubLog>(); }
 #else
         /// Add a "device health" log message to send to Notehub on the next
-        /// sync via the healthhost.qo Notefile.
+        /// sync via the _health_host.qo Notefile.
         auto log() { return create_<api::HubLog>(); }
 #endif
 

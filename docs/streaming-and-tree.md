@@ -42,7 +42,21 @@ if (r && r.body()) {
 }
 ```
 
-In streaming mode the response bytes are gone once the SAX parser has run, so `r.body()` returns null. The same use case is served by committing the body shape ahead of time, either with a struct via `.into(struct)` or with a SAX `JsonSink` for fully ad-hoc parsing:
+In streaming mode the response bytes are gone once the SAX parser has run, so `r.body()` returns null. Because a null return is also the legitimate "response carried no body field" result in tree mode, the two cases look identical to the caller — for mixed builds where the same code path may run in either mode, prefer `r.body_or_error()`, which returns an explicit `Error::NotReady` when the Notecard was in streaming mode:
+
+```cpp
+auto r = nc.note.get("data.qi").execute();
+if (r) {
+    auto safe = r.body_or_error();
+    if (safe.has_value()) {
+        // *safe is a const JsonReader*, may still be null if no body field
+    } else {
+        // safe.error().code == Error::NotReady — running in streaming mode
+    }
+}
+```
+
+The same use case is served by committing the body shape ahead of time, either with a struct via `.into(struct)` or with a SAX `JsonSink` for fully ad-hoc parsing:
 
 ```cpp
 struct Readings {
@@ -112,11 +126,24 @@ This table summarizes the surfaces touched by the mode choice. Every other surfa
 | Binary transfers (COBS) | yes | yes |
 | Error handling (`ApiResult`) | yes | yes |
 | Lambda request builder (`nc.request(...)`) | yes | — |
-| `response.body() -> JsonReader*` | yes | — |
+| `response.body() -> JsonReader*` | yes | — (null) |
+| `response.body_or_error()` | success | `Err::NotReady` |
 | Requires `JsonBackend` | yes | no |
 | Zero-heap capable | depends on backend | yes |
 
-Defining `NOTE_NO_BUFFERED` removes tree mode entirely (a saving of roughly 2 to 4 KB of flash). `NOTE_MINIMAL` sets this automatically.
+Defining `NOTE_NO_JSON_TREE` removes tree mode entirely (a saving of roughly 2 to 4 KB of flash). `NOTE_MINIMAL` sets this automatically. The legacy name `NOTE_NO_BUFFERED` is honoured as an alias for backward compatibility; new code should use `NOTE_NO_JSON_TREE`.
+
+`NOTE_NO_JSON_TREE` also drops two `std::unique_ptr<JsonReader>` fields and a discriminator bool from every `Response` struct — measured at **24 bytes per response** on 64-bit hosts (and ~12 bytes on 32-bit embedded targets) even for code that never calls `body()`. The header-only `body()` / `body_or_error()` / `parse(reader)` methods themselves are DCE'd by the linker when unreferenced, so the flash cost of leaving the flag off is near zero — the per-response RAM is the real penalty. Streaming-only projects on memory-constrained MCUs should set `NOTE_NO_JSON_TREE=1` for the RAM win even if their code already happens to be streaming-clean.
+
+## Why there is no per-instance compile-time gate
+
+`response.body()` exists when the build allows tree mode. There is no separate `StreamingResponse` type that omits `body()` at compile time when *this particular Notecard instance* uses streaming. That sounds like a useful safety net, and it was considered, but it doesn't pay off:
+
+- The shape needed — `Notecard<note::Streaming>` vs `Notecard<note::JsonTree>` with mode-aware `Response` traits — would require templating `Notecard`, `StaticNotecard`, and the `Api` wrapper on a mode tag, and threading that tag through every generated endpoint. Existing `Notecard nc;` syntax would need a migration shim.
+- It only catches one case: mixed builds where the user wrote streaming-only code but left `NOTE_NO_JSON_TREE` off. That case is already caught at runtime by `body_or_error()` — explicit `Error::NotReady` with an actionable message — and `was_streaming_parse()` is available for introspection. Whole-program elimination is covered by the macro flag.
+- For users who only ever use streaming, setting `NOTE_NO_JSON_TREE=1` removes `body()` from the compiled API surface entirely. That's the same compile-time safety the template approach would deliver, without the architectural surface.
+
+So the safety story is: **(1)** macro flag for whole-program compile-time removal; **(2)** `body_or_error()` + `was_streaming_parse()` for runtime detection in mixed builds; **(3)** `[[nodiscard]]` on `body()` so the compiler nags about unused returns. Per-instance compile-time gating isn't planned.
 
 ## See also
 

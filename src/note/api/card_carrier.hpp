@@ -157,7 +157,7 @@ struct CardCarrier {
         /// The current `AUX_CHARGING` `mode`, or `off` if not set.
         note::ResponseField<note::string_view> mode{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("charging")) rsp.charging = reader_->get_bool("charging");
@@ -175,7 +175,7 @@ struct CardCarrier {
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -218,7 +218,7 @@ struct CardCarrier {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

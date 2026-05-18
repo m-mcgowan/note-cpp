@@ -412,7 +412,7 @@ struct HubSet {
     ///
     /// `{"org":"my-organization","product":"My Product","description":"A
     /// description of the image","version":"1.2.4","built":"Jan 01 2025
-    /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
+    /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
     /// 5,"builder":"The Builder"}`
     ///
     /// If your project uses Notecard Outboard Firmware Update, you can
@@ -435,7 +435,7 @@ struct HubSet {
         ///
         /// `{"org":"my-organization","product":"My Product","description":"A
         /// description of the image","version":"1.2.4","built":"Jan 01 2025
-        /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
+        /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
         /// 5,"builder":"The Builder"}`
         ///
         /// If your project uses Notecard Outboard Firmware Update, you can

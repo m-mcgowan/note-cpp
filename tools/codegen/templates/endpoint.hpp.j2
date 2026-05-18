@@ -487,7 +487,7 @@ namespace note::api {
 
 {{ indent }}/// Forward body SAX events to the given JsonSink.
 {{ indent }}/// The sink must outlive execute(). Works in both streaming and
-{{ indent }}/// buffered transport modes.
+{{ indent }}/// JSON tree-mode transports.
 {{ indent }}auto& into(::note::JsonSink& sink_) {
 {{ indent }}    body_ptr_ = &sink_;
 {{ indent }}    body_handler_factory_ = &::note::jsonsink_body_factory;
@@ -552,9 +552,30 @@ namespace note::api {
 {% endfor %}
 {% if op.response.has_body %}
 
-#if !NOTE_NO_BUFFERED
-{{ indent }}    /// Access the body as a JsonReader (buffered parse path only).
-{{ indent }}    const JsonReader* body() const { return body_.get(); }
+#if !NOTE_NO_JSON_TREE
+{{ indent }}    /// Access the body as a JsonReader (JSON tree-mode path only).
+{{ indent }}    /// Returns `nullptr` when the response had no body field, OR
+{{ indent }}    /// when the Notecard ran in streaming mode (no JSON tree was
+{{ indent }}    /// built). The two cases look identical to the caller — prefer
+{{ indent }}    /// `body_or_error()` for explicit handling of the streaming case.
+{{ indent }}    [[nodiscard]] const JsonReader* body() const { return body_.get(); }
+
+{{ indent }}    /// Safe variant of `body()`: returns an explicit error when the
+{{ indent }}    /// Notecard ran in streaming mode (body tree unavailable by
+{{ indent }}    /// design), otherwise returns the body pointer (which may still
+{{ indent }}    /// be `nullptr` if the response carried no body field).
+{{ indent }}    ::note::Result<const JsonReader*> body_or_error() const {
+{{ indent }}        if (streaming_parse_used_)
+{{ indent }}            return ::note::make_error(::note::Error::NotReady, NOTE_ERR(
+{{ indent }}                "body() unavailable: Notecard parsed response in streaming mode. "
+{{ indent }}                "Use .into(JsonSink&) or .into(MyStruct&) for streaming body access."));
+{{ indent }}        return body_.get();
+{{ indent }}    }
+
+{{ indent }}    /// True when this response was produced by the streaming SAX
+{{ indent }}    /// parser path (no JSON tree built). When true, `body()` is
+{{ indent }}    /// unavailable and `body_or_error()` returns an explicit error.
+{{ indent }}    bool was_streaming_parse() const { return streaming_parse_used_; }
 #endif
 {% endif %}
 
@@ -562,7 +583,7 @@ namespace note::api {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
 {{ indent }}    static Response parse(std::unique_ptr<JsonReader> reader_) {
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
@@ -610,7 +631,7 @@ namespace note::api {
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
 {% endif %}
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 {% if op.response.properties %}
 
 {{ indent }}    // SAX sink — zero-allocation streaming parse into Response fields.
@@ -804,6 +825,11 @@ namespace note::api {
 {{ indent }}            if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
 {% endif %}
 {{ indent }}            rsp = Response{};
+{% if op.response.has_body %}
+#if !NOTE_NO_JSON_TREE
+{{ indent }}            rsp.streaming_parse_used_ = true;
+#endif
+{% endif %}
 {{ indent }}        }
 {{ indent }}    };
 {% if op.has_version_gated_response_props %}
@@ -867,11 +893,16 @@ namespace note::api {
 {{ indent }}    }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
 {{ indent }}private:
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}
 {{ indent }}    std::unique_ptr<JsonReader> body_;
+{{ indent }}    /// Set by the streaming Sink when this Response is populated via
+{{ indent }}    /// SAX parsing (no JSON tree). `body_or_error()` reads this
+{{ indent }}    /// to surface an explicit error instead of a silent nullptr.
+{{ indent }}    bool streaming_parse_used_ = false;
+{{ indent }}    friend struct Sink;
 {% endif %}
 #endif
 {{ indent }}};

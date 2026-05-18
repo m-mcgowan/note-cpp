@@ -138,7 +138,7 @@ struct CardBinaryPut : note::BinarySendMixin {
         /// transmission
         note::ResponseField<note::string_view> err{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("err")) rsp.err = reader_->get_string("err");
@@ -154,7 +154,7 @@ struct CardBinaryPut : note::BinarySendMixin {
             if (reader_.has("err")) rsp.err = reader_.get_string("err");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -190,7 +190,7 @@ struct CardBinaryPut : note::BinarySendMixin {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

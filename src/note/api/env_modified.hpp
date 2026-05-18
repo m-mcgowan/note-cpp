@@ -127,7 +127,7 @@ struct EnvModified {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -151,7 +151,7 @@ struct EnvModified {
             return rsp;
         }
 #pragma GCC diagnostic pop
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -196,7 +196,7 @@ struct EnvModified {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

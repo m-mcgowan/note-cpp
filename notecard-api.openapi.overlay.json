@@ -122,6 +122,11 @@
                     }
                 }
             }
+        },
+        "/env/get": {
+            "get": {
+                "description": "When called without a `name` (or `names`), `env.get` returns the full environment-variable set known to the Notecard. The response size scales with the Notehub project and may exceed the default response buffer, surfacing as `Error::Overflow`. For this shape, prefer the streaming `.into(JsonSink&)` overload — body events stream off the wire and the env set can be arbitrarily large. As an alternative, `Notecard::set_response_buffer()` can enlarge the staging buffer if a bounded response is acceptable."
+            }
         }
     }
 }

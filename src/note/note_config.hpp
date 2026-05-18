@@ -13,7 +13,7 @@
 ///   build_flags = -DNOTE_MINIMAL=1    ; sets all size-saving defaults
 ///
 /// Instead of:
-///   build_flags = -DNOTE_NO_BUFFERED=1 -DNOTE_NO_STD_STRING=1 -DNOTE_NO_MD5=1
+///   build_flags = -DNOTE_NO_JSON_TREE=1 -DNOTE_NO_STD_STRING=1 -DNOTE_NO_MD5=1
 ///                 -DNOTE_NO_CRC=1 -DNOTE_PRINTABLE=0 -DNOTE_EXTRAS=0
 ///                 -DNOTE_SHORT_ERRORS=1
 
@@ -25,8 +25,8 @@
 
 #if NOTE_MINIMAL
 
-#  ifndef NOTE_NO_BUFFERED
-#    define NOTE_NO_BUFFERED 1
+#  ifndef NOTE_NO_JSON_TREE
+#    define NOTE_NO_JSON_TREE 1
 #  endif
 
 #  ifndef NOTE_NO_STD_STRING
@@ -106,8 +106,19 @@
 // ── Individual flag defaults ───────────────────────────────────────────
 // Each flag defaults to its non-MINIMAL value if not already set.
 
-#ifndef NOTE_NO_BUFFERED
-#define NOTE_NO_BUFFERED 0
+// NOTE_NO_JSON_TREE — when 1, omit the JsonReader tree-mode response API
+// (`Response::body()`, `Response::body_or_error()`, `parse(reader)`). The
+// streaming SAX parse path is unaffected. Older code referencing the
+// deprecated name `NOTE_NO_BUFFERED` is honoured via the back-compat
+// shim below; new code should use `NOTE_NO_JSON_TREE`.
+#ifdef NOTE_NO_BUFFERED
+#  ifndef NOTE_NO_JSON_TREE
+#    define NOTE_NO_JSON_TREE NOTE_NO_BUFFERED
+#  endif
+#endif
+
+#ifndef NOTE_NO_JSON_TREE
+#define NOTE_NO_JSON_TREE 0
 #endif
 
 #ifndef NOTE_NO_STD_STRING
@@ -277,8 +288,8 @@
 Disable debug or enable std::string."
 #endif
 
-#if !NOTE_NO_BUFFERED && NOTE_NO_STD_STRING
-#error "The buffered transport path requires std::string support (NOTE_NO_STD_STRING=0). \
-Set NOTE_NO_BUFFERED=1 or enable std::string."
+#if !NOTE_NO_JSON_TREE && NOTE_NO_STD_STRING
+#error "The JSON tree-mode response path requires std::string support (NOTE_NO_STD_STRING=0). \
+Set NOTE_NO_JSON_TREE=1 or enable std::string."
 #endif
 

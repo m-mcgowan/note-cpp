@@ -94,7 +94,7 @@ struct CardAuxSerial {
         /// serial receive buffer minus `1`, which represents the number of
         /// bytes the host can absorb before the sender must delay due to the
         /// absence of flow control. For example, `note-arduino`` uses a buffer
-        /// size of `(SERIALRXBUFFER_SIZE - 1)`.
+        /// size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
@@ -104,7 +104,7 @@ struct CardAuxSerial {
             /// of the host's serial receive buffer minus `1`, which represents
             /// the number of bytes the host can absorb before the sender must
             /// delay due to the absence of flow control. For example, `note-
-            /// arduino`` uses a buffer size of `(SERIALRXBUFFER_SIZE - 1)`.
+            /// arduino`` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -295,7 +295,7 @@ struct CardAuxSerial {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
@@ -321,7 +321,7 @@ struct CardAuxSerial {
                 return rsp;
             }
 #pragma GCC diagnostic pop
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -379,7 +379,7 @@ struct CardAuxSerial {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -516,7 +516,7 @@ struct CardAuxSerial {
         /// serial receive buffer minus `1`, which represents the number of
         /// bytes the host can absorb before the sender must delay due to the
         /// absence of flow control. For example, `note-arduino`` uses a buffer
-        /// size of `(SERIALRXBUFFER_SIZE - 1)`.
+        /// size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
@@ -526,7 +526,7 @@ struct CardAuxSerial {
             /// of the host's serial receive buffer minus `1`, which represents
             /// the number of bytes the host can absorb before the sender must
             /// delay due to the absence of flow control. For example, `note-
-            /// arduino`` uses a buffer size of `(SERIALRXBUFFER_SIZE - 1)`.
+            /// arduino`` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)

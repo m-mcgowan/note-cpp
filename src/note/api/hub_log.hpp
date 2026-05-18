@@ -32,7 +32,7 @@ namespace note::api {
 
 
 /// Add a "device health" log message to send to Notehub on the next sync via
-/// the healthhost.qo Notefile.
+/// the _health_host.qo Notefile.
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct HubLog {

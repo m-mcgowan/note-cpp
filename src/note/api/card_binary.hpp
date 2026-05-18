@@ -129,7 +129,7 @@ struct CardBinary {
             /// The MD5 checksum calculated for the entire unencoded buffer.
             note::ResponseField<note::string_view> status{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
@@ -155,7 +155,7 @@ struct CardBinary {
                 if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -226,7 +226,7 @@ struct CardBinary {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -381,7 +381,7 @@ struct CardBinary {
             /// The MD5 checksum calculated for the entire unencoded buffer.
             note::ResponseField<note::string_view> status{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
@@ -407,7 +407,7 @@ struct CardBinary {
                 if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -478,7 +478,7 @@ struct CardBinary {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif

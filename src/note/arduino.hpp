@@ -163,7 +163,7 @@ public:
     }
 #endif // NOTE_ARDUINO_HAS_WIRE
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     // ── Buffered begin() — `Response::body()` returns a JsonReader* ───────
     //
     // Same Protocol stack as the streaming begin() above; the
@@ -174,7 +174,7 @@ public:
     // doesn't fit. Both transport-agnostic `.into(T&)` and tree-mode
     // `body()` work after a buffered begin.
     //
-    // Compiled out under NOTE_MINIMAL / NOTE_NO_BUFFERED — AVR-class
+    // Compiled out under NOTE_MINIMAL / NOTE_NO_JSON_TREE — AVR-class
     // builds use the streaming-only path and `.into(T&)` for body data.
 
     /// Begin with serial transport + JsonBackend (enables `body()`).
@@ -205,7 +205,7 @@ public:
         begin_buffered_finish(backend);
     }
 #endif // NOTE_ARDUINO_HAS_WIRE
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
     /// Enable debug output to an Arduino Print (e.g. Serial).
     /// Default: wire data only. Pass flags for more categories:
@@ -244,7 +244,7 @@ private:
         Base::begin(*i2c_streaming_, alloc);
     }
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     void begin_buffered_finish(JsonBackend& backend) {
         i2c_hal_transport_ = std::make_unique<link::I2cFramer<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<Protocol>(*i2c_hal_transport_);

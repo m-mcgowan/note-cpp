@@ -142,13 +142,13 @@ namespace detail {
 template<>
 class ApiResult<void> {
     std::optional<ErrorInfo> err_;
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     std::unique_ptr<JsonReader> reader_;
 #endif
 public:
     ApiResult() = default;
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
         : err_(std::move(e)), reader_(std::move(reader)) {}
 #endif
@@ -169,7 +169,20 @@ class Notecard {
 public:
     Notecard() = default;
 
-    /// Tree-mode ctor: buffered transact via the supplied JsonBackend.
+    /// Streaming ctor — preferred for new code. Responses are SAX-parsed
+    /// off the wire; typed fields (`r.version`, `.into(struct&)`) work
+    /// without any JSON tree-mode path linked. `body()` returns nullptr
+    /// in this mode; `body_or_error()` returns an explicit error.
+    explicit Notecard(ITransact& transport, Allocator alloc = {})
+        : transport_(&transport)
+        , alloc_(alloc)
+    {}
+
+    /// Tree-mode ctor: a JsonBackend builds a walkable response tree so
+    /// `Response::body()` returns a JsonReader for ad-hoc field access.
+    /// Streaming is the recommended default unless you need `body()` or
+    /// the lambda request builder; pass the single-arg streaming ctor
+    /// above otherwise.
     Notecard(JsonBackend& backend, ITransact& transport)
         : backend_(&backend)
         , transport_(&transport)
@@ -177,10 +190,10 @@ public:
 
     /// Unified ctor (Phase 5a step 8a). `backend` may be nullptr — pass
     /// nullptr + a non-null allocator for streaming-only mode; pass a
-    /// backend to enable the buffered tree-parse path. The allocator
+    /// backend to enable the JSON tree-mode parse path. The allocator
     /// selects the response-strategy: when set, execute() drives the
     /// streaming SAX path; when unset and a backend is present, the
-    /// buffered tree-parse path runs.
+    /// tree-parse path runs.
     Notecard(JsonBackend* backend, ITransact& transport, Allocator alloc = {})
         : backend_(backend)
         , transport_(&transport)
@@ -294,7 +307,7 @@ public:
         }
 
         // Buffered fallback: requires a JsonBackend + buffered transport.
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         if (backend_) {
             const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
             auto attempt = [&]() -> ApiResult<Rsp> {
@@ -388,7 +401,7 @@ public:
             BuildFnRequestSource src(build_fn, ctx);
             result = transport_->send(src.as_source());
         }
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         else if (backend_) {
             auto& builder = backend_->get_builder();
             build_fn(builder, ctx);
@@ -444,7 +457,7 @@ public:
             return {};
         }
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         if (backend_) {
             debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
             enforce_timing();
@@ -503,7 +516,7 @@ public:
             return {};
         }
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         if (backend_) {
             debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
             enforce_timing();

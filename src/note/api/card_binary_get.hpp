@@ -146,7 +146,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
         /// The MD5 checksum of the data returned, after it has been decoded
         note::ResponseField<note::string_view> status{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("err")) rsp.err = reader_->get_string("err");
@@ -164,7 +164,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -206,7 +206,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

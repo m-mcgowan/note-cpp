@@ -104,7 +104,9 @@ def _strip_markdown(text: str) -> str:
     # Strip bold/italic markers
     text = re.sub(r'_\*\*([^*]+)\*\*_', r'\1', text)
     text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
-    text = re.sub(r'_([^_]+)_', r'\1', text)
+    # Strip markdown italic (`_text_`) only when not part of a snake_case identifier.
+    # Without the lookarounds, `set_response_buffer` collapses to `setresponsebuffer`.
+    text = re.sub(r'(?<!\w)_([^_\s][^_]*)_(?!\w)', r'\1', text)
     return text
 
 

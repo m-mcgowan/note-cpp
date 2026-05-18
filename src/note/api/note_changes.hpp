@@ -176,7 +176,7 @@ struct NoteChanges {
             /// The total number of Notes in the Notefile.
             note::ResponseField<note::json_int_t> total{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
@@ -194,7 +194,7 @@ struct NoteChanges {
                 if (reader_.has("total")) rsp.total = reader_.get_int("total");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -236,7 +236,7 @@ struct NoteChanges {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -468,7 +468,7 @@ struct NoteChanges {
             /// The total number of Notes in the Notefile.
             note::ResponseField<note::json_int_t> total{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
@@ -486,7 +486,7 @@ struct NoteChanges {
                 if (reader_.has("total")) rsp.total = reader_.get_int("total");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -528,7 +528,7 @@ struct NoteChanges {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif

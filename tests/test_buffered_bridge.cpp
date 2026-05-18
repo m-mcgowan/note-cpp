@@ -144,3 +144,30 @@ TEST_CASE("ITransact bridge: oversize request returns Overflow") {
     // Bridge must short-circuit before invoking the string_view virtual.
     CHECK(transport.transact_count == 0);
 }
+
+// Response-overflow message must point users at the two escape hatches:
+// enlarging the staging buffer or switching to the streaming path. The
+// raw "exceeds buffer" message names the symptom but not the remedy; this
+// test pins the discoverability contract so we don't silently regress it.
+#if !NOTE_SHORT_ERRORS
+TEST_CASE("ITransact: response overflow names set_response_buffer + .into() escape hatches") {
+    // Drive the CallbackTransport's response-overflow path directly: the
+    // canned response is bigger than the caller's staging buffer.
+    note::test::CallbackTransport transport(
+        [](string_view, uint32_t) -> Result<string_view> {
+            static const std::string big(2048, 'a');
+            return string_view{big};
+        });
+
+    char rsp_buf[64];
+    auto rv = transport.transact(string_view{"{\"req\":\"env.get\"}"},
+                                 span<char>(rsp_buf, sizeof(rsp_buf)), 1000);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().code == Error::Overflow);
+    auto msg = string_view{rv.error().message};
+    CHECK_MESSAGE(msg.find("set_response_buffer") != string_view::npos,
+                  "overflow message should name set_response_buffer; got: ", std::string{msg});
+    CHECK_MESSAGE(msg.find(".into(") != string_view::npos,
+                  "overflow message should name .into(...) streaming overload; got: ", std::string{msg});
+}
+#endif

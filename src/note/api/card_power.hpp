@@ -129,7 +129,7 @@ struct CardPower {
             /// The current voltage.
             note::ResponseField<double> voltage{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("milliamp_hours")) rsp.milliampHours = reader_->get_double("milliamp_hours");
@@ -149,7 +149,7 @@ struct CardPower {
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -197,7 +197,7 @@ struct CardPower {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -366,7 +366,7 @@ struct CardPower {
             /// The current voltage.
             note::ResponseField<double> voltage{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("milliamp_hours")) rsp.milliampHours = reader_->get_double("milliamp_hours");
@@ -386,7 +386,7 @@ struct CardPower {
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -434,7 +434,7 @@ struct CardPower {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -591,7 +591,7 @@ struct CardPower {
             /// The current voltage.
             note::ResponseField<double> voltage{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("milliamp_hours")) rsp.milliampHours = reader_->get_double("milliamp_hours");
@@ -611,7 +611,7 @@ struct CardPower {
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -659,7 +659,7 @@ struct CardPower {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif

@@ -616,7 +616,9 @@ private:
         }
         buf[pos] = '\0';
         if (overflow)
-            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+            return make_error(Error::Overflow, NOTE_ERR(
+                "response exceeds buffer; enlarge with nc.set_response_buffer() "
+                "or wire .into(JsonSink&) for streaming"));
         return string_view(buf, pos);
     }
 

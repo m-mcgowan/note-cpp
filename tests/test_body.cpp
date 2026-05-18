@@ -420,6 +420,37 @@ TEST_CASE("note.get response body() returns reader when body present") {
     REQUIRE(rsp.body() != nullptr);
     REQUIRE(rsp.body()->get_double("temperature") == 22.5);
     REQUIRE(rsp.body()->get_int("humidity") == 60);
+    REQUIRE_FALSE(rsp.was_streaming_parse());
+    // body_or_error() success path mirrors body() in the buffered case.
+    auto safe = rsp.body_or_error();
+    REQUIRE(safe.has_value());
+    REQUIRE(*safe != nullptr);
+}
+
+TEST_CASE("note.get streaming-parsed response: body_or_error reports streaming mode") {
+    // Streaming Sink::reset sets streaming_parse_used_ on the Response. Even
+    // when the Response is otherwise default-initialised, body_or_error must
+    // surface an explicit Error::NotReady so callers can react instead of
+    // silently dereferencing a null body() pointer.
+    using Rsp = note::api::NoteGet::Get::Response;
+    Rsp rsp;
+    char arena_buf[256];
+    note::MonotonicArena arena(arena_buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    Rsp::Sink sink(rsp, pool);
+    sink.reset();
+    REQUIRE(rsp.was_streaming_parse());
+    REQUIRE(rsp.body() == nullptr);
+    auto safe = rsp.body_or_error();
+    REQUIRE_FALSE(safe.has_value());
+    CHECK(safe.error().code == note::Error::NotReady);
+#if !NOTE_SHORT_ERRORS
+    auto msg = note::string_view{safe.error().message};
+    CHECK_MESSAGE(msg.find("streaming mode") != note::string_view::npos,
+                  "should name streaming mode; got: ", std::string{msg});
+    CHECK_MESSAGE(msg.find(".into(") != note::string_view::npos,
+                  "should name .into(...) alternative; got: ", std::string{msg});
+#endif
 }
 
 #if __cplusplus >= 202002L

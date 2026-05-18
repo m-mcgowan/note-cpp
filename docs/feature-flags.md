@@ -44,7 +44,7 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 | Flag | Default | Minimal | Effect | Savings |
 |------|---------|---------|--------|---------|
 | `NOTE_JSONB` | `0` | **(M)** `1` | Use [JSONB binary wire format](jsonb.md) instead of JSON text. Requests/responses encoded as COBS-framed binary opcodes. CRC is bypassed (COBS provides framing but not integrity — CRC handles that separately). Raw JSON string bodies are a compile error — use lambdas or typed structs. Requires Notecard firmware 11.x+. | ~1.9 KB flash (replaces JSON builder/lexer with the smaller JSONB builder/parser) |
-| `NOTE_NO_BUFFERED` | off | **(M)** on | Disable `JsonBackend`/`JsonReader` tree parse path. Only streaming SAX parse available. (Macro name retained for backwards compatibility.) | ~2-4 KB flash, ~300 B RAM |
+| `NOTE_NO_JSON_TREE` | off | **(M)** on | Disable `JsonBackend`/`JsonReader` tree-mode parse path (`.body()`, `.body_or_error()`, `parse(reader)`). Only streaming SAX parse available. The legacy spelling `NOTE_NO_BUFFERED` is honoured as a deprecated alias. | ~2-4 KB flash, ~300 B RAM |
 | `NOTE_NO_CRC` | off | **(M)** on | Disable CRC32 on request/response framing. (CRC not supported by JSONB on Notecard)| ~200 B flash, 64 B .data (LUT) |
 | `NOTE_NO_MD5` | off | **(M)** on | Disable MD5 for binary transfer verification. | ~512 B .data (tables) |
 | `NOTE_NO_STD_STRING` | off | **(M)** on | Disable `std::string`-dependent features (debug wire tracing, some transport methods). Required for AVR (no `<string>` header). | Enables AVR builds |

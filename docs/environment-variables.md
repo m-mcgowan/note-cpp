@@ -178,7 +178,7 @@ if (rsp) {
 }
 ```
 
-On AVR-class builds (`NOTE_MINIMAL` sets `NOTE_NO_BUFFERED=1`), tree mode is compiled out — the `transact` + `scan` pattern above is the only option for dynamic keys.
+On AVR-class builds (`NOTE_MINIMAL` sets `NOTE_NO_JSON_TREE=1`), tree mode is compiled out — the `transact` + `scan` pattern above is the only option for dynamic keys.
 
 ## C++ level
 

@@ -134,7 +134,7 @@ struct CardRandom {
         /// values, the length of which is specified by the `count` argument.
         note::ResponseField<note::string_view> payload{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("count")) rsp.count = reader_->get_int("count");
@@ -152,7 +152,7 @@ struct CardRandom {
             if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -198,7 +198,7 @@ struct CardRandom {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

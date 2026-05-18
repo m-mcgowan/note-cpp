@@ -59,8 +59,8 @@ struct CardDfu {
 
 
     /// The `mode` argument allows you to control whether a Notecard's `AUX`
-    /// pins (default) or `ALTDFU` pins are used for Notecard Outboard Firmware
-    /// Update. This argument is only supported on Notecards that have `ALTDFU`
+    /// pins (default) or `ALT_DFU` pins are used for Notecard Outboard Firmware
+    /// Update. This argument is only supported on Notecards that have `ALT_DFU`
     /// pins, which includes all versions of Notecard Cell+WiFi, non-legacy
     /// versions of Notecard Cellular, and Notecard WiFi v2.
     // mode: altdfu | aux
@@ -99,9 +99,9 @@ struct CardDfu {
         static constexpr note::string_view altdfu{"altdfu"};
         static constexpr note::string_view aux{"aux"};
         /// The `mode` argument allows you to control whether a Notecard's `AUX`
-        /// pins (default) or `ALTDFU` pins are used for Notecard Outboard
+        /// pins (default) or `ALT_DFU` pins are used for Notecard Outboard
         /// Firmware Update. This argument is only supported on Notecards that
-        /// have `ALTDFU` pins, which includes all versions of Notecard
+        /// have `ALT_DFU` pins, which includes all versions of Notecard
         /// Cell+WiFi, non-legacy versions of Notecard Cellular, and Notecard
         /// WiFi v2.
         CardDfu& operator()(note::string_view v);
@@ -295,7 +295,7 @@ struct CardDfu {
         /// support for Outboard DFU.
         note::ResponseField<note::string_view> name{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("name")) rsp.name = reader_->get_string("name");
@@ -311,7 +311,7 @@ struct CardDfu {
             if (reader_.has("name")) rsp.name = reader_.get_string("name");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -347,7 +347,7 @@ struct CardDfu {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

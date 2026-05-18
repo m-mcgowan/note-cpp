@@ -155,7 +155,7 @@ struct CardUsageTest {
         /// Time of device activation.
         note::ResponseField<note::json_int_t> time{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("bytes_per_day")) rsp.bytesPerDay = reader_->get_int("bytes_per_day");
@@ -191,7 +191,7 @@ struct CardUsageTest {
             if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -287,7 +287,7 @@ struct CardUsageTest {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

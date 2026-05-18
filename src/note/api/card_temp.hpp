@@ -70,17 +70,17 @@ struct CardTemp {
 #endif
 
 
-        /// If specified, creates a templated `temp.qo` file that gathers
+        /// If specified, creates a templated `_temp.qo` file that gathers
         /// Notecard temperature value at the specified minutes interval. When
         /// using card.aux track mode, the sensor temperature, pressure, and
-        /// humidity is also included with each Note._
+        /// humidity is also included with each Note.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// If specified, creates a templated `temp.qo` file that gathers
+            /// If specified, creates a templated `_temp.qo` file that gathers
             /// Notecard temperature value at the specified minutes interval.
             /// When using card.aux track mode, the sensor temperature,
-            /// pressure, and humidity is also included with each Note._
+            /// pressure, and humidity is also included with each Note.
             CardTemp::Read& operator()(note::json_int_t v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
@@ -185,7 +185,7 @@ struct CardTemp {
             /// The current voltage.
             note::ResponseField<double> voltage{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
@@ -213,7 +213,7 @@ struct CardTemp {
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -286,7 +286,7 @@ struct CardTemp {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -404,17 +404,17 @@ struct CardTemp {
 #endif
 
 
-        /// If specified, creates a templated `temp.qo` file that gathers
+        /// If specified, creates a templated `_temp.qo` file that gathers
         /// Notecard temperature value at the specified minutes interval. When
         /// using card.aux track mode, the sensor temperature, pressure, and
-        /// humidity is also included with each Note._
+        /// humidity is also included with each Note.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// If specified, creates a templated `temp.qo` file that gathers
+            /// If specified, creates a templated `_temp.qo` file that gathers
             /// Notecard temperature value at the specified minutes interval.
             /// When using card.aux track mode, the sensor temperature,
-            /// pressure, and humidity is also included with each Note._
+            /// pressure, and humidity is also included with each Note.
             CardTemp::Configure& operator()(note::json_int_t v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
@@ -519,7 +519,7 @@ struct CardTemp {
             /// The current voltage.
             note::ResponseField<double> voltage{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
@@ -547,7 +547,7 @@ struct CardTemp {
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -620,7 +620,7 @@ struct CardTemp {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -738,17 +738,17 @@ struct CardTemp {
 #endif
 
 
-        /// If specified, creates a templated `temp.qo` file that gathers
+        /// If specified, creates a templated `_temp.qo` file that gathers
         /// Notecard temperature value at the specified minutes interval. When
         /// using card.aux track mode, the sensor temperature, pressure, and
-        /// humidity is also included with each Note._
+        /// humidity is also included with each Note.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// If specified, creates a templated `temp.qo` file that gathers
+            /// If specified, creates a templated `_temp.qo` file that gathers
             /// Notecard temperature value at the specified minutes interval.
             /// When using card.aux track mode, the sensor temperature,
-            /// pressure, and humidity is also included with each Note._
+            /// pressure, and humidity is also included with each Note.
             CardTemp::Stop& operator()(note::json_int_t v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
@@ -837,7 +837,7 @@ struct CardTemp {
             /// The current voltage.
             note::ResponseField<double> voltage{};
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
@@ -865,7 +865,7 @@ struct CardTemp {
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -938,7 +938,7 @@ struct CardTemp {
             }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif

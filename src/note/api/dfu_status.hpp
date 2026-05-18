@@ -160,7 +160,7 @@ struct DfuStatus {
     ///
     /// `{"org":"my-organization","product":"My Product","description":"A
     /// description of the image","version":"1.2.4","built":"Jan 01 2025
-    /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
+    /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
     /// 5,"builder":"The Builder"}`
     ///
     /// Code to help you generate a version with the correct formatting is
@@ -176,7 +176,7 @@ struct DfuStatus {
         ///
         /// `{"org":"my-organization","product":"My Product","description":"A
         /// description of the image","version":"1.2.4","built":"Jan 01 2025
-        /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
+        /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
         /// 5,"builder":"The Builder"}`
         ///
         /// Code to help you generate a version with the correct formatting is
@@ -294,7 +294,7 @@ struct DfuStatus {
 
     /// Forward body SAX events to the given JsonSink.
     /// The sink must outlive execute(). Works in both streaming and
-    /// buffered transport modes.
+    /// JSON tree-mode transports.
     auto& into(::note::JsonSink& sink_) {
         body_ptr_ = &sink_;
         body_handler_factory_ = &::note::jsonsink_body_factory;
@@ -343,12 +343,33 @@ struct DfuStatus {
         /// The current status of the firmware download.
         note::ResponseField<note::string_view> status{};
 
-#if !NOTE_NO_BUFFERED
-        /// Access the body as a JsonReader (buffered parse path only).
-        const JsonReader* body() const { return body_.get(); }
+#if !NOTE_NO_JSON_TREE
+        /// Access the body as a JsonReader (JSON tree-mode path only).
+        /// Returns `nullptr` when the response had no body field, OR
+        /// when the Notecard ran in streaming mode (no JSON tree was
+        /// built). The two cases look identical to the caller — prefer
+        /// `body_or_error()` for explicit handling of the streaming case.
+        [[nodiscard]] const JsonReader* body() const { return body_.get(); }
+
+        /// Safe variant of `body()`: returns an explicit error when the
+        /// Notecard ran in streaming mode (body tree unavailable by
+        /// design), otherwise returns the body pointer (which may still
+        /// be `nullptr` if the response carried no body field).
+        ::note::Result<const JsonReader*> body_or_error() const {
+            if (streaming_parse_used_)
+                return ::note::make_error(::note::Error::NotReady, NOTE_ERR(
+                    "body() unavailable: Notecard parsed response in streaming mode. "
+                    "Use .into(JsonSink&) or .into(MyStruct&) for streaming body access."));
+            return body_.get();
+        }
+
+        /// True when this response was produced by the streaming SAX
+        /// parser path (no JSON tree built). When true, `body()` is
+        /// unavailable and `body_or_error()` returns an explicit error.
+        bool was_streaming_parse() const { return streaming_parse_used_; }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
@@ -374,7 +395,7 @@ struct DfuStatus {
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
-#endif // !NOTE_NO_BUFFERED
+#endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -433,6 +454,9 @@ struct DfuStatus {
                 body_depth_ = 0;
                 if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
                 rsp = Response{};
+#if !NOTE_NO_JSON_TREE
+                rsp.streaming_parse_used_ = true;
+#endif
             }
         };
 
@@ -471,10 +495,15 @@ struct DfuStatus {
         }
 #endif
 
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
+        /// Set by the streaming Sink when this Response is populated via
+        /// SAX parsing (no JSON tree). `body_or_error()` reads this
+        /// to surface an explicit error instead of a silent nullptr.
+        bool streaming_parse_used_ = false;
+        friend struct Sink;
 #endif
     };
 

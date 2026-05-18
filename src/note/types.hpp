@@ -193,13 +193,13 @@ inline Unexpected make_error(Error code, ErrorMessage message = {}) {
 template<typename Response>
 class ApiResult : public Response {
     std::optional<ErrorInfo> err_;
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     std::unique_ptr<JsonReader> reader_;  // keeps error message string_views alive
 #endif
 public:
     ApiResult(Response r) : Response(std::move(r)) {}
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
-#if !NOTE_NO_BUFFERED
+#if !NOTE_NO_JSON_TREE
     ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
         : err_(std::move(e)), reader_(std::move(reader)) {}
 #endif

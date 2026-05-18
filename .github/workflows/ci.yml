@@ -50,6 +50,10 @@ jobs:
       || inputs.build-type == 'full'
       || inputs.build-type == 'quick'
     strategy:
+      # Surface every compiler's result, not just the first failure — when one
+      # entry breaks, fail-fast cancels the rest and we learn nothing about
+      # whether the others would have passed or hit independent issues.
+      fail-fast: false
       matrix:
         include:
           - compiler: g++-12

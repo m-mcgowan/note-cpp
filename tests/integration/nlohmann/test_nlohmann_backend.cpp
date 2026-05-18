@@ -138,3 +138,59 @@ TEST_CASE("nlohmann/round_trip") {
     CHECK(std::abs(body->get_double("temp") - 22.5) < 0.001);
     CHECK(body->get_int("humidity") == 60);
 }
+
+// Wrong-type fallbacks. `nlohmann/reader/defaults` covers the
+// `it == json_.end()` branch; these subcases drive the parallel
+// `!it->is_<T>()` branches in each getter so both clauses of the
+// short-circuited condition see both outcomes.
+TEST_CASE("nlohmann/reader/wrong_type_returns_default") {
+    NlohmannBackend backend;
+    auto reader = backend.parse_response(
+        R"({"s":"hi","n":42,"b":true,"a":[1,2],"o":{"k":1}})");
+
+    SUBCASE("get_bool on non-bool returns default") {
+        CHECK(reader->get_bool("s", true)  == true);
+        CHECK(reader->get_bool("n", false) == false);
+    }
+    SUBCASE("get_int on non-number returns default") {
+        CHECK(reader->get_int("s", 99) == 99);
+        CHECK(reader->get_int("b", 99) == 99);
+    }
+    SUBCASE("get_double on non-number returns default") {
+        CHECK(std::abs(reader->get_double("s", 1.25) - 1.25) < 0.001);
+    }
+    SUBCASE("get_string on non-string returns default") {
+        CHECK(reader->get_string("n", "fallback") == "fallback");
+        CHECK(reader->get_string("b", "fallback") == "fallback");
+    }
+    SUBCASE("get_string_array on non-array returns 0") {
+        note::string_view out[4];
+        CHECK(reader->get_string_array("s", out, 4) == 0);
+    }
+    SUBCASE("get_object_array on non-array returns 0") {
+        std::unique_ptr<note::JsonReader> out[4];
+        CHECK(reader->get_object_array("s", out, 4) == 0);
+    }
+    SUBCASE("get_object on non-object returns nullptr") {
+        CHECK(reader->get_object("a") == nullptr);
+    }
+}
+
+TEST_CASE("nlohmann/reader/error_message_paths") {
+    NlohmannBackend backend;
+
+    SUBCASE("parse failure: has_error true, parse-error sentinel") {
+        auto reader = backend.parse_response("not json at all");
+        REQUIRE(reader->has_error());
+        CHECK(reader->get_error() == "JSON parse error");
+    }
+    SUBCASE("err field with non-string value: empty view") {
+        auto reader = backend.parse_response(R"({"err":42})");
+        CHECK_FALSE(reader->has_error());
+        CHECK(reader->get_error().empty());
+    }
+    SUBCASE("no err field: empty view") {
+        auto reader = backend.parse_response(R"({"ok":true})");
+        CHECK(reader->get_error().empty());
+    }
+}

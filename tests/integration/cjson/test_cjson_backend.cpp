@@ -139,3 +139,82 @@ TEST_CASE("cjson/round_trip") {
     CHECK(std::abs(body->get_double("temp") - 22.5) < 0.001);
     CHECK(body->get_int("humidity") == 60);
 }
+
+// Wrong-type fallbacks: when a key exists but its value is the wrong type
+// for the requested getter, the reader must return the supplied default.
+// The default-on-missing-key path is already covered by `cjson/reader/defaults`;
+// these subcases exercise the parallel branches where `cJSON_Is<T>` returns
+// false.
+TEST_CASE("cjson/reader/wrong_type_returns_default") {
+    CjsonBackend backend;
+    // s is a string, n is a number, b is a bool, a is an array, o is an object.
+    auto reader = backend.parse_response(
+        R"({"s":"hi","n":42,"b":true,"a":[1,2],"o":{"k":1}})");
+
+    SUBCASE("get_bool on non-bool returns default") {
+        CHECK(reader->get_bool("s", true)  == true);
+        CHECK(reader->get_bool("s", false) == false);
+        CHECK(reader->get_bool("n", true)  == true);
+    }
+    SUBCASE("get_int on non-number returns default") {
+        CHECK(reader->get_int("s", 99) == 99);
+        CHECK(reader->get_int("b", 99) == 99);
+    }
+    SUBCASE("get_double on non-number returns default") {
+        CHECK(std::abs(reader->get_double("s", 1.25) - 1.25) < 0.001);
+        CHECK(std::abs(reader->get_double("b", 1.25) - 1.25) < 0.001);
+    }
+    SUBCASE("get_string on non-string returns default") {
+        CHECK(reader->get_string("n", "fallback") == "fallback");
+        CHECK(reader->get_string("b", "fallback") == "fallback");
+    }
+    SUBCASE("get_string_array on non-array returns 0") {
+        note::string_view out[4];
+        CHECK(reader->get_string_array("s", out, 4) == 0);
+        CHECK(reader->get_string_array("n", out, 4) == 0);
+    }
+    SUBCASE("get_object_array on non-array returns 0") {
+        std::unique_ptr<note::JsonReader> out[4];
+        CHECK(reader->get_object_array("s", out, 4) == 0);
+    }
+    SUBCASE("get_object on non-object returns nullptr") {
+        CHECK(reader->get_object("s") == nullptr);
+        CHECK(reader->get_object("a") == nullptr);
+    }
+}
+
+TEST_CASE("cjson/reader/error_message_paths") {
+    CjsonBackend backend;
+
+    SUBCASE("parse failure: has_error true, err_message default") {
+        auto reader = backend.parse_response("not json at all");
+        REQUIRE(reader->has_error());
+        // Null root -> "JSON parse error" sentinel.
+        CHECK(reader->get_error() == "JSON parse error");
+    }
+    SUBCASE("err field with non-string value: returns empty view") {
+        // err present but the wrong type — get_error must NOT mis-interpret.
+        auto reader = backend.parse_response(R"({"err":42})");
+        CHECK_FALSE(reader->has_error());
+        CHECK(reader->get_error().empty());
+    }
+    SUBCASE("no err field at all: empty view") {
+        auto reader = backend.parse_response(R"({"ok":true})");
+        CHECK(reader->get_error().empty());
+    }
+}
+
+TEST_CASE("cjson/builder/reset_after_use_rebuilds_tree") {
+    // reset() on a builder that already has a tree must dispose of the old
+    // root and start fresh — covers the `if (root_) cJSON_Delete(root_)`
+    // branch when root_ is non-null.
+    CjsonBackend backend;
+    auto builder = backend.create_builder();
+    builder->add("first", "a");
+    builder->reset();
+    builder->add("second", "b");
+    auto json = builder->to_view();
+    auto reader = backend.parse_response(json);
+    CHECK(reader->get_string("first", "MISSING") == "MISSING");
+    CHECK(reader->get_string("second") == "b");
+}

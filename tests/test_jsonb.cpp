@@ -903,6 +903,217 @@ TEST_CASE("jsonb parser: empty stream is not an error") {
 // the real transport returns the full response in one frame_read chunk.
 
 // ---------------------------------------------------------------------------
+// Targeted opcode coverage — the StreamingJsonbBuilder only emits
+// kInt32 / kDouble / kTrue / kFalse / kString, but the parser must accept
+// any width that note-c-zero (or a third-party JSONB producer) emits.
+// These tests hand-craft byte streams for the non-builder-emitted opcodes
+// and verify the parser produces the right SAX events. Without them the
+// kInt8/16/64, kUint8/16/32/64, and kFloat branches in the dispatch
+// switch never execute.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Parse a hand-crafted opcode stream and return the recorded events.
+std::vector<RecordingSink::Event> parse_opcodes(const std::vector<uint8_t>& opcodes) {
+    RecordingSink sink;
+    VectorReader reader{opcodes};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+    return sink.events;
+}
+
+// Parse a hand-crafted opcode stream and return any error (or empty string).
+std::string parse_opcodes_expect_error(const std::vector<uint8_t>& opcodes) {
+    RecordingSink sink;
+    VectorReader reader{opcodes};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    return std::string(err.data(), err.size());
+}
+
+}  // namespace
+
+TEST_CASE("jsonb parser: integer width opcodes dispatch as Int events") {
+    // One of each integer opcode in a single object. All dispatch as int32
+    // (the SAX layer only carries int32), so we verify the value after the
+    // width-specific decode.
+    std::vector<uint8_t> opcodes = {
+        jsonb::kBeginObject,
+
+        jsonb::kItem, 'a', '\0',
+        jsonb::kInt8, 0x80,                          // -128 as signed int8
+
+        jsonb::kItem, 'b', '\0',
+        jsonb::kInt16, 0x00, 0x80,                   // -32768 as signed int16 LE
+
+        jsonb::kItem, 'c', '\0',
+        jsonb::kInt64,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // -1 (truncated to int32)
+
+        jsonb::kItem, 'd', '\0',
+        jsonb::kUint8, 0xff,                         // 255
+
+        jsonb::kItem, 'e', '\0',
+        jsonb::kUint16, 0x34, 0x12,                  // 0x1234 = 4660
+
+        jsonb::kItem, 'f', '\0',
+        jsonb::kUint32, 0x78, 0x56, 0x34, 0x12,      // 0x12345678 = 305419896
+
+        jsonb::kItem, 'g', '\0',
+        jsonb::kUint64,
+        0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0,          // 0x12345678 truncated
+
+        jsonb::kEndObject,
+    };
+    auto events = parse_opcodes(opcodes);
+    // ObjBegin + 7 ints + ObjEnd
+    REQUIRE(events.size() == 9);
+    CHECK(events[1].type == RecordingSink::Int);
+    CHECK(events[1].key == "a"); CHECK(events[1].i == -128);
+    CHECK(events[2].i == -32768);
+    CHECK(events[3].i == -1);
+    CHECK(events[4].i == 255);
+    CHECK(events[5].i == 4660);
+    CHECK(events[6].i == 0x12345678);
+    CHECK(events[7].i == 0x12345678);
+}
+
+TEST_CASE("jsonb parser: kFloat opcode dispatches as Float event") {
+    const float f = 3.14f;
+    std::vector<uint8_t> opcodes = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'v', '\0',
+        jsonb::kFloat,
+    };
+    uint8_t raw[4];
+    memcpy(raw, &f, 4);
+    opcodes.insert(opcodes.end(), raw, raw + 4);
+    opcodes.push_back(jsonb::kEndObject);
+    auto events = parse_opcodes(opcodes);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].type == RecordingSink::Float);
+    CHECK(events[1].key == "v");
+    CHECK(events[1].f == doctest::Approx(static_cast<double>(f)));
+}
+
+TEST_CASE("jsonb parser: truncated width-prefixed opcodes return errors") {
+    auto truncate_after = [](uint8_t opcode) {
+        return std::vector<uint8_t>{
+            jsonb::kBeginObject,
+            jsonb::kItem, 'x', '\0',
+            opcode,
+            // payload missing entirely
+        };
+    };
+
+    SUBCASE("truncated int8")   { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kInt8)).find("int8")   != std::string::npos); }
+    SUBCASE("truncated int16")  { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kInt16)).find("int16") != std::string::npos); }
+    SUBCASE("truncated int32")  { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kInt32)).find("int32") != std::string::npos); }
+    SUBCASE("truncated int64")  { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kInt64)).find("int64") != std::string::npos); }
+    SUBCASE("truncated uint8")  { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kUint8)).find("uint8")   != std::string::npos); }
+    SUBCASE("truncated uint16") { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kUint16)).find("uint16") != std::string::npos); }
+    SUBCASE("truncated uint32") { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kUint32)).find("uint32") != std::string::npos); }
+    SUBCASE("truncated uint64") { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kUint64)).find("uint64") != std::string::npos); }
+    SUBCASE("truncated float")  { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kFloat)).find("float")   != std::string::npos); }
+    SUBCASE("truncated double") { CHECK(parse_opcodes_expect_error(truncate_after(jsonb::kDouble)).find("double") != std::string::npos); }
+
+    SUBCASE("unknown opcode") {
+        std::vector<uint8_t> opcodes = {
+            jsonb::kBeginObject,
+            jsonb::kItem, 'x', '\0',
+            0xEE,  // not a known opcode
+            jsonb::kEndObject,
+        };
+        CHECK(parse_opcodes_expect_error(opcodes).find("unknown") != std::string::npos);
+    }
+}
+
+TEST_CASE("jsonb builder: add_element(false) emits kFalse opcode") {
+    // mixed-array test covers add_element(true); cover the false branch
+    // here so both sides of the kTrue/kFalse ternary in JsonBuilder::add_element
+    // are exercised.
+    auto bytes = jsonb_build([](JsonBuilder& b) {
+        b.begin_array("flags");
+        b.add_element(false);
+        b.add_element(true);
+        b.end_array();
+    });
+    // kBeginObject + kItem + "flags\0" + kBeginArray + kFalse + kTrue +
+    // kEndArray + kEndObject = 1 + 1 + 6 + 1 + 1 + 1 + 1 + 1 = 13
+    REQUIRE(bytes.size() == 13);
+    CHECK(bytes[8]  == jsonb::kBeginArray);
+    CHECK(bytes[9]  == jsonb::kFalse);
+    CHECK(bytes[10] == jsonb::kTrue);
+}
+
+TEST_CASE("jsonb CobsStreamWriter: inner-writer failure propagates from flush") {
+    // A JsonWriter that returns false on the first write call. Forces the
+    // `!flush_block()` branches in CobsStreamWriter::write to fire.
+    struct FailingWriter : JsonWriter {
+        bool write(const char*, size_t) override { return false; }
+    };
+
+    SUBCASE("flush triggered by a zero byte") {
+        FailingWriter inner;
+        CobsStreamWriter w(inner, /*xor=*/0);
+        const char data[] = {'\0'};
+        CHECK_FALSE(w.write(data, 1));
+    }
+
+    SUBCASE("flush triggered by 254-byte block fill") {
+        FailingWriter inner;
+        CobsStreamWriter w(inner, /*xor=*/0);
+        // 254 non-zero bytes fills the block to the point where the next
+        // byte (or, depending on the encoder, the 255th itself) triggers
+        // an auto-flush.
+        std::vector<char> filler(254, 'a');
+        // First write may succeed or fail depending on when the encoder
+        // flushes; the contract under test is just that an inner-writer
+        // failure surfaces at some point. Drive enough bytes to force at
+        // least one flush attempt.
+        bool any_fail = !w.write(filler.data(), filler.size())
+                     || !w.write(filler.data(), filler.size());
+        CHECK(any_fail);
+    }
+
+    SUBCASE("explicit flush() returns false") {
+        FailingWriter inner;
+        CobsStreamWriter w(inner, /*xor=*/0);
+        // Even with no data written, flush emits the (default) code byte.
+        CHECK_FALSE(w.flush());
+    }
+}
+
+TEST_CASE("jsonb parser: deeply nested object beyond kMaxDepth") {
+    // The parser maintains an 8-slot key stack (jsonb.hpp kMaxDepth = 8).
+    // Going past it must not push or crash — push_key silently stops
+    // saving, and pop_key restores `key_len_ = 0` for the over-deep level.
+    std::vector<uint8_t> opcodes = {jsonb::kBeginObject};
+    // Open 12 nested objects (4 deeper than the stack), each under a key.
+    for (int i = 0; i < 12; ++i) {
+        opcodes.push_back(jsonb::kItem);
+        opcodes.push_back('k');
+        opcodes.push_back('\0');
+        opcodes.push_back(jsonb::kBeginObject);
+    }
+    // Close them all.
+    for (int i = 0; i < 12; ++i) opcodes.push_back(jsonb::kEndObject);
+    opcodes.push_back(jsonb::kEndObject);
+
+    auto events = parse_opcodes(opcodes);
+    // 13 ObjBegin + 13 ObjEnd
+    REQUIRE(events.size() == 26);
+    CHECK(events[0].type == RecordingSink::ObjBegin);
+    CHECK(events[25].type == RecordingSink::ObjEnd);
+}
+
+// ---------------------------------------------------------------------------
 // End-to-end: StaticNotecard + Api + card.version over JSONB mock HAL
 // ---------------------------------------------------------------------------
 

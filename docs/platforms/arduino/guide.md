@@ -2,7 +2,7 @@
 
 ## Setup
 
-`note::arduino::Notecard` wraps the full transport stack behind `begin()`, so a typical sketch only needs to pick a serial or I2C transport and call the right overload:
+`note::arduino::Notecard`  uses `begin()` to create the transport stack, so a typical sketch only needs to pick a serial or I2C transport and call the right overload:
 
 ```cpp
 #include <note.hpp>
@@ -37,15 +37,17 @@ nc.begin(Wire, backend);                // tree mode, I2C
 
 The tree-mode `begin()` overloads do not take a separate response-buffer argument. `Notecard` owns a default response staging buffer of `NOTE_RSP_BUF_SIZE` bytes (1024 by default). If your largest expected response exceeds that, call `nc.set_response_buffer(span)` after `begin()` with a buffer of your own.
 
-`note.hpp` imports `Notecard`, duration literals (`15_mins`, `5_s`), and
+// TODO - why does tree mode use a fixed buffer, shouldn't this also be passed in by the caller?
+
+For convenience, `note.hpp` imports by default `Notecard`, duration literals (`15_mins`, `5_s`), and
 other common names into the global namespace. See
 [namespace imports](../../feature-flags.md#namespace-imports) to customize.
 
-To confirm the Notecard is reachable before issuing application requests, call `nc.ping()`. It sends a one-shot `echo` probe with a random nonce, returns truthy if the Notecard echoes the nonce back within the default 500 ms timeout, and never retries or resets the transport on failure. The probe is documented in more detail under [troubleshooting.md § no response from the Notecard](../../troubleshooting.md#im-getting-no-response-from-the-notecard).
+To confirm the Notecard is reachable before issuing application requests, call `nc.ping()`. It sends a one-shot `echo` probe and returns truthy if the Notecard echoes the random value back within the default 500 ms timeout, and never retries or resets the transport on failure. The probe is documented in more detail under [troubleshooting.md § no response from the Notecard](../../troubleshooting.md#im-getting-no-response-from-the-notecard).
 
 ## Printing
 
-Most `note-cpp` types are Arduino `Printable` — use `Serial.print()` directly:
+Most `note-cpp` types are Arduino `Printable` so you can use `Serial.print()` directly. Where they are not printable (to reduce flash use), use the `printable()` function to make them printable.
 
 | Type | Example | Printable? |
 |------|---------|:----------:|
@@ -74,6 +76,8 @@ auto r = nc.card.version().execute();
 Serial.println(printable(r));  // prints response or error
 ```
 
+// TODO - don't we have an option to enable printable by default on all items?
+
 ## String fields
 
 Response string fields use `string_view` internally — a lightweight
@@ -83,6 +87,8 @@ use since `Serial.print()` handles it directly.
 When you need an Arduino `String` (e.g. to store or pass to other
 libraries), convert explicitly:
 
+// TODO - use a snippet
+// TODO - is r.version.size() really needed since the string is null terminated?
 ```cpp
 auto r = nc.card.version().execute();
 if (r) {
@@ -119,8 +125,7 @@ See [Error Handling](../../error-handling.md) for the full reference.
 
 ## Duration literals
 
-Time literals are available without `using` declarations (imported
-by `note.hpp`):
+Time literals are available without `using` declarations (imported by `note.hpp`):
 
 ```cpp
 nc.hub.set()
@@ -136,13 +141,15 @@ nc.card.attn().arm()
 
 Available: `_s` / `_seconds`, `_mins` / `_minutes`, `_hours`, `_days`.
 
-## ATTN pin (interrupts)
+## ATTN pin
 
+// todo - use a snippet
+// todo - add comments what the API does and each line does (apart from execute)
 ```cpp
-nc.card.attn().arm()
-    .connected()
-    .files()
-    .seconds(300)
+nc.card.attn().arm()    // arm ATTN pin
+    .connected()        // trigger when connected
+    .files()            // trigger on files (TODO - surely the files need specifying?)
+    .seconds(300)       // todo - is this right?
     .execute();
 
 // Query what triggered ATTN
@@ -174,6 +181,8 @@ build_flags = -DNOTE_MINIMAL
 This strips tree-mode JSON, polymorphic dispatch, and optional features.
 Use `StaticNotecard` for zero-vtable, zero-heap operation:
 
+
+// TODO - use a snippet. Also check this is minimal
 ```cpp
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
@@ -200,6 +209,8 @@ much flash (and RAM) you get back by dropping to a lower-level API.
 Rows are ordered from "best developer experience" down to "smallest
 possible footprint":
 
+// TODO - update the note-c figures to include the heap, as I did in the README.md
+// TODO - add links to the corresponding example code 
 | # | Style (typical call site) | Flash | Δ flash vs typed | RAM | Δ RAM vs typed |
 |---|---|---|---|---|---|
 | — | **note-c** (`Notecard::requestAndResponse(...)`) | 25,076 B | +346 B | 729 B | −107 B* |
@@ -219,7 +230,7 @@ Choosing a style:
 2. **Typed direct** — identical API surface but constructs request
    objects manually. Tiny win over (1), used when you want explicit
    control of the request struct.
-3. **Raw + SAX sink** — drops the codegen'd request/response types
+3. **Raw + SAX sink** — drops the request/response API shapes
    but keeps the SAX parser for robust decoding. The streaming sink
    means no response buffer in RAM — pick this when RAM is the
    bottleneck **and** the response may be too large to buffer.
@@ -231,11 +242,16 @@ Choosing a style:
 5. **Flash keys** — same as (4) but with scan keys in PROGMEM. A
    small additional RAM win on AVR; essentially free on other cores.
 
+
+TODO - since this table above is given in the README, does it need duplicating here? Also I feel this is more like reference material once you've used the typed API. I think this is quite low-level detail so should be in a separate document with a short pointer paragraph here.
+
+
 See the "Parsing responses" sections below for the code patterns
 that correspond to rows 3, 4, and 5.
 
 Build a request either way with `JsonBuf`:
 
+// TODO - use snippets.
 ```cpp
 #include <note/static_notecard.hpp>
 #include <note/arduino/begin.hpp>

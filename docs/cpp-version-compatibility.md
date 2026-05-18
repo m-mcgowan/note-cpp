@@ -2,7 +2,8 @@
 
 The core library works with C++17. Each successive standard unlocks additional features without changing the API of the lower-standard subset — code that compiles on C++17 keeps working on C++20/23.
 
-| Feature | C++17 | C++20 | C++23 |
+// TODO - link to the typed API
+| Group/Feature | C++17 | C++20 | C++23 |
 |---------|:-----:|:-----:|:-----:|
 | **Core** | | | |
 | Typed API (request builders, responses, fluent setters) | yes | yes | yes |
@@ -29,9 +30,13 @@ The core library works with C++17. Each successive standard unlocks additional f
 | [`std::expected`](internal/cpp-version-blockers.md) (native, vs `tl::expected` fallback) | — | — | yes |
 | [`std::unreachable`](internal/cpp-version-blockers.md) (native, vs compiler builtins) | — | — | yes |
 
+// TODO - what is the significance of the standard library features - how do these differences affect user code other than the concrete types have different names but the same API service? How is std::unreachable used? Are these internal library details?
+
 ## Setting the standard in your build
 
 The library requires C++17 or later. C++20 unlocks designated initializers, duck-typed args structs, and `consteval` enum validation; the rest of the surface is the same.
+
+// TODO - isn't build_unflags also needed when the defaults also include setting the -std value? look at our actual platformio.ini examples.
 
 ### PlatformIO (Arduino framework)
 
@@ -73,3 +78,5 @@ Or in `CMakeLists.txt`:
 ```cmake
 set(CMAKE_CXX_STANDARD 20)
 ```
+
+// TODO - are there tests for zephyr builds? If not, we shouldn't mention it in these docs.

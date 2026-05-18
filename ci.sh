@@ -256,10 +256,11 @@ VEOF
     # compile-fail fixtures under tests/ — see tests/compile_warn/ and
     # tests/compile_fail/target_*.cpp / fw_*.cpp. ctest runs those.
 
-    # Build all examples
+    # Build all examples. Skip CMake build artifacts (e.g. vscode-intellisense's
+    # CompilerIdCXX/ probe files have no main() and fail to link as standalone).
     echo
     ci_stage "Examples"
-    for ex in $(find "$ROOT/examples/stdcpp" -name '*.cpp' | sort); do
+    for ex in $(find "$ROOT/examples/stdcpp" -name '*.cpp' -not -path '*/build/*' | sort); do
         name=${ex#$ROOT/examples/stdcpp/}
         printf "  %-40s " "$name"
         $CXX $CXXFLAGS $INCLUDE -o /tmp/note-cpp-ex "$ex" && echo "OK" || { echo "FAIL"; exit 1; }

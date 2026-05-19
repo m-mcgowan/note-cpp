@@ -43,12 +43,12 @@ struct CardBinary {
         struct keys_ {
             static constexpr char req[] NOTE_FLASH_ATTR = "card.binary";
             static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
-            static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
-            static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
             static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
             static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
             static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
-            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
         };
 
         static constexpr string_view notecard_request = "card.binary";
@@ -113,31 +113,31 @@ struct CardBinary {
                 ::note::detail::arena_cost(81) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The size of COBS-encoded data stored in the reserved area
-            /// (without the trailing ).
-            note::ResponseField<note::json_int_t> cobs{};
-            /// Returns true if the Notecard is connected to the network.
-            note::ResponseField<bool> connected{};
             /// If present, a string describing the error that occurred during
             /// transmission.
             note::ResponseField<note::string_view> err{};
+            /// The MD5 checksum calculated for the entire unencoded buffer.
+            note::ResponseField<note::string_view> status{};
+            /// The size of COBS-encoded data stored in the reserved area
+            /// (without the trailing ).
+            note::ResponseField<note::json_int_t> cobs{};
             /// The amount of unencoded data currently stored (in bytes).
             note::ResponseField<note::json_int_t> length{};
             /// The space available (in bytes) for storing unencoded data on the
             /// Notecard.
             note::ResponseField<note::json_int_t> max{};
-            /// The MD5 checksum calculated for the entire unencoded buffer.
-            note::ResponseField<note::string_view> status{};
+            /// Returns true if the Notecard is connected to the network.
+            note::ResponseField<bool> connected{};
 
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
-                if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
                 if (reader_->has("err")) rsp.err = reader_->get_string("err");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
+                if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
                 if (reader_->has("length")) rsp.length = reader_->get_int("length");
                 if (reader_->has("max")) rsp.max = reader_->get_int("max");
-                if (reader_->has("status")) rsp.status = reader_->get_string("status");
+                if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -147,12 +147,12 @@ struct CardBinary {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
-                if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
                 if (reader_.has("err")) rsp.err = reader_.get_string("err");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
+                if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
                 if (reader_.has("length")) rsp.length = reader_.get_int("length");
                 if (reader_.has("max")) rsp.max = reader_.get_int("max");
-                if (reader_.has("status")) rsp.status = reader_.get_string("status");
+                if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
                 return rsp;
             }
 #endif // !NOTE_NO_JSON_TREE
@@ -200,16 +200,16 @@ struct CardBinary {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"cobs\":");
-                n += note::detail::print_json_value(p, cobs.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"connected\":");
-                n += note::detail::print_json_value(p, connected.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"err\":");
                 n += note::detail::print_json_value(p, err.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"status\":");
+                n += note::detail::print_json_value(p, status.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"cobs\":");
+                n += note::detail::print_json_value(p, cobs.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"length\":");
@@ -220,8 +220,8 @@ struct CardBinary {
                 n += note::detail::print_json_value(p, max.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"status\":");
-                n += note::detail::print_json_value(p, status.value());
+                n += p.print("\"connected\":");
+                n += note::detail::print_json_value(p, connected.value());
                 n += p.print("}");
                 return n;
             }
@@ -306,12 +306,12 @@ struct CardBinary {
         struct keys_ {
             static constexpr char req[] NOTE_FLASH_ATTR = "card.binary";
             static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
-            static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
-            static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
             static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
             static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
             static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
-            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
         };
 
         static constexpr string_view notecard_request = "card.binary";
@@ -366,31 +366,31 @@ struct CardBinary {
                 ::note::detail::arena_cost(81) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The size of COBS-encoded data stored in the reserved area
-            /// (without the trailing ).
-            note::ResponseField<note::json_int_t> cobs{};
-            /// Returns true if the Notecard is connected to the network.
-            note::ResponseField<bool> connected{};
             /// If present, a string describing the error that occurred during
             /// transmission.
             note::ResponseField<note::string_view> err{};
+            /// The MD5 checksum calculated for the entire unencoded buffer.
+            note::ResponseField<note::string_view> status{};
+            /// The size of COBS-encoded data stored in the reserved area
+            /// (without the trailing ).
+            note::ResponseField<note::json_int_t> cobs{};
             /// The amount of unencoded data currently stored (in bytes).
             note::ResponseField<note::json_int_t> length{};
             /// The space available (in bytes) for storing unencoded data on the
             /// Notecard.
             note::ResponseField<note::json_int_t> max{};
-            /// The MD5 checksum calculated for the entire unencoded buffer.
-            note::ResponseField<note::string_view> status{};
+            /// Returns true if the Notecard is connected to the network.
+            note::ResponseField<bool> connected{};
 
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
-                if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
                 if (reader_->has("err")) rsp.err = reader_->get_string("err");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
+                if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
                 if (reader_->has("length")) rsp.length = reader_->get_int("length");
                 if (reader_->has("max")) rsp.max = reader_->get_int("max");
-                if (reader_->has("status")) rsp.status = reader_->get_string("status");
+                if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -400,12 +400,12 @@ struct CardBinary {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
-                if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
                 if (reader_.has("err")) rsp.err = reader_.get_string("err");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
+                if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
                 if (reader_.has("length")) rsp.length = reader_.get_int("length");
                 if (reader_.has("max")) rsp.max = reader_.get_int("max");
-                if (reader_.has("status")) rsp.status = reader_.get_string("status");
+                if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
                 return rsp;
             }
 #endif // !NOTE_NO_JSON_TREE
@@ -453,16 +453,16 @@ struct CardBinary {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"cobs\":");
-                n += note::detail::print_json_value(p, cobs.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"connected\":");
-                n += note::detail::print_json_value(p, connected.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"err\":");
                 n += note::detail::print_json_value(p, err.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"status\":");
+                n += note::detail::print_json_value(p, status.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"cobs\":");
+                n += note::detail::print_json_value(p, cobs.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"length\":");
@@ -473,8 +473,8 @@ struct CardBinary {
                 n += note::detail::print_json_value(p, max.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"status\":");
-                n += note::detail::print_json_value(p, status.value());
+                n += p.print("\"connected\":");
+                n += note::detail::print_json_value(p, connected.value());
                 n += p.print("}");
                 return n;
             }
@@ -562,12 +562,12 @@ struct request_traits<::note::api::CardBinary::Status> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardBinary::Status::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, cobs)), ::note::FieldType::Int},
-        {::note::api::CardBinary::Status::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, connected)), ::note::FieldType::Bool},
         {::note::api::CardBinary::Status::keys_::rsp_err, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, err)), ::note::FieldType::String},
+        {::note::api::CardBinary::Status::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, status)), ::note::FieldType::String},
+        {::note::api::CardBinary::Status::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, cobs)), ::note::FieldType::Int},
         {::note::api::CardBinary::Status::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, length)), ::note::FieldType::Int},
         {::note::api::CardBinary::Status::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, max)), ::note::FieldType::Int},
-        {::note::api::CardBinary::Status::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, status)), ::note::FieldType::String},
+        {::note::api::CardBinary::Status::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, connected)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -636,12 +636,12 @@ struct request_traits<::note::api::CardBinary::Clear> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardBinary::Clear::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, cobs)), ::note::FieldType::Int},
-        {::note::api::CardBinary::Clear::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, connected)), ::note::FieldType::Bool},
         {::note::api::CardBinary::Clear::keys_::rsp_err, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, err)), ::note::FieldType::String},
+        {::note::api::CardBinary::Clear::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, status)), ::note::FieldType::String},
+        {::note::api::CardBinary::Clear::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, cobs)), ::note::FieldType::Int},
         {::note::api::CardBinary::Clear::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, length)), ::note::FieldType::Int},
         {::note::api::CardBinary::Clear::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, max)), ::note::FieldType::Int},
-        {::note::api::CardBinary::Clear::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, status)), ::note::FieldType::String},
+        {::note::api::CardBinary::Clear::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, connected)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

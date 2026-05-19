@@ -49,10 +49,10 @@ struct DfuStatus {
         static constexpr char version[] NOTE_FLASH_ATTR = "version";
         static constexpr char vvalue[] NOTE_FLASH_ATTR = "vvalue";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
         static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
         static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
-        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
     };
 
     static constexpr string_view notecard_request = "dfu.status";
@@ -334,14 +334,14 @@ struct DfuStatus {
 
         /// The current DFU mode. Will be one of:
         note::ResponseField<note::string_view> mode{};
+        /// The current status of the firmware download.
+        note::ResponseField<note::string_view> status{};
         /// `true` when firmware downloads are disabled.
         note::ResponseField<bool> off{};
         /// `true` when firmware downloads are enabled.
         note::ResponseField<bool> on{};
         /// `true` when Notecard DFU is currently in-progress.
         note::ResponseField<bool> pending{};
-        /// The current status of the firmware download.
-        note::ResponseField<note::string_view> status{};
 
 #if !NOTE_NO_JSON_TREE
         /// Access the body as a JsonReader (JSON tree-mode path only).
@@ -373,10 +373,10 @@ struct DfuStatus {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             if (reader_->has("off")) rsp.off = reader_->get_bool("off");
             if (reader_->has("on")) rsp.on = reader_->get_bool("on");
             if (reader_->has("pending")) rsp.pending = reader_->get_bool("pending");
-            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -388,10 +388,10 @@ struct DfuStatus {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             if (reader_.has("off")) rsp.off = reader_.get_bool("off");
             if (reader_.has("on")) rsp.on = reader_.get_bool("on");
             if (reader_.has("pending")) rsp.pending = reader_.get_bool("pending");
-            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
@@ -485,6 +485,10 @@ struct DfuStatus {
             n += note::detail::print_json_value(p, mode.value());
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"off\":");
             n += note::detail::print_json_value(p, off.value());
             if (!first_) n += p.print(",");
@@ -495,10 +499,6 @@ struct DfuStatus {
             first_ = false;
             n += p.print("\"pending\":");
             n += note::detail::print_json_value(p, pending.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"status\":");
-            n += note::detail::print_json_value(p, status.value());
             n += p.print("}");
             return n;
         }
@@ -658,10 +658,10 @@ struct request_traits<::note::api::DfuStatus> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::DfuStatus::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::DfuStatus::Response, mode)), ::note::FieldType::String},
+        {::note::api::DfuStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::DfuStatus::Response, status)), ::note::FieldType::String},
         {::note::api::DfuStatus::keys_::rsp_off, static_cast<uint16_t>(offsetof(::note::api::DfuStatus::Response, off)), ::note::FieldType::Bool},
         {::note::api::DfuStatus::keys_::rsp_on, static_cast<uint16_t>(offsetof(::note::api::DfuStatus::Response, on)), ::note::FieldType::Bool},
         {::note::api::DfuStatus::keys_::rsp_pending, static_cast<uint16_t>(offsetof(::note::api::DfuStatus::Response, pending)), ::note::FieldType::Bool},
-        {::note::api::DfuStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::DfuStatus::Response, status)), ::note::FieldType::String},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

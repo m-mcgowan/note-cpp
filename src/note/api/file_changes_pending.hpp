@@ -38,8 +38,8 @@ struct FileChangesPending {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "file.changes.pending";
         static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
-        static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
         static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+        static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
     };
 
     static constexpr string_view notecard_request = "file.changes.pending";
@@ -94,17 +94,17 @@ struct FileChangesPending {
 
         /// The number of changes across all files.
         note::ResponseField<note::json_int_t> changes{};
-        /// `true` if there are pending changes.
-        note::ResponseField<bool> pending{};
         /// The total of unsynced notes across all Notefiles.
         note::ResponseField<note::json_int_t> total{};
+        /// `true` if there are pending changes.
+        note::ResponseField<bool> pending{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
-            if (reader_->has("pending")) rsp.pending = reader_->get_bool("pending");
             if (reader_->has("total")) rsp.total = reader_->get_int("total");
+            if (reader_->has("pending")) rsp.pending = reader_->get_bool("pending");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -115,8 +115,8 @@ struct FileChangesPending {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("changes")) rsp.changes = reader_.get_int("changes");
-            if (reader_.has("pending")) rsp.pending = reader_.get_bool("pending");
             if (reader_.has("total")) rsp.total = reader_.get_int("total");
+            if (reader_.has("pending")) rsp.pending = reader_.get_bool("pending");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -158,12 +158,12 @@ struct FileChangesPending {
             n += note::detail::print_json_value(p, changes.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"pending\":");
-            n += note::detail::print_json_value(p, pending.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"total\":");
             n += note::detail::print_json_value(p, total.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"pending\":");
+            n += note::detail::print_json_value(p, pending.value());
             n += p.print("}");
             return n;
         }
@@ -242,8 +242,8 @@ struct request_traits<::note::api::FileChangesPending> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::FileChangesPending::keys_::rsp_changes, static_cast<uint16_t>(offsetof(::note::api::FileChangesPending::Response, changes)), ::note::FieldType::Int},
-        {::note::api::FileChangesPending::keys_::rsp_pending, static_cast<uint16_t>(offsetof(::note::api::FileChangesPending::Response, pending)), ::note::FieldType::Bool},
         {::note::api::FileChangesPending::keys_::rsp_total, static_cast<uint16_t>(offsetof(::note::api::FileChangesPending::Response, total)), ::note::FieldType::Int},
+        {::note::api::FileChangesPending::keys_::rsp_pending, static_cast<uint16_t>(offsetof(::note::api::FileChangesPending::Response, pending)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

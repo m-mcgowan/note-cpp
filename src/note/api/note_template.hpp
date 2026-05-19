@@ -56,8 +56,8 @@ struct NoteTemplate {
             static constexpr char length[] NOTE_FLASH_ATTR = "length";
             static constexpr char port[] NOTE_FLASH_ATTR = "port";
             static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
-            static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
             static constexpr char rsp_format[] NOTE_FLASH_ATTR = "format";
+            static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
             static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
             static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
         };
@@ -336,9 +336,6 @@ struct NoteTemplate {
                 ::note::detail::arena_cost(33) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The number of bytes that will be transmitted to Notehub, per
-            /// Note, before compression.
-            note::ResponseField<note::json_int_t> bytes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
@@ -349,6 +346,9 @@ struct NoteTemplate {
 #endif
             note::ResponseField<note::string_view> format{};
 #endif
+            /// The number of bytes that will be transmitted to Notehub, per
+            /// Note, before compression.
+            note::ResponseField<note::json_int_t> bytes{};
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
             note::ResponseField<note::json_int_t> length{};
@@ -393,10 +393,10 @@ struct NoteTemplate {
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 if (reader_->has("format")) rsp.format = reader_->get_string("format");
 #endif
+                if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
                 if (reader_->has("length")) rsp.length = reader_->get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
@@ -414,10 +414,10 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 if (reader_.has("format")) rsp.format = reader_.get_string("format");
 #endif
+                if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
                 if (reader_.has("length")) rsp.length = reader_.get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
@@ -522,16 +522,16 @@ struct NoteTemplate {
             size_t printTo(Print& p) const {
                 size_t n = p.print("{");
                 bool first_ = true;
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"bytes\":");
-                n += note::detail::print_json_value(p, bytes.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"format\":");
                 n += note::detail::print_json_value(p, format.value());
 #endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"bytes\":");
+                n += note::detail::print_json_value(p, bytes.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"length\":");
@@ -665,8 +665,8 @@ struct NoteTemplate {
             static constexpr char length[] NOTE_FLASH_ATTR = "length";
             static constexpr char port[] NOTE_FLASH_ATTR = "port";
             static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
-            static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
             static constexpr char rsp_format[] NOTE_FLASH_ATTR = "format";
+            static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
             static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
             static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
         };
@@ -958,9 +958,6 @@ struct NoteTemplate {
                 ::note::detail::arena_cost(33) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The number of bytes that will be transmitted to Notehub, per
-            /// Note, before compression.
-            note::ResponseField<note::json_int_t> bytes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
@@ -971,6 +968,9 @@ struct NoteTemplate {
 #endif
             note::ResponseField<note::string_view> format{};
 #endif
+            /// The number of bytes that will be transmitted to Notehub, per
+            /// Note, before compression.
+            note::ResponseField<note::json_int_t> bytes{};
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
             note::ResponseField<note::json_int_t> length{};
@@ -1015,10 +1015,10 @@ struct NoteTemplate {
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 if (reader_->has("format")) rsp.format = reader_->get_string("format");
 #endif
+                if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
                 if (reader_->has("length")) rsp.length = reader_->get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
@@ -1036,10 +1036,10 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 if (reader_.has("format")) rsp.format = reader_.get_string("format");
 #endif
+                if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
                 if (reader_.has("length")) rsp.length = reader_.get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
@@ -1144,16 +1144,16 @@ struct NoteTemplate {
             size_t printTo(Print& p) const {
                 size_t n = p.print("{");
                 bool first_ = true;
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"bytes\":");
-                n += note::detail::print_json_value(p, bytes.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"format\":");
                 n += note::detail::print_json_value(p, format.value());
 #endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"bytes\":");
+                n += note::detail::print_json_value(p, bytes.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"length\":");
@@ -1324,10 +1324,10 @@ struct request_traits<::note::api::NoteTemplate::Define> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::NoteTemplate::Define::keys_::rsp_bytes, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, bytes)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
         {::note::api::NoteTemplate::Define::keys_::rsp_format, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, format)), ::note::FieldType::String},
 #endif
+        {::note::api::NoteTemplate::Define::keys_::rsp_bytes, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, bytes)), ::note::FieldType::Int},
         {::note::api::NoteTemplate::Define::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, length)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         {::note::api::NoteTemplate::Define::keys_::rsp_template_, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, template_)), ::note::FieldType::Bool},
@@ -1465,10 +1465,10 @@ struct request_traits<::note::api::NoteTemplate::Remove> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::NoteTemplate::Remove::keys_::rsp_bytes, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, bytes)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
         {::note::api::NoteTemplate::Remove::keys_::rsp_format, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, format)), ::note::FieldType::String},
 #endif
+        {::note::api::NoteTemplate::Remove::keys_::rsp_bytes, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, bytes)), ::note::FieldType::Int},
         {::note::api::NoteTemplate::Remove::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, length)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         {::note::api::NoteTemplate::Remove::keys_::rsp_template_, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, template_)), ::note::FieldType::Bool},

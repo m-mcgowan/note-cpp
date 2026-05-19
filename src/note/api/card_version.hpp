@@ -40,12 +40,12 @@ struct CardVersion {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.version";
         static constexpr char rsp_board[] NOTE_FLASH_ATTR = "board";
-        static constexpr char rsp_cell[] NOTE_FLASH_ATTR = "cell";
         static constexpr char rsp_device[] NOTE_FLASH_ATTR = "device";
-        static constexpr char rsp_gps[] NOTE_FLASH_ATTR = "gps";
         static constexpr char rsp_name[] NOTE_FLASH_ATTR = "name";
         static constexpr char rsp_sku[] NOTE_FLASH_ATTR = "sku";
         static constexpr char rsp_version[] NOTE_FLASH_ATTR = "version";
+        static constexpr char rsp_cell[] NOTE_FLASH_ATTR = "cell";
+        static constexpr char rsp_gps[] NOTE_FLASH_ATTR = "gps";
         static constexpr char rsp_wifi[] NOTE_FLASH_ATTR = "wifi";
     };
 
@@ -172,18 +172,18 @@ struct CardVersion {
 
         /// The Notecard board version number.
         note::ResponseField<note::string_view> board{};
-        /// If `true`, indicates the Notecard supports cellular connectivity.
-        note::ResponseField<bool> cell{};
         /// The DeviceUID of the Notecard.
         note::ResponseField<note::string_view> device{};
-        /// If `true`, indicates the Notecard has an onboard GPS module.
-        note::ResponseField<bool> gps{};
         /// The official name of the device.
         note::ResponseField<note::string_view> name{};
         /// The Notecard SKU.
         note::ResponseField<note::string_view> sku{};
         /// The full version number of the Notecard firmware.
         note::ResponseField<note::string_view> version{};
+        /// If `true`, indicates the Notecard supports cellular connectivity.
+        note::ResponseField<bool> cell{};
+        /// If `true`, indicates the Notecard has an onboard GPS module.
+        note::ResponseField<bool> gps{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, indicates the Notecard supports WiFi connectivity.
         ///
@@ -226,12 +226,12 @@ struct CardVersion {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("board")) rsp.board = reader_->get_string("board");
-            if (reader_->has("cell")) rsp.cell = reader_->get_bool("cell");
             if (reader_->has("device")) rsp.device = reader_->get_string("device");
-            if (reader_->has("gps")) rsp.gps = reader_->get_bool("gps");
             if (reader_->has("name")) rsp.name = reader_->get_string("name");
             if (reader_->has("sku")) rsp.sku = reader_->get_string("sku");
             if (reader_->has("version")) rsp.version = reader_->get_string("version");
+            if (reader_->has("cell")) rsp.cell = reader_->get_bool("cell");
+            if (reader_->has("gps")) rsp.gps = reader_->get_bool("gps");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_->has("wifi")) rsp.wifi = reader_->get_bool("wifi");
 #endif
@@ -249,12 +249,12 @@ struct CardVersion {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("board")) rsp.board = reader_.get_string("board");
-            if (reader_.has("cell")) rsp.cell = reader_.get_bool("cell");
             if (reader_.has("device")) rsp.device = reader_.get_string("device");
-            if (reader_.has("gps")) rsp.gps = reader_.get_bool("gps");
             if (reader_.has("name")) rsp.name = reader_.get_string("name");
             if (reader_.has("sku")) rsp.sku = reader_.get_string("sku");
             if (reader_.has("version")) rsp.version = reader_.get_string("version");
+            if (reader_.has("cell")) rsp.cell = reader_.get_bool("cell");
+            if (reader_.has("gps")) rsp.gps = reader_.get_bool("gps");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_.has("wifi")) rsp.wifi = reader_.get_bool("wifi");
 #endif
@@ -366,16 +366,8 @@ struct CardVersion {
             n += note::detail::print_json_value(p, board.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"cell\":");
-            n += note::detail::print_json_value(p, cell.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"device\":");
             n += note::detail::print_json_value(p, device.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"gps\":");
-            n += note::detail::print_json_value(p, gps.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"name\":");
@@ -388,6 +380,14 @@ struct CardVersion {
             first_ = false;
             n += p.print("\"version\":");
             n += note::detail::print_json_value(p, version.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"cell\":");
+            n += note::detail::print_json_value(p, cell.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"gps\":");
+            n += note::detail::print_json_value(p, gps.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             if (!first_) n += p.print(",");
             first_ = false;
@@ -478,12 +478,12 @@ struct request_traits<::note::api::CardVersion> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardVersion::keys_::rsp_board, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, board)), ::note::FieldType::String},
-        {::note::api::CardVersion::keys_::rsp_cell, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, cell)), ::note::FieldType::Bool},
         {::note::api::CardVersion::keys_::rsp_device, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, device)), ::note::FieldType::String},
-        {::note::api::CardVersion::keys_::rsp_gps, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, gps)), ::note::FieldType::Bool},
         {::note::api::CardVersion::keys_::rsp_name, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, name)), ::note::FieldType::String},
         {::note::api::CardVersion::keys_::rsp_sku, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, sku)), ::note::FieldType::String},
         {::note::api::CardVersion::keys_::rsp_version, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, version)), ::note::FieldType::String},
+        {::note::api::CardVersion::keys_::rsp_cell, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, cell)), ::note::FieldType::Bool},
+        {::note::api::CardVersion::keys_::rsp_gps, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, gps)), ::note::FieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardVersion::keys_::rsp_wifi, static_cast<uint16_t>(offsetof(::note::api::CardVersion::Response, wifi)), ::note::FieldType::Bool},
 #endif

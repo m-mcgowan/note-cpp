@@ -40,13 +40,13 @@ struct CardMotion {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.motion";
         static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
-        static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
-        static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_motion[] NOTE_FLASH_ATTR = "motion";
         static constexpr char rsp_movements[] NOTE_FLASH_ATTR = "movements";
-        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
+        static constexpr char rsp_motion[] NOTE_FLASH_ATTR = "motion";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
     };
 
     static constexpr string_view notecard_request = "card.motion";
@@ -116,42 +116,42 @@ struct CardMotion {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// `true` if the Notecard's accelerometer detected a free-fall since
-        /// the last request to `card.motion`.
-        note::ResponseField<bool> alert{};
-        /// The number of accelerometer motion events since the `card.motion`
-        /// request was last made.
-        note::ResponseField<note::json_int_t> count{};
         /// Returns the current motion status of the Notecard (e.g. `"stopped"`
         /// or `"moving"`). Learn how to configure this feature in this guide.
         note::ResponseField<note::string_view> mode{};
-        /// Time of the last accelerometer motion event.
-        note::ResponseField<note::json_int_t> motion{};
         /// If the `minutes` argument is provided, a string of base-36
         /// characters, where each character represents the number of
         /// accelerometer movements in each bucket during the sample duration.
         /// Each character will be a digit 0-9, A-Z to indicate a count of
         /// 10-35, or `*` to indicate a count greater than 35.
         note::ResponseField<note::string_view> movements{};
-        /// If the `minutes` argument is provided, the duration of each bucket
-        /// of sample accelerometer movements.
-        note::ResponseField<note::json_int_t> seconds{};
         /// Comma-separated list of accelerometer orientation events that
         /// ocurred since the last request to `card.motion`. One or more of the
         /// following: `"face-up"`, `"face-down"`, `"portrait-up"`, `"portrait-
         /// down"`, `"landscape-right"`, `"landscape-left"`, `"angled"`.
         note::ResponseField<note::string_view> status{};
+        /// The number of accelerometer motion events since the `card.motion`
+        /// request was last made.
+        note::ResponseField<note::json_int_t> count{};
+        /// Time of the last accelerometer motion event.
+        note::ResponseField<note::json_int_t> motion{};
+        /// If the `minutes` argument is provided, the duration of each bucket
+        /// of sample accelerometer movements.
+        note::ResponseField<note::json_int_t> seconds{};
+        /// `true` if the Notecard's accelerometer detected a free-fall since
+        /// the last request to `card.motion`.
+        note::ResponseField<bool> alert{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
-            if (reader_->has("count")) rsp.count = reader_->get_int("count");
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
-            if (reader_->has("motion")) rsp.motion = reader_->get_int("motion");
             if (reader_->has("movements")) rsp.movements = reader_->get_string("movements");
-            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("count")) rsp.count = reader_->get_int("count");
+            if (reader_->has("motion")) rsp.motion = reader_->get_int("motion");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -161,13 +161,13 @@ struct CardMotion {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
-            if (reader_.has("count")) rsp.count = reader_.get_int("count");
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
-            if (reader_.has("motion")) rsp.motion = reader_.get_int("motion");
             if (reader_.has("movements")) rsp.movements = reader_.get_string("movements");
-            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("count")) rsp.count = reader_.get_int("count");
+            if (reader_.has("motion")) rsp.motion = reader_.get_int("motion");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -217,32 +217,32 @@ struct CardMotion {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"alert\":");
-            n += note::detail::print_json_value(p, alert.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"count\":");
-            n += note::detail::print_json_value(p, count.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"mode\":");
             n += note::detail::print_json_value(p, mode.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"motion\":");
-            n += note::detail::print_json_value(p, motion.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"movements\":");
             n += note::detail::print_json_value(p, movements.value());
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"count\":");
+            n += note::detail::print_json_value(p, count.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"motion\":");
+            n += note::detail::print_json_value(p, motion.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"seconds\":");
             n += note::detail::print_json_value(p, seconds.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"status\":");
-            n += note::detail::print_json_value(p, status.value());
+            n += p.print("\"alert\":");
+            n += note::detail::print_json_value(p, alert.value());
             n += p.print("}");
             return n;
         }
@@ -332,13 +332,13 @@ struct request_traits<::note::api::CardMotion> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardMotion::keys_::rsp_alert, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, alert)), ::note::FieldType::Bool},
-        {::note::api::CardMotion::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, count)), ::note::FieldType::Int},
         {::note::api::CardMotion::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, mode)), ::note::FieldType::String},
-        {::note::api::CardMotion::keys_::rsp_motion, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, motion)), ::note::FieldType::Int},
         {::note::api::CardMotion::keys_::rsp_movements, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, movements)), ::note::FieldType::String},
-        {::note::api::CardMotion::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, seconds)), ::note::FieldType::Int},
         {::note::api::CardMotion::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, status)), ::note::FieldType::String},
+        {::note::api::CardMotion::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, count)), ::note::FieldType::Int},
+        {::note::api::CardMotion::keys_::rsp_motion, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, motion)), ::note::FieldType::Int},
+        {::note::api::CardMotion::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, seconds)), ::note::FieldType::Int},
+        {::note::api::CardMotion::keys_::rsp_alert, static_cast<uint16_t>(offsetof(::note::api::CardMotion::Response, alert)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

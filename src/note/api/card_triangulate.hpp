@@ -57,11 +57,11 @@ struct CardTriangulate {
         static constexpr char text[] NOTE_FLASH_ATTR = "text";
         static constexpr char time[] NOTE_FLASH_ATTR = "time";
         static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
-        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
         static constexpr char rsp_motion[] NOTE_FLASH_ATTR = "motion";
-        static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
         static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
         static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
     };
 
@@ -268,18 +268,18 @@ struct CardTriangulate {
             ::note::detail::arena_cost(33) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+        /// A comma-separated list indicating the active triangulation modes.
+        note::ResponseField<note::string_view> mode{};
         /// The length of the `text` buffer provided in the current or a
         /// previous request.
         note::ResponseField<note::json_int_t> length{};
-        /// A comma-separated list indicating the active triangulation modes.
-        note::ResponseField<note::string_view> mode{};
         /// Time of last detected Notecard movement.
         note::ResponseField<note::json_int_t> motion{};
+        /// Time of last triangulation scan.
+        note::ResponseField<note::json_int_t> time{};
         /// `true` if triangulation scans will be performed even if the device
         /// has not moved.
         note::ResponseField<bool> on{};
-        /// Time of last triangulation scan.
-        note::ResponseField<note::json_int_t> time{};
         /// `true` if triangulation scans will be performed only when the device
         /// is USB-powered.
         note::ResponseField<bool> usb{};
@@ -287,11 +287,11 @@ struct CardTriangulate {
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("length")) rsp.length = reader_->get_int("length");
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("length")) rsp.length = reader_->get_int("length");
             if (reader_->has("motion")) rsp.motion = reader_->get_int("motion");
-            if (reader_->has("on")) rsp.on = reader_->get_bool("on");
             if (reader_->has("time")) rsp.time = reader_->get_int("time");
+            if (reader_->has("on")) rsp.on = reader_->get_bool("on");
             if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -302,11 +302,11 @@ struct CardTriangulate {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("length")) rsp.length = reader_.get_int("length");
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("length")) rsp.length = reader_.get_int("length");
             if (reader_.has("motion")) rsp.motion = reader_.get_int("motion");
-            if (reader_.has("on")) rsp.on = reader_.get_bool("on");
             if (reader_.has("time")) rsp.time = reader_.get_int("time");
+            if (reader_.has("on")) rsp.on = reader_.get_bool("on");
             if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
             return rsp;
         }
@@ -354,24 +354,24 @@ struct CardTriangulate {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"length\":");
-            n += note::detail::print_json_value(p, length.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"mode\":");
             n += note::detail::print_json_value(p, mode.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"length\":");
+            n += note::detail::print_json_value(p, length.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"motion\":");
             n += note::detail::print_json_value(p, motion.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"on\":");
-            n += note::detail::print_json_value(p, on.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"time\":");
             n += note::detail::print_json_value(p, time.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"on\":");
+            n += note::detail::print_json_value(p, on.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"usb\":");
@@ -548,11 +548,11 @@ struct request_traits<::note::api::CardTriangulate> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardTriangulate::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, length)), ::note::FieldType::Int},
         {::note::api::CardTriangulate::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardTriangulate::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, length)), ::note::FieldType::Int},
         {::note::api::CardTriangulate::keys_::rsp_motion, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, motion)), ::note::FieldType::Int},
-        {::note::api::CardTriangulate::keys_::rsp_on, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, on)), ::note::FieldType::Bool},
         {::note::api::CardTriangulate::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, time)), ::note::FieldType::Int},
+        {::note::api::CardTriangulate::keys_::rsp_on, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, on)), ::note::FieldType::Bool},
         {::note::api::CardTriangulate::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop

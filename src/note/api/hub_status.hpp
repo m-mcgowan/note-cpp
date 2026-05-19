@@ -37,8 +37,8 @@ namespace note::api {
 struct HubStatus {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "hub.status";
-        static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
     };
 
     static constexpr string_view notecard_request = "hub.status";
@@ -92,19 +92,19 @@ struct HubStatus {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// `true` if the Notecard is connected to Notehub.
-        note::ResponseField<bool> connected{};
         /// Details about the Notecard's transport (e.g. cellular, WiFi, LoRa)
         /// connection status.
         ///
         /// Use `connected` to check if the Notecard is connected to Notehub.
         note::ResponseField<note::string_view> status{};
+        /// `true` if the Notecard is connected to Notehub.
+        note::ResponseField<bool> connected{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -114,8 +114,8 @@ struct HubStatus {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -151,12 +151,12 @@ struct HubStatus {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"connected\":");
-            n += note::detail::print_json_value(p, connected.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"status\":");
             n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"connected\":");
+            n += note::detail::print_json_value(p, connected.value());
             n += p.print("}");
             return n;
         }
@@ -234,8 +234,8 @@ struct request_traits<::note::api::HubStatus> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::HubStatus::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::HubStatus::Response, connected)), ::note::FieldType::Bool},
         {::note::api::HubStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::HubStatus::Response, status)), ::note::FieldType::String},
+        {::note::api::HubStatus::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::HubStatus::Response, connected)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

@@ -39,8 +39,8 @@ struct FileStats {
         static constexpr char req[] NOTE_FLASH_ATTR = "file.stats";
         static constexpr char file[] NOTE_FLASH_ATTR = "file";
         static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
-        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
     };
 
     static constexpr string_view notecard_request = "file.stats";
@@ -103,18 +103,18 @@ struct FileStats {
 
         /// The number of Notes across all Notefiles pending sync.
         note::ResponseField<note::json_int_t> changes{};
+        /// The total number of Notes across all Notefiles.
+        note::ResponseField<note::json_int_t> total{};
         /// `true` if a sync is recommended based on the number of pending
         /// notes.
         note::ResponseField<bool> sync{};
-        /// The total number of Notes across all Notefiles.
-        note::ResponseField<note::json_int_t> total{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
-            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
             if (reader_->has("total")) rsp.total = reader_->get_int("total");
+            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -125,8 +125,8 @@ struct FileStats {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("changes")) rsp.changes = reader_.get_int("changes");
-            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
             if (reader_.has("total")) rsp.total = reader_.get_int("total");
+            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -168,12 +168,12 @@ struct FileStats {
             n += note::detail::print_json_value(p, changes.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"sync\":");
-            n += note::detail::print_json_value(p, sync.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"total\":");
             n += note::detail::print_json_value(p, total.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"sync\":");
+            n += note::detail::print_json_value(p, sync.value());
             n += p.print("}");
             return n;
         }
@@ -264,8 +264,8 @@ struct request_traits<::note::api::FileStats> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::FileStats::keys_::rsp_changes, static_cast<uint16_t>(offsetof(::note::api::FileStats::Response, changes)), ::note::FieldType::Int},
-        {::note::api::FileStats::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::FileStats::Response, sync)), ::note::FieldType::Bool},
         {::note::api::FileStats::keys_::rsp_total, static_cast<uint16_t>(offsetof(::note::api::FileStats::Response, total)), ::note::FieldType::Int},
+        {::note::api::FileStats::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::FileStats::Response, sync)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

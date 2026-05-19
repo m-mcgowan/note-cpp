@@ -43,8 +43,8 @@ struct CardCarrier {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.carrier";
         static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_charging[] NOTE_FLASH_ATTR = "charging";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_charging[] NOTE_FLASH_ATTR = "charging";
     };
 
     static constexpr string_view notecard_request = "card.carrier";
@@ -152,16 +152,16 @@ struct CardCarrier {
             ::note::detail::arena_cost(33) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// Will display `true` when in `AUX_CHARGING` `"charging"` mode.
-        note::ResponseField<bool> charging{};
         /// The current `AUX_CHARGING` `mode`, or `off` if not set.
         note::ResponseField<note::string_view> mode{};
+        /// Will display `true` when in `AUX_CHARGING` `"charging"` mode.
+        note::ResponseField<bool> charging{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("charging")) rsp.charging = reader_->get_bool("charging");
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("charging")) rsp.charging = reader_->get_bool("charging");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -171,8 +171,8 @@ struct CardCarrier {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("charging")) rsp.charging = reader_.get_bool("charging");
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("charging")) rsp.charging = reader_.get_bool("charging");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -208,12 +208,12 @@ struct CardCarrier {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"charging\":");
-            n += note::detail::print_json_value(p, charging.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"mode\":");
             n += note::detail::print_json_value(p, mode.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"charging\":");
+            n += note::detail::print_json_value(p, charging.value());
             n += p.print("}");
             return n;
         }
@@ -303,8 +303,8 @@ struct request_traits<::note::api::CardCarrier> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardCarrier::keys_::rsp_charging, static_cast<uint16_t>(offsetof(::note::api::CardCarrier::Response, charging)), ::note::FieldType::Bool},
         {::note::api::CardCarrier::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardCarrier::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardCarrier::keys_::rsp_charging, static_cast<uint16_t>(offsetof(::note::api::CardCarrier::Response, charging)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

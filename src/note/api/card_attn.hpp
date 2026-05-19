@@ -87,11 +87,11 @@ struct CardAttn {
             static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
             static constexpr char start[] NOTE_FLASH_ATTR = "start";
             static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
-            static constexpr char rsp_files[] NOTE_FLASH_ATTR = "files";
-            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
             static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
-            static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_files[] NOTE_FLASH_ATTR = "files";
             static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
+            static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
         };
 
         static constexpr string_view notecard_request = "card.attn";
@@ -359,14 +359,20 @@ struct CardAttn {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(392) +
                 ::note::detail::arena_cost(257) +
+                ::note::detail::arena_cost(392) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+            /// When using `sleep` mode with a `payload`, the payload provided
+            /// by the host to the Notecard.
+            note::ResponseField<note::string_view> payload{};
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the
             /// occurrence of other attention mode triggers:
             note::ResponseArray<note::printable_string_view, 8> files{};
+            /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
+            /// time) that the payload was stored by the Notecard.
+            note::ResponseField<note::json_int_t> time{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.
@@ -377,29 +383,23 @@ struct CardAttn {
 #endif
             note::ResponseField<bool> off{};
 #endif
-            /// When using `sleep` mode with a `payload`, the payload provided
-            /// by the host to the Notecard.
-            note::ResponseField<note::string_view> payload{};
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
             /// field will not be present when the attention pin is `LOW`.
             note::ResponseField<bool> set{};
-            /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
-            /// time) that the payload was stored by the Notecard.
-            note::ResponseField<note::json_int_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
+                if (reader_->has("time")) rsp.time = reader_->get_int("time");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("off")) rsp.off = reader_->get_bool("off");
 #endif
-                if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
                 if (reader_->has("set")) rsp.set = reader_->get_bool("set");
-                if (reader_->has("time")) rsp.time = reader_->get_int("time");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -412,13 +412,13 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
                 { note::string_view arr_[8]; auto n_ = reader_.get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
+                if (reader_.has("time")) rsp.time = reader_.get_int("time");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("off")) rsp.off = reader_.get_bool("off");
 #endif
-                if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
                 if (reader_.has("set")) rsp.set = reader_.get_bool("set");
-                if (reader_.has("time")) rsp.time = reader_.get_int("time");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -471,8 +471,8 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                for (auto& v_ : files) if (!v_.empty()) v_ = pool.intern(v_);
                 if (!payload.empty()) payload = pool.intern(payload);
+                for (auto& v_ : files) if (!v_.empty()) v_ = pool.intern(v_);
             }
 #pragma GCC diagnostic pop
 
@@ -483,6 +483,10 @@ struct CardAttn {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
+                n += p.print("\"payload\":");
+                n += note::detail::print_json_value(p, payload.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
                 n += p.print("\"files\":");
                 n += p.print("[");
                 for (size_t i_ = 0; i_ < files.size(); ++i_) {
@@ -490,6 +494,10 @@ struct CardAttn {
                     n += note::detail::print_json_value(p, files[i_]);
                 }
                 n += p.print("]");
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"time\":");
+                n += note::detail::print_json_value(p, time.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -498,16 +506,8 @@ struct CardAttn {
 #endif
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"payload\":");
-                n += note::detail::print_json_value(p, payload.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"set\":");
                 n += note::detail::print_json_value(p, set.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"time\":");
-                n += note::detail::print_json_value(p, time.value());
                 n += p.print("}");
                 return n;
             }
@@ -2492,13 +2492,13 @@ struct request_traits<::note::api::CardAttn::Request> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardAttn::Request::keys_::rsp_payload, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, payload)), ::note::FieldType::String},
         {::note::api::CardAttn::Request::keys_::rsp_files, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, files)), ::note::FieldType::StringArray},
+        {::note::api::CardAttn::Request::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, time)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardAttn::Request::keys_::rsp_off, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, off)), ::note::FieldType::Bool},
 #endif
-        {::note::api::CardAttn::Request::keys_::rsp_payload, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, payload)), ::note::FieldType::String},
         {::note::api::CardAttn::Request::keys_::rsp_set, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, set)), ::note::FieldType::Bool},
-        {::note::api::CardAttn::Request::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardAttn::Request::Response, time)), ::note::FieldType::Int},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

@@ -55,11 +55,11 @@ struct WebPost {
         static constexpr char status[] NOTE_FLASH_ATTR = "status";
         static constexpr char total[] NOTE_FLASH_ATTR = "total";
         static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+        static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
         static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
-        static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
         static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
-        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
     };
 
     static constexpr string_view notecard_request = "web.post";
@@ -403,6 +403,13 @@ struct WebPost {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+        /// A base64-encoded binary payload from the external service, if any.
+        /// The maximum response size from the service is 8192 bytes.
+        note::ResponseField<note::string_view> payload{};
+        /// If a `payload` is returned in the response, this is a 32-character
+        /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
+        /// the host to check for any I2C/UART corruption.
+        note::ResponseField<note::string_view> status{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         /// If the web transaction returns a binary payload, `cobs` is the size
         /// of the COBS-encoded payload (in bytes).
@@ -416,15 +423,8 @@ struct WebPost {
         /// If the web transaction returns a binary payload, `length` is the
         /// size of the unencoded payload (in bytes).
         note::ResponseField<note::json_int_t> length{};
-        /// A base64-encoded binary payload from the external service, if any.
-        /// The maximum response size from the service is 8192 bytes.
-        note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code.
         note::ResponseField<note::json_int_t> result{};
-        /// If a `payload` is returned in the response, this is a 32-character
-        /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
-        /// the host to check for any I2C/UART corruption.
-        note::ResponseField<note::string_view> status{};
 
 #if !NOTE_NO_JSON_TREE
         /// Access the body as a JsonReader (JSON tree-mode path only).
@@ -457,13 +457,13 @@ struct WebPost {
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
+            if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
 #endif
             if (reader_->has("length")) rsp.length = reader_->get_int("length");
-            if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
             if (reader_->has("result")) rsp.result = reader_->get_int("result");
-            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -477,13 +477,13 @@ struct WebPost {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
+            if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
 #endif
             if (reader_.has("length")) rsp.length = reader_.get_int("length");
-            if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
             if (reader_.has("result")) rsp.result = reader_.get_int("result");
-            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
@@ -585,6 +585,14 @@ struct WebPost {
         size_t printTo(Print& p) const {
             size_t n = p.print("{");
             bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"payload\":");
+            n += note::detail::print_json_value(p, payload.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             if (!first_) n += p.print(",");
             first_ = false;
@@ -597,16 +605,8 @@ struct WebPost {
             n += note::detail::print_json_value(p, length.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"payload\":");
-            n += note::detail::print_json_value(p, payload.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"result\":");
             n += note::detail::print_json_value(p, result.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"status\":");
-            n += note::detail::print_json_value(p, status.value());
             n += p.print("}");
             return n;
         }
@@ -852,13 +852,13 @@ struct request_traits<::note::api::WebPost> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::WebPost::keys_::rsp_payload, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, payload)), ::note::FieldType::String},
+        {::note::api::WebPost::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, status)), ::note::FieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         {::note::api::WebPost::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, cobs)), ::note::FieldType::Int},
 #endif
         {::note::api::WebPost::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, length)), ::note::FieldType::Int},
-        {::note::api::WebPost::keys_::rsp_payload, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, payload)), ::note::FieldType::String},
         {::note::api::WebPost::keys_::rsp_result, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, result)), ::note::FieldType::Int},
-        {::note::api::WebPost::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::WebPost::Response, status)), ::note::FieldType::String},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

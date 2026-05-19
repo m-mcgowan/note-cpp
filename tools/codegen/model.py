@@ -113,6 +113,47 @@ class PropertyDef:
         return "string"
 
     @property
+    def layout_sort_key(self) -> tuple[int, int, int]:
+        """Sort key for response-field layout. Groups by kind so the generated
+        Response struct can run its dtor as a tight loop over a contiguous
+        run of string-view fields, followed by per-array calls for string
+        arrays. Within each kind, larger/better-aligned types come first to
+        minimise padding.
+
+        Tuple form: (kind, -alignment, declaration_index). Lower kind first.
+          kind 0 — string_view singletons   (Phase 1 dtor walks these)
+          kind 1 — string_view arrays       (Phase 1 dtor walks these)
+          kind 2 — non-string singletons (sorted by alignment desc)
+          kind 3 — non-string arrays
+        The third element keeps the sort stable; spec_parser sets it from
+        the order properties appear in the source schema.
+        """
+        # Approximate alignment of the field's payload type. We don't model
+        # ResponseField/ResponseArray wrapper overhead — just the inner T —
+        # because that's what differs between fields.
+        ALIGN = {
+            "note::json_int_t": 8, "note::json_time_t": 8,
+            "int64_t": 8, "uint64_t": 8, "double": 8,
+            "int32_t": 4, "uint32_t": 4, "float": 4,
+            "int16_t": 2, "uint16_t": 2,
+            "int8_t": 1, "uint8_t": 1, "bool": 1,
+            "note::string_view": 8,
+        }
+        is_string = self.cpp_type == "note::string_view"
+        if is_string and not self.is_array:
+            kind = 0
+        elif is_string and self.is_array:
+            kind = 1
+        elif not self.is_array:
+            kind = 2
+        else:
+            kind = 3
+        align = ALIGN.get(self.cpp_type, 1)
+        # Negative alignment so larger-aligned sorts first.
+        # Final element supplied by the caller (declaration index).
+        return (kind, -align, 0)
+
+    @property
     def default_arg(self) -> str:
         """Default argument for JsonReader::get_*() calls."""
         if self.default_value is not None:
@@ -225,12 +266,45 @@ class BinaryBufferDef:
         return "Direction::Send" if self.direction == "send" else "Direction::Receive"
 
 
+def sort_response_props_for_layout(props: list[PropertyDef]) -> list[PropertyDef]:
+    """Stable sort of response properties for the generated struct layout.
+
+    Groups string singletons, then string arrays, then everything else.
+    See PropertyDef.layout_sort_key for the full rule. Ties broken by
+    the property's original index in the source schema to keep diffs
+    minimal when nothing changed.
+    """
+    keyed = [(p.layout_sort_key[:2] + (i,), p) for i, p in enumerate(props)]
+    keyed.sort(key=lambda kv: kv[0])
+    return [p for _, p in keyed]
+
+
 @dataclass
 class ResponseDef:
     """Response schema for an operation."""
     properties: list[PropertyDef] = field(default_factory=list)
     has_body: bool = False  # True when response includes a body object
     description: str = ""  # From 200 response description
+
+    @property
+    def n_string_fields(self) -> int:
+        """Count of string_view singleton response fields (Phase 1 dtor uses this)."""
+        return sum(1 for p in self.properties
+                   if p.cpp_type == "note::string_view" and not p.is_array)
+
+    @property
+    def first_string_field(self) -> PropertyDef | None:
+        """First string_view singleton, or None — used as the dtor's loop base."""
+        for p in self.properties:
+            if p.cpp_type == "note::string_view" and not p.is_array:
+                return p
+        return None
+
+    @property
+    def string_array_fields(self) -> list[PropertyDef]:
+        """Every string_view array field — dtor emits one release call per."""
+        return [p for p in self.properties
+                if p.cpp_type == "note::string_view" and p.is_array]
 
 
 _FACTORY_METHOD_RENAMES: dict[str, str] = {

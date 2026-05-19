@@ -43,11 +43,11 @@ struct CardTime {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.time";
         static constexpr char rsp_area[] NOTE_FLASH_ATTR = "area";
         static constexpr char rsp_country[] NOTE_FLASH_ATTR = "country";
+        static constexpr char rsp_zone[] NOTE_FLASH_ATTR = "zone";
         static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
         static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
         static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
         static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
-        static constexpr char rsp_zone[] NOTE_FLASH_ATTR = "zone";
     };
 
     static constexpr string_view notecard_request = "card.time";
@@ -109,6 +109,8 @@ struct CardTime {
         /// The country where the Notecard is located, if the cell tower is
         /// recognized.
         note::ResponseField<note::string_view> country{};
+        /// The time zone of the Notecard, if the cell tower is recognized.
+        note::ResponseField<note::string_view> zone{};
         /// Latitude of the Notecard, if the cell tower is recognized.
         note::ResponseField<double> lat{};
         /// Longitude of the Notecard, if the cell tower is recognized.
@@ -118,19 +120,17 @@ struct CardTime {
         /// The current time in UTC. Will only populate if the Notecard has
         /// completed a sync to Notehub to obtain the time.
         note::ResponseField<note::json_int_t> time{};
-        /// The time zone of the Notecard, if the cell tower is recognized.
-        note::ResponseField<note::string_view> zone{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("area")) rsp.area = reader_->get_string("area");
             if (reader_->has("country")) rsp.country = reader_->get_string("country");
+            if (reader_->has("zone")) rsp.zone = reader_->get_string("zone");
             if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
             if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
             if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
             if (reader_->has("time")) rsp.time = reader_->get_int("time");
-            if (reader_->has("zone")) rsp.zone = reader_->get_string("zone");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -142,11 +142,11 @@ struct CardTime {
             Response rsp;
             if (reader_.has("area")) rsp.area = reader_.get_string("area");
             if (reader_.has("country")) rsp.country = reader_.get_string("country");
+            if (reader_.has("zone")) rsp.zone = reader_.get_string("zone");
             if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
             if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
             if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
             if (reader_.has("time")) rsp.time = reader_.get_int("time");
-            if (reader_.has("zone")) rsp.zone = reader_.get_string("zone");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -205,6 +205,10 @@ struct CardTime {
             n += note::detail::print_json_value(p, country.value());
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"zone\":");
+            n += note::detail::print_json_value(p, zone.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"lat\":");
             n += note::detail::print_json_value(p, lat.value());
             if (!first_) n += p.print(",");
@@ -219,10 +223,6 @@ struct CardTime {
             first_ = false;
             n += p.print("\"time\":");
             n += note::detail::print_json_value(p, time.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"zone\":");
-            n += note::detail::print_json_value(p, zone.value());
             n += p.print("}");
             return n;
         }
@@ -302,11 +302,11 @@ struct request_traits<::note::api::CardTime> {
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardTime::keys_::rsp_area, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, area)), ::note::FieldType::String},
         {::note::api::CardTime::keys_::rsp_country, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, country)), ::note::FieldType::String},
+        {::note::api::CardTime::keys_::rsp_zone, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, zone)), ::note::FieldType::String},
         {::note::api::CardTime::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, lat)), ::note::FieldType::Double},
         {::note::api::CardTime::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, lon)), ::note::FieldType::Double},
         {::note::api::CardTime::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, minutes)), ::note::FieldType::Int},
         {::note::api::CardTime::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, time)), ::note::FieldType::Int},
-        {::note::api::CardTime::keys_::rsp_zone, static_cast<uint16_t>(offsetof(::note::api::CardTime::Response, zone)), ::note::FieldType::String},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

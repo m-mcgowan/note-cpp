@@ -39,14 +39,14 @@ struct HubGet {
         static constexpr char req[] NOTE_FLASH_ATTR = "hub.get";
         static constexpr char rsp_device[] NOTE_FLASH_ATTR = "device";
         static constexpr char rsp_host[] NOTE_FLASH_ATTR = "host";
-        static constexpr char rsp_inbound[] NOTE_FLASH_ATTR = "inbound";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_outbound[] NOTE_FLASH_ATTR = "outbound";
         static constexpr char rsp_product[] NOTE_FLASH_ATTR = "product";
         static constexpr char rsp_sn[] NOTE_FLASH_ATTR = "sn";
-        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char rsp_vinbound[] NOTE_FLASH_ATTR = "vinbound";
         static constexpr char rsp_voutbound[] NOTE_FLASH_ATTR = "voutbound";
+        static constexpr char rsp_inbound[] NOTE_FLASH_ATTR = "inbound";
+        static constexpr char rsp_outbound[] NOTE_FLASH_ATTR = "outbound";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
     };
 
     static constexpr string_view notecard_request = "hub.get";
@@ -109,39 +109,39 @@ struct HubGet {
         note::ResponseField<note::string_view> device{};
         /// The URL of the Notehub host.
         note::ResponseField<note::string_view> host{};
-        /// The max wait time, in minutes, to sync inbound data from Notehub.
-        note::ResponseField<note::json_int_t> inbound{};
         /// The current operating `mode` of the Notecard, as defined in
         /// `hub.set`.
         note::ResponseField<note::string_view> mode{};
-        /// The max wait time, in minutes, to sync outbound data from the
-        /// Notecard.
-        note::ResponseField<note::json_int_t> outbound{};
         /// The ProductUID to which the Notecard is registered.
         note::ResponseField<note::string_view> product{};
         /// The serial number of the device, if set.
         note::ResponseField<note::string_view> sn{};
-        /// `true` if the device is in `continuous` mode and set to sync every
-        /// time a change is detected.
-        note::ResponseField<bool> sync{};
         /// If `inbound` has been overridden with a voltage-variable value.
         note::ResponseField<note::string_view> vinbound{};
         /// If `outbound` is overridden with a voltage-variable value.
         note::ResponseField<note::string_view> voutbound{};
+        /// The max wait time, in minutes, to sync inbound data from Notehub.
+        note::ResponseField<note::json_int_t> inbound{};
+        /// The max wait time, in minutes, to sync outbound data from the
+        /// Notecard.
+        note::ResponseField<note::json_int_t> outbound{};
+        /// `true` if the device is in `continuous` mode and set to sync every
+        /// time a change is detected.
+        note::ResponseField<bool> sync{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("device")) rsp.device = reader_->get_string("device");
             if (reader_->has("host")) rsp.host = reader_->get_string("host");
-            if (reader_->has("inbound")) rsp.inbound = reader_->get_int("inbound");
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
-            if (reader_->has("outbound")) rsp.outbound = reader_->get_int("outbound");
             if (reader_->has("product")) rsp.product = reader_->get_string("product");
             if (reader_->has("sn")) rsp.sn = reader_->get_string("sn");
-            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
             if (reader_->has("vinbound")) rsp.vinbound = reader_->get_string("vinbound");
             if (reader_->has("voutbound")) rsp.voutbound = reader_->get_string("voutbound");
+            if (reader_->has("inbound")) rsp.inbound = reader_->get_int("inbound");
+            if (reader_->has("outbound")) rsp.outbound = reader_->get_int("outbound");
+            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -153,14 +153,14 @@ struct HubGet {
             Response rsp;
             if (reader_.has("device")) rsp.device = reader_.get_string("device");
             if (reader_.has("host")) rsp.host = reader_.get_string("host");
-            if (reader_.has("inbound")) rsp.inbound = reader_.get_int("inbound");
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
-            if (reader_.has("outbound")) rsp.outbound = reader_.get_int("outbound");
             if (reader_.has("product")) rsp.product = reader_.get_string("product");
             if (reader_.has("sn")) rsp.sn = reader_.get_string("sn");
-            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
             if (reader_.has("vinbound")) rsp.vinbound = reader_.get_string("vinbound");
             if (reader_.has("voutbound")) rsp.voutbound = reader_.get_string("voutbound");
+            if (reader_.has("inbound")) rsp.inbound = reader_.get_int("inbound");
+            if (reader_.has("outbound")) rsp.outbound = reader_.get_int("outbound");
+            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -224,16 +224,8 @@ struct HubGet {
             n += note::detail::print_json_value(p, host.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"inbound\":");
-            n += note::detail::print_json_value(p, inbound.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"mode\":");
             n += note::detail::print_json_value(p, mode.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"outbound\":");
-            n += note::detail::print_json_value(p, outbound.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"product\":");
@@ -244,16 +236,24 @@ struct HubGet {
             n += note::detail::print_json_value(p, sn.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"sync\":");
-            n += note::detail::print_json_value(p, sync.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"vinbound\":");
             n += note::detail::print_json_value(p, vinbound.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"voutbound\":");
             n += note::detail::print_json_value(p, voutbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"inbound\":");
+            n += note::detail::print_json_value(p, inbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"outbound\":");
+            n += note::detail::print_json_value(p, outbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"sync\":");
+            n += note::detail::print_json_value(p, sync.value());
             n += p.print("}");
             return n;
         }
@@ -333,14 +333,14 @@ struct request_traits<::note::api::HubGet> {
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::HubGet::keys_::rsp_device, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, device)), ::note::FieldType::String},
         {::note::api::HubGet::keys_::rsp_host, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, host)), ::note::FieldType::String},
-        {::note::api::HubGet::keys_::rsp_inbound, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, inbound)), ::note::FieldType::Int},
         {::note::api::HubGet::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, mode)), ::note::FieldType::String},
-        {::note::api::HubGet::keys_::rsp_outbound, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, outbound)), ::note::FieldType::Int},
         {::note::api::HubGet::keys_::rsp_product, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, product)), ::note::FieldType::String},
         {::note::api::HubGet::keys_::rsp_sn, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, sn)), ::note::FieldType::String},
-        {::note::api::HubGet::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, sync)), ::note::FieldType::Bool},
         {::note::api::HubGet::keys_::rsp_vinbound, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, vinbound)), ::note::FieldType::String},
         {::note::api::HubGet::keys_::rsp_voutbound, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, voutbound)), ::note::FieldType::String},
+        {::note::api::HubGet::keys_::rsp_inbound, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, inbound)), ::note::FieldType::Int},
+        {::note::api::HubGet::keys_::rsp_outbound, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, outbound)), ::note::FieldType::Int},
+        {::note::api::HubGet::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::HubGet::Response, sync)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

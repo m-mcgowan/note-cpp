@@ -54,9 +54,9 @@ struct CardTemp {
             static constexpr char rsp_humidity[] NOTE_FLASH_ATTR = "humidity";
             static constexpr char rsp_pressure[] NOTE_FLASH_ATTR = "pressure";
             static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
-            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
         static constexpr string_view notecard_request = "card.temp";
@@ -177,13 +177,13 @@ struct CardTemp {
             /// this field will be set to the temperature value from the
             /// connected sensor in degrees centigrade.
             note::ResponseField<double> temperature{};
-            /// `true` if the Notecard is connected to USB power.
-            note::ResponseField<bool> usb{};
             /// The current temperature from the Notecard's onboard sensor in
             /// degrees centigrade, including the calibration offset.
             note::ResponseField<double> value{};
             /// The current voltage.
             note::ResponseField<double> voltage{};
+            /// `true` if the Notecard is connected to USB power.
+            note::ResponseField<bool> usb{};
 
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -192,9 +192,9 @@ struct CardTemp {
                 if (reader_->has("humidity")) rsp.humidity = reader_->get_double("humidity");
                 if (reader_->has("pressure")) rsp.pressure = reader_->get_double("pressure");
                 if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
-                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -208,9 +208,9 @@ struct CardTemp {
                 if (reader_.has("humidity")) rsp.humidity = reader_.get_double("humidity");
                 if (reader_.has("pressure")) rsp.pressure = reader_.get_double("pressure");
                 if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
-                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 return rsp;
             }
 #endif // !NOTE_NO_JSON_TREE
@@ -272,16 +272,16 @@ struct CardTemp {
                 n += note::detail::print_json_value(p, temperature.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"usb\":");
-                n += note::detail::print_json_value(p, usb.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"value\":");
                 n += note::detail::print_json_value(p, value.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"voltage\":");
                 n += note::detail::print_json_value(p, voltage.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
                 n += p.print("}");
                 return n;
             }
@@ -389,9 +389,9 @@ struct CardTemp {
             static constexpr char rsp_humidity[] NOTE_FLASH_ATTR = "humidity";
             static constexpr char rsp_pressure[] NOTE_FLASH_ATTR = "pressure";
             static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
-            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
         static constexpr string_view notecard_request = "card.temp";
@@ -512,13 +512,13 @@ struct CardTemp {
             /// this field will be set to the temperature value from the
             /// connected sensor in degrees centigrade.
             note::ResponseField<double> temperature{};
-            /// `true` if the Notecard is connected to USB power.
-            note::ResponseField<bool> usb{};
             /// The current temperature from the Notecard's onboard sensor in
             /// degrees centigrade, including the calibration offset.
             note::ResponseField<double> value{};
             /// The current voltage.
             note::ResponseField<double> voltage{};
+            /// `true` if the Notecard is connected to USB power.
+            note::ResponseField<bool> usb{};
 
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -527,9 +527,9 @@ struct CardTemp {
                 if (reader_->has("humidity")) rsp.humidity = reader_->get_double("humidity");
                 if (reader_->has("pressure")) rsp.pressure = reader_->get_double("pressure");
                 if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
-                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -543,9 +543,9 @@ struct CardTemp {
                 if (reader_.has("humidity")) rsp.humidity = reader_.get_double("humidity");
                 if (reader_.has("pressure")) rsp.pressure = reader_.get_double("pressure");
                 if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
-                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 return rsp;
             }
 #endif // !NOTE_NO_JSON_TREE
@@ -607,16 +607,16 @@ struct CardTemp {
                 n += note::detail::print_json_value(p, temperature.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"usb\":");
-                n += note::detail::print_json_value(p, usb.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"value\":");
                 n += note::detail::print_json_value(p, value.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"voltage\":");
                 n += note::detail::print_json_value(p, voltage.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
                 n += p.print("}");
                 return n;
             }
@@ -724,9 +724,9 @@ struct CardTemp {
             static constexpr char rsp_humidity[] NOTE_FLASH_ATTR = "humidity";
             static constexpr char rsp_pressure[] NOTE_FLASH_ATTR = "pressure";
             static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
-            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
         static constexpr string_view notecard_request = "card.temp";
@@ -831,13 +831,13 @@ struct CardTemp {
             /// this field will be set to the temperature value from the
             /// connected sensor in degrees centigrade.
             note::ResponseField<double> temperature{};
-            /// `true` if the Notecard is connected to USB power.
-            note::ResponseField<bool> usb{};
             /// The current temperature from the Notecard's onboard sensor in
             /// degrees centigrade, including the calibration offset.
             note::ResponseField<double> value{};
             /// The current voltage.
             note::ResponseField<double> voltage{};
+            /// `true` if the Notecard is connected to USB power.
+            note::ResponseField<bool> usb{};
 
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -846,9 +846,9 @@ struct CardTemp {
                 if (reader_->has("humidity")) rsp.humidity = reader_->get_double("humidity");
                 if (reader_->has("pressure")) rsp.pressure = reader_->get_double("pressure");
                 if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
-                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -862,9 +862,9 @@ struct CardTemp {
                 if (reader_.has("humidity")) rsp.humidity = reader_.get_double("humidity");
                 if (reader_.has("pressure")) rsp.pressure = reader_.get_double("pressure");
                 if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
-                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 return rsp;
             }
 #endif // !NOTE_NO_JSON_TREE
@@ -926,16 +926,16 @@ struct CardTemp {
                 n += note::detail::print_json_value(p, temperature.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"usb\":");
-                n += note::detail::print_json_value(p, usb.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"value\":");
                 n += note::detail::print_json_value(p, value.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"voltage\":");
                 n += note::detail::print_json_value(p, voltage.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
                 n += p.print("}");
                 return n;
             }
@@ -1054,9 +1054,9 @@ struct request_traits<::note::api::CardTemp::Read> {
         {::note::api::CardTemp::Read::keys_::rsp_humidity, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, humidity)), ::note::FieldType::Double},
         {::note::api::CardTemp::Read::keys_::rsp_pressure, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, pressure)), ::note::FieldType::Double},
         {::note::api::CardTemp::Read::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, temperature)), ::note::FieldType::Double},
-        {::note::api::CardTemp::Read::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, usb)), ::note::FieldType::Bool},
         {::note::api::CardTemp::Read::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, value)), ::note::FieldType::Double},
         {::note::api::CardTemp::Read::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, voltage)), ::note::FieldType::Double},
+        {::note::api::CardTemp::Read::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -1155,9 +1155,9 @@ struct request_traits<::note::api::CardTemp::Configure> {
         {::note::api::CardTemp::Configure::keys_::rsp_humidity, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, humidity)), ::note::FieldType::Double},
         {::note::api::CardTemp::Configure::keys_::rsp_pressure, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, pressure)), ::note::FieldType::Double},
         {::note::api::CardTemp::Configure::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, temperature)), ::note::FieldType::Double},
-        {::note::api::CardTemp::Configure::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, usb)), ::note::FieldType::Bool},
         {::note::api::CardTemp::Configure::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, value)), ::note::FieldType::Double},
         {::note::api::CardTemp::Configure::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, voltage)), ::note::FieldType::Double},
+        {::note::api::CardTemp::Configure::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -1251,9 +1251,9 @@ struct request_traits<::note::api::CardTemp::Stop> {
         {::note::api::CardTemp::Stop::keys_::rsp_humidity, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, humidity)), ::note::FieldType::Double},
         {::note::api::CardTemp::Stop::keys_::rsp_pressure, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, pressure)), ::note::FieldType::Double},
         {::note::api::CardTemp::Stop::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, temperature)), ::note::FieldType::Double},
-        {::note::api::CardTemp::Stop::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, usb)), ::note::FieldType::Bool},
         {::note::api::CardTemp::Stop::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, value)), ::note::FieldType::Double},
         {::note::api::CardTemp::Stop::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, voltage)), ::note::FieldType::Double},
+        {::note::api::CardTemp::Stop::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

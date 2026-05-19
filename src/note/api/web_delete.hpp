@@ -48,8 +48,8 @@ struct WebDelete {
         static constexpr char route[] NOTE_FLASH_ATTR = "route";
         static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
-        static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
         static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
         static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
     };
@@ -274,12 +274,12 @@ struct WebDelete {
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
         note::ResponseField<note::string_view> payload{};
-        /// The HTTP Status Code
-        note::ResponseField<note::json_int_t> result{};
         /// If a `payload` is returned in the response, this is a 32-character
         /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
         /// the host to check for any I2C/UART corruption.
         note::ResponseField<note::string_view> status{};
+        /// The HTTP Status Code
+        note::ResponseField<note::json_int_t> result{};
         /// Size of the COBS-encoded binary payload (in bytes).
         note::ResponseField<note::json_int_t> cobs{};
         /// Size of the unencoded binary payload (in bytes).
@@ -315,8 +315,8 @@ struct WebDelete {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
-            if (reader_->has("result")) rsp.result = reader_->get_int("result");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("result")) rsp.result = reader_->get_int("result");
             if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
             if (reader_->has("length")) rsp.length = reader_->get_int("length");
             rsp.body_ = reader_->get_object("body");
@@ -330,8 +330,8 @@ struct WebDelete {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
-            if (reader_.has("result")) rsp.result = reader_.get_int("result");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("result")) rsp.result = reader_.get_int("result");
             if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
             if (reader_.has("length")) rsp.length = reader_.get_int("length");
             rsp.body_ = reader_.get_object("body");
@@ -430,12 +430,12 @@ struct WebDelete {
             n += note::detail::print_json_value(p, payload.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"result\":");
-            n += note::detail::print_json_value(p, result.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"status\":");
             n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"result\":");
+            n += note::detail::print_json_value(p, result.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"cobs\":");
@@ -599,8 +599,8 @@ struct request_traits<::note::api::WebDelete> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::WebDelete::keys_::rsp_payload, static_cast<uint16_t>(offsetof(::note::api::WebDelete::Response, payload)), ::note::FieldType::String},
-        {::note::api::WebDelete::keys_::rsp_result, static_cast<uint16_t>(offsetof(::note::api::WebDelete::Response, result)), ::note::FieldType::Int},
         {::note::api::WebDelete::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::WebDelete::Response, status)), ::note::FieldType::String},
+        {::note::api::WebDelete::keys_::rsp_result, static_cast<uint16_t>(offsetof(::note::api::WebDelete::Response, result)), ::note::FieldType::Int},
         {::note::api::WebDelete::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::WebDelete::Response, cobs)), ::note::FieldType::Int},
         {::note::api::WebDelete::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::WebDelete::Response, length)), ::note::FieldType::Int},
     };

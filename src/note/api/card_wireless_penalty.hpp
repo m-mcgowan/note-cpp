@@ -46,10 +46,10 @@ struct CardWirelessPenalty {
             static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
             static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
             static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
-            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         };
 
         static constexpr string_view notecard_request = "card.wireless.penalty";
@@ -179,6 +179,9 @@ struct CardWirelessPenalty {
                 ::note::detail::arena_cost(81) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+            /// If the Notecard is in a Penalty Box, this field provides the
+            /// associated Error and Status Codes.
+            note::ResponseField<note::string_view> status{};
             /// The number of consecutive network registration failures.
             note::ResponseField<note::json_int_t> count{};
             /// The time since the first network registration failure.
@@ -193,21 +196,18 @@ struct CardWirelessPenalty {
 #endif
             note::ResponseField<note::json_int_t> seconds{};
 #endif
-            /// If the Notecard is in a Penalty Box, this field provides the
-            /// associated Error and Status Codes.
-            note::ResponseField<note::string_view> status{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 if (reader_->has("count")) rsp.count = reader_->get_int("count");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -220,12 +220,12 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 if (reader_.has("count")) rsp.count = reader_.get_int("count");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -279,6 +279,10 @@ struct CardWirelessPenalty {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
+                n += p.print("\"status\":");
+                n += note::detail::print_json_value(p, status.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
                 n += p.print("\"count\":");
                 n += note::detail::print_json_value(p, count.value());
                 if (!first_) n += p.print(",");
@@ -291,10 +295,6 @@ struct CardWirelessPenalty {
                 n += p.print("\"seconds\":");
                 n += note::detail::print_json_value(p, seconds.value());
 #endif
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"status\":");
-                n += note::detail::print_json_value(p, status.value());
                 n += p.print("}");
                 return n;
             }
@@ -402,10 +402,10 @@ struct CardWirelessPenalty {
             static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
             static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
             static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
-            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         };
 
         static constexpr string_view notecard_request = "card.wireless.penalty";
@@ -525,6 +525,9 @@ struct CardWirelessPenalty {
                 ::note::detail::arena_cost(81) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+            /// If the Notecard is in a Penalty Box, this field provides the
+            /// associated Error and Status Codes.
+            note::ResponseField<note::string_view> status{};
             /// The number of consecutive network registration failures.
             note::ResponseField<note::json_int_t> count{};
             /// The time since the first network registration failure.
@@ -539,21 +542,18 @@ struct CardWirelessPenalty {
 #endif
             note::ResponseField<note::json_int_t> seconds{};
 #endif
-            /// If the Notecard is in a Penalty Box, this field provides the
-            /// associated Error and Status Codes.
-            note::ResponseField<note::string_view> status{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 if (reader_->has("count")) rsp.count = reader_->get_int("count");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -566,12 +566,12 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 if (reader_.has("count")) rsp.count = reader_.get_int("count");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -625,6 +625,10 @@ struct CardWirelessPenalty {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
+                n += p.print("\"status\":");
+                n += note::detail::print_json_value(p, status.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
                 n += p.print("\"count\":");
                 n += note::detail::print_json_value(p, count.value());
                 if (!first_) n += p.print(",");
@@ -637,10 +641,6 @@ struct CardWirelessPenalty {
                 n += p.print("\"seconds\":");
                 n += note::detail::print_json_value(p, seconds.value());
 #endif
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"status\":");
-                n += note::detail::print_json_value(p, status.value());
                 n += p.print("}");
                 return n;
             }
@@ -743,10 +743,10 @@ struct CardWirelessPenalty {
             static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
             static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
             static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
-            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         };
 
         static constexpr string_view notecard_request = "card.wireless.penalty";
@@ -862,6 +862,9 @@ struct CardWirelessPenalty {
                 ::note::detail::arena_cost(81) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+            /// If the Notecard is in a Penalty Box, this field provides the
+            /// associated Error and Status Codes.
+            note::ResponseField<note::string_view> status{};
             /// The number of consecutive network registration failures.
             note::ResponseField<note::json_int_t> count{};
             /// The time since the first network registration failure.
@@ -876,21 +879,18 @@ struct CardWirelessPenalty {
 #endif
             note::ResponseField<note::json_int_t> seconds{};
 #endif
-            /// If the Notecard is in a Penalty Box, this field provides the
-            /// associated Error and Status Codes.
-            note::ResponseField<note::string_view> status{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 if (reader_->has("count")) rsp.count = reader_->get_int("count");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -903,12 +903,12 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 if (reader_.has("count")) rsp.count = reader_.get_int("count");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -962,6 +962,10 @@ struct CardWirelessPenalty {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
+                n += p.print("\"status\":");
+                n += note::detail::print_json_value(p, status.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
                 n += p.print("\"count\":");
                 n += note::detail::print_json_value(p, count.value());
                 if (!first_) n += p.print(",");
@@ -974,10 +978,6 @@ struct CardWirelessPenalty {
                 n += p.print("\"seconds\":");
                 n += note::detail::print_json_value(p, seconds.value());
 #endif
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"status\":");
-                n += note::detail::print_json_value(p, status.value());
                 n += p.print("}");
                 return n;
             }
@@ -1110,12 +1110,12 @@ struct request_traits<::note::api::CardWirelessPenalty::Check> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardWirelessPenalty::Check::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check::Response, status)), ::note::FieldType::String},
         {::note::api::CardWirelessPenalty::Check::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check::Response, count)), ::note::FieldType::Int},
         {::note::api::CardWirelessPenalty::Check::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check::Response, minutes)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardWirelessPenalty::Check::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check::Response, seconds)), ::note::FieldType::Int},
 #endif
-        {::note::api::CardWirelessPenalty::Check::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check::Response, status)), ::note::FieldType::String},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -1217,12 +1217,12 @@ struct request_traits<::note::api::CardWirelessPenalty::Set> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardWirelessPenalty::Set::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set::Response, status)), ::note::FieldType::String},
         {::note::api::CardWirelessPenalty::Set::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set::Response, count)), ::note::FieldType::Int},
         {::note::api::CardWirelessPenalty::Set::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set::Response, minutes)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardWirelessPenalty::Set::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set::Response, seconds)), ::note::FieldType::Int},
 #endif
-        {::note::api::CardWirelessPenalty::Set::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set::Response, status)), ::note::FieldType::String},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -1324,12 +1324,12 @@ struct request_traits<::note::api::CardWirelessPenalty::Clear> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardWirelessPenalty::Clear::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear::Response, status)), ::note::FieldType::String},
         {::note::api::CardWirelessPenalty::Clear::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear::Response, count)), ::note::FieldType::Int},
         {::note::api::CardWirelessPenalty::Clear::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear::Response, minutes)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardWirelessPenalty::Clear::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear::Response, seconds)), ::note::FieldType::Int},
 #endif
-        {::note::api::CardWirelessPenalty::Clear::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear::Response, status)), ::note::FieldType::String},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

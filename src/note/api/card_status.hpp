@@ -37,15 +37,15 @@ namespace note::api {
 struct CardStatus {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.status";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_inbound[] NOTE_FLASH_ATTR = "inbound";
+        static constexpr char rsp_outbound[] NOTE_FLASH_ATTR = "outbound";
+        static constexpr char rsp_storage[] NOTE_FLASH_ATTR = "storage";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
         static constexpr char rsp_cell[] NOTE_FLASH_ATTR = "cell";
         static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
         static constexpr char rsp_gps[] NOTE_FLASH_ATTR = "gps";
-        static constexpr char rsp_inbound[] NOTE_FLASH_ATTR = "inbound";
-        static constexpr char rsp_outbound[] NOTE_FLASH_ATTR = "outbound";
-        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
-        static constexpr char rsp_storage[] NOTE_FLASH_ATTR = "storage";
         static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
-        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
         static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         static constexpr char rsp_wifi[] NOTE_FLASH_ATTR = "wifi";
     };
@@ -101,6 +101,22 @@ struct CardStatus {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+        /// General status information.
+        note::ResponseField<note::string_view> status{};
+        /// The effective inbound synchronization period being used by the
+        /// device. See Configuring Synchronization Modes for details on how
+        /// Notecard synchronization modes work.
+        note::ResponseField<note::json_int_t> inbound{};
+        /// The effective outbound synchronization period being used by the
+        /// device. See Configuring Synchronization Modes for details on how
+        /// Notecard synchronization modes work.
+        note::ResponseField<note::json_int_t> outbound{};
+        /// Indicates the percentage of total Notecard storage in use. Note that
+        /// users can utilize approximately 80% of this total capacity.
+        note::ResponseField<note::json_int_t> storage{};
+        /// The UNIX Epoch Time of approximately when the Notecard was first
+        /// powered up.
+        note::ResponseField<note::json_int_t> time{};
         /// `true` if the modem is currently powered on.
         note::ResponseField<bool> cell{};
         /// `true` if connected to Notehub.
@@ -114,19 +130,6 @@ struct CardStatus {
 #endif
         note::ResponseField<bool> gps{};
 #endif
-        /// The effective inbound synchronization period being used by the
-        /// device. See Configuring Synchronization Modes for details on how
-        /// Notecard synchronization modes work.
-        note::ResponseField<note::json_int_t> inbound{};
-        /// The effective outbound synchronization period being used by the
-        /// device. See Configuring Synchronization Modes for details on how
-        /// Notecard synchronization modes work.
-        note::ResponseField<note::json_int_t> outbound{};
-        /// General status information.
-        note::ResponseField<note::string_view> status{};
-        /// Indicates the percentage of total Notecard storage in use. Note that
-        /// users can utilize approximately 80% of this total capacity.
-        note::ResponseField<note::json_int_t> storage{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
         /// `true` if the Notecard has ever connected to Notehub.
         ///
@@ -136,9 +139,6 @@ struct CardStatus {
 #endif
         note::ResponseField<bool> sync{};
 #endif
-        /// The UNIX Epoch Time of approximately when the Notecard was first
-        /// powered up.
-        note::ResponseField<note::json_int_t> time{};
         /// `true` if the Notecard is being powered by USB.
         note::ResponseField<bool> usb{};
         /// `true` if the Notecard's WiFi radio is currently powered on.
@@ -149,19 +149,19 @@ struct CardStatus {
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("inbound")) rsp.inbound = reader_->get_int("inbound");
+            if (reader_->has("outbound")) rsp.outbound = reader_->get_int("outbound");
+            if (reader_->has("storage")) rsp.storage = reader_->get_int("storage");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             if (reader_->has("cell")) rsp.cell = reader_->get_bool("cell");
             if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_->has("gps")) rsp.gps = reader_->get_bool("gps");
 #endif
-            if (reader_->has("inbound")) rsp.inbound = reader_->get_int("inbound");
-            if (reader_->has("outbound")) rsp.outbound = reader_->get_int("outbound");
-            if (reader_->has("status")) rsp.status = reader_->get_string("status");
-            if (reader_->has("storage")) rsp.storage = reader_->get_int("storage");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
             if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
 #endif
-            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
             if (reader_->has("wifi")) rsp.wifi = reader_->get_bool("wifi");
             rsp.reader_ = std::move(reader_);
@@ -176,19 +176,19 @@ struct CardStatus {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("inbound")) rsp.inbound = reader_.get_int("inbound");
+            if (reader_.has("outbound")) rsp.outbound = reader_.get_int("outbound");
+            if (reader_.has("storage")) rsp.storage = reader_.get_int("storage");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             if (reader_.has("cell")) rsp.cell = reader_.get_bool("cell");
             if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_.has("gps")) rsp.gps = reader_.get_bool("gps");
 #endif
-            if (reader_.has("inbound")) rsp.inbound = reader_.get_int("inbound");
-            if (reader_.has("outbound")) rsp.outbound = reader_.get_int("outbound");
-            if (reader_.has("status")) rsp.status = reader_.get_string("status");
-            if (reader_.has("storage")) rsp.storage = reader_.get_int("storage");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
             if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
 #endif
-            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
             if (reader_.has("wifi")) rsp.wifi = reader_.get_bool("wifi");
             return rsp;
@@ -254,6 +254,26 @@ struct CardStatus {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"inbound\":");
+            n += note::detail::print_json_value(p, inbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"outbound\":");
+            n += note::detail::print_json_value(p, outbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"storage\":");
+            n += note::detail::print_json_value(p, storage.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"time\":");
+            n += note::detail::print_json_value(p, time.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"cell\":");
             n += note::detail::print_json_value(p, cell.value());
             if (!first_) n += p.print(",");
@@ -266,32 +286,12 @@ struct CardStatus {
             n += p.print("\"gps\":");
             n += note::detail::print_json_value(p, gps.value());
 #endif
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"inbound\":");
-            n += note::detail::print_json_value(p, inbound.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"outbound\":");
-            n += note::detail::print_json_value(p, outbound.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"status\":");
-            n += note::detail::print_json_value(p, status.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"storage\":");
-            n += note::detail::print_json_value(p, storage.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"sync\":");
             n += note::detail::print_json_value(p, sync.value());
 #endif
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"time\":");
-            n += note::detail::print_json_value(p, time.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"usb\":");
@@ -377,19 +377,19 @@ struct request_traits<::note::api::CardStatus> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, status)), ::note::FieldType::String},
+        {::note::api::CardStatus::keys_::rsp_inbound, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, inbound)), ::note::FieldType::Int},
+        {::note::api::CardStatus::keys_::rsp_outbound, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, outbound)), ::note::FieldType::Int},
+        {::note::api::CardStatus::keys_::rsp_storage, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, storage)), ::note::FieldType::Int},
+        {::note::api::CardStatus::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, time)), ::note::FieldType::Int},
         {::note::api::CardStatus::keys_::rsp_cell, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, cell)), ::note::FieldType::Bool},
         {::note::api::CardStatus::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, connected)), ::note::FieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardStatus::keys_::rsp_gps, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, gps)), ::note::FieldType::Bool},
 #endif
-        {::note::api::CardStatus::keys_::rsp_inbound, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, inbound)), ::note::FieldType::Int},
-        {::note::api::CardStatus::keys_::rsp_outbound, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, outbound)), ::note::FieldType::Int},
-        {::note::api::CardStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, status)), ::note::FieldType::String},
-        {::note::api::CardStatus::keys_::rsp_storage, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, storage)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardStatus::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, sync)), ::note::FieldType::Bool},
 #endif
-        {::note::api::CardStatus::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, time)), ::note::FieldType::Int},
         {::note::api::CardStatus::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, usb)), ::note::FieldType::Bool},
         {::note::api::CardStatus::keys_::rsp_wifi, static_cast<uint16_t>(offsetof(::note::api::CardStatus::Response, wifi)), ::note::FieldType::Bool},
     };

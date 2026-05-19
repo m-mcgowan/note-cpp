@@ -56,9 +56,9 @@ struct CardAux {
         static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char usage[] NOTE_FLASH_ATTR = "usage";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_power[] NOTE_FLASH_ATTR = "power";
         static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_power[] NOTE_FLASH_ATTR = "power";
     };
 
     static constexpr string_view notecard_request = "card.aux";
@@ -473,6 +473,12 @@ struct CardAux {
 
         /// The current AUX `mode`, or `off` if not set.
         note::ResponseField<note::string_view> mode{};
+        /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
+        /// the number of seconds per sample.
+        note::ResponseField<note::json_int_t> seconds{};
+        /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
+        /// the time that counting started.
+        note::ResponseField<note::json_time_t> time{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, indicates the Notecard has USB (main) power. This
         /// parameter only appears in the body of the Note in Notehub if using
@@ -484,12 +490,6 @@ struct CardAux {
 #endif
         note::ResponseField<bool> power{};
 #endif
-        /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
-        /// the number of seconds per sample.
-        note::ResponseField<note::json_int_t> seconds{};
-        /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
-        /// the time that counting started.
-        note::ResponseField<note::json_time_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -497,11 +497,11 @@ struct CardAux {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_->has("power")) rsp.power = reader_->get_bool("power");
 #endif
-            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
-            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -515,11 +515,11 @@ struct CardAux {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
             if (reader_.has("power")) rsp.power = reader_.get_bool("power");
 #endif
-            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
-            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
 #pragma GCC diagnostic pop
@@ -574,12 +574,6 @@ struct CardAux {
             first_ = false;
             n += p.print("\"mode\":");
             n += note::detail::print_json_value(p, mode.value());
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"power\":");
-            n += note::detail::print_json_value(p, power.value());
-#endif
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"seconds\":");
@@ -588,6 +582,12 @@ struct CardAux {
             first_ = false;
             n += p.print("\"time\":");
             n += note::detail::print_json_value(p, time.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"power\":");
+            n += note::detail::print_json_value(p, power.value());
+#endif
             n += p.print("}");
             return n;
         }
@@ -828,11 +828,11 @@ struct request_traits<::note::api::CardAux> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardAux::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardAux::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardAux::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardAux::Response, seconds)), ::note::FieldType::Int},
+        {::note::api::CardAux::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardAux::Response, time)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardAux::keys_::rsp_power, static_cast<uint16_t>(offsetof(::note::api::CardAux::Response, power)), ::note::FieldType::Bool},
 #endif
-        {::note::api::CardAux::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardAux::Response, seconds)), ::note::FieldType::Int},
-        {::note::api::CardAux::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardAux::Response, time)), ::note::FieldType::Int},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

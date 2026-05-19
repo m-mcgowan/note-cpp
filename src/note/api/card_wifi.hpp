@@ -43,10 +43,10 @@ struct CardWifi {
         static constexpr char ssid[] NOTE_FLASH_ATTR = "ssid";
         static constexpr char start[] NOTE_FLASH_ATTR = "start";
         static constexpr char text[] NOTE_FLASH_ATTR = "text";
-        static constexpr char rsp_secure[] NOTE_FLASH_ATTR = "secure";
         static constexpr char rsp_security[] NOTE_FLASH_ATTR = "security";
         static constexpr char rsp_ssid[] NOTE_FLASH_ATTR = "ssid";
         static constexpr char rsp_version[] NOTE_FLASH_ATTR = "version";
+        static constexpr char rsp_secure[] NOTE_FLASH_ATTR = "secure";
     };
 
     static constexpr string_view notecard_request = "card.wifi";
@@ -208,23 +208,23 @@ struct CardWifi {
             ::note::detail::arena_cost(41) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// `true` means that the WiFi access point is using Management Frame
-        /// Protection.
-        note::ResponseField<bool> secure{};
         /// The security protocol the WiFi access point uses.
         note::ResponseField<note::string_view> security{};
         /// The SSID of the WiFi access point.
         note::ResponseField<note::string_view> ssid{};
         /// The Silicon Labs WF200 WiFi Transceiver binary version.
         note::ResponseField<note::string_view> version{};
+        /// `true` means that the WiFi access point is using Management Frame
+        /// Protection.
+        note::ResponseField<bool> secure{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("secure")) rsp.secure = reader_->get_bool("secure");
             if (reader_->has("security")) rsp.security = reader_->get_string("security");
             if (reader_->has("ssid")) rsp.ssid = reader_->get_string("ssid");
             if (reader_->has("version")) rsp.version = reader_->get_string("version");
+            if (reader_->has("secure")) rsp.secure = reader_->get_bool("secure");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -234,10 +234,10 @@ struct CardWifi {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("secure")) rsp.secure = reader_.get_bool("secure");
             if (reader_.has("security")) rsp.security = reader_.get_string("security");
             if (reader_.has("ssid")) rsp.ssid = reader_.get_string("ssid");
             if (reader_.has("version")) rsp.version = reader_.get_string("version");
+            if (reader_.has("secure")) rsp.secure = reader_.get_bool("secure");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -277,10 +277,6 @@ struct CardWifi {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"secure\":");
-            n += note::detail::print_json_value(p, secure.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"security\":");
             n += note::detail::print_json_value(p, security.value());
             if (!first_) n += p.print(",");
@@ -291,6 +287,10 @@ struct CardWifi {
             first_ = false;
             n += p.print("\"version\":");
             n += note::detail::print_json_value(p, version.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"secure\":");
+            n += note::detail::print_json_value(p, secure.value());
             n += p.print("}");
             return n;
         }
@@ -430,10 +430,10 @@ struct request_traits<::note::api::CardWifi> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardWifi::keys_::rsp_secure, static_cast<uint16_t>(offsetof(::note::api::CardWifi::Response, secure)), ::note::FieldType::Bool},
         {::note::api::CardWifi::keys_::rsp_security, static_cast<uint16_t>(offsetof(::note::api::CardWifi::Response, security)), ::note::FieldType::String},
         {::note::api::CardWifi::keys_::rsp_ssid, static_cast<uint16_t>(offsetof(::note::api::CardWifi::Response, ssid)), ::note::FieldType::String},
         {::note::api::CardWifi::keys_::rsp_version, static_cast<uint16_t>(offsetof(::note::api::CardWifi::Response, version)), ::note::FieldType::String},
+        {::note::api::CardWifi::keys_::rsp_secure, static_cast<uint16_t>(offsetof(::note::api::CardWifi::Response, secure)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

@@ -45,8 +45,8 @@ struct HubSignal {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "hub.signal";
         static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
-        static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
         static constexpr char rsp_signals[] NOTE_FLASH_ATTR = "signals";
+        static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
     };
 
     static constexpr string_view notecard_request = "hub.signal";
@@ -185,10 +185,10 @@ struct HubSignal {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// `true` if the Notecard is connected to Notehub.
-        note::ResponseField<bool> connected{};
         /// The number of queued signals remaining.
         note::ResponseField<note::json_int_t> signals{};
+        /// `true` if the Notecard is connected to Notehub.
+        note::ResponseField<bool> connected{};
 
 #if !NOTE_NO_JSON_TREE
         /// Access the body as a JsonReader (JSON tree-mode path only).
@@ -219,8 +219,8 @@ struct HubSignal {
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
             if (reader_->has("signals")) rsp.signals = reader_->get_int("signals");
+            if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -231,8 +231,8 @@ struct HubSignal {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
             if (reader_.has("signals")) rsp.signals = reader_.get_int("signals");
+            if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
@@ -316,12 +316,12 @@ struct HubSignal {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"connected\":");
-            n += note::detail::print_json_value(p, connected.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"signals\":");
             n += note::detail::print_json_value(p, signals.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"connected\":");
+            n += note::detail::print_json_value(p, connected.value());
             n += p.print("}");
             return n;
         }
@@ -422,8 +422,8 @@ struct request_traits<::note::api::HubSignal> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::HubSignal::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::HubSignal::Response, connected)), ::note::FieldType::Bool},
         {::note::api::HubSignal::keys_::rsp_signals, static_cast<uint16_t>(offsetof(::note::api::HubSignal::Response, signals)), ::note::FieldType::Int},
+        {::note::api::HubSignal::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::HubSignal::Response, connected)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

@@ -54,17 +54,17 @@ struct CardVoltage {
             static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char vmin[] NOTE_FLASH_ATTR = "vmin";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
             static constexpr char rsp_daily[] NOTE_FLASH_ATTR = "daily";
             static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
-            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
             static constexpr char rsp_monthly[] NOTE_FLASH_ATTR = "monthly";
-            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_vavg[] NOTE_FLASH_ATTR = "vavg";
             static constexpr char rsp_vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char rsp_vmin[] NOTE_FLASH_ATTR = "vmin";
             static constexpr char rsp_weekly[] NOTE_FLASH_ATTR = "weekly";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
         static constexpr string_view notecard_request = "card.voltage";
@@ -339,6 +339,13 @@ struct CardVoltage {
                 ::note::detail::arena_cost(33) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+            /// The current voltage-variable threshold value returned from
+            /// Notecard.
+            ///
+            /// For example, if the voltage threshold is
+            /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
+            /// voltage of `3.9`, the mode value would be `"normal"`.
+            note::ResponseField<note::string_view> mode{};
             /// Change of moving average in the last 24 hours, if relevant to
             /// the time period analyzed.
             note::ResponseField<double> daily{};
@@ -347,25 +354,9 @@ struct CardVoltage {
             /// Represents the Notecard's uptime in minutes. This field is not
             /// present when the device is powered via USB.
             note::ResponseField<note::json_int_t> minutes{};
-            /// The current voltage-variable threshold value returned from
-            /// Notecard.
-            ///
-            /// For example, if the voltage threshold is
-            /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
-            /// voltage of `3.9`, the mode value would be `"normal"`.
-            note::ResponseField<note::string_view> mode{};
             /// Change of moving average in the last 30 days, if relevant to the
             /// time period analyzed.
             note::ResponseField<double> monthly{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            /// `true` if the Notecard is connected to USB power.
-            ///
-            /// @since{3.5.1}
-#if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
-            [[deprecated("requires firmware >= 3.5.1")]]
-#endif
-            note::ResponseField<bool> usb{};
-#endif
             /// The current voltage.
             note::ResponseField<double> value{};
             /// The average voltage value during the measured period.
@@ -378,25 +369,34 @@ struct CardVoltage {
             /// Change of moving average in the last 7 days, if relevant to the
             /// time period analyzed.
             note::ResponseField<double> weekly{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            /// `true` if the Notecard is connected to USB power.
+            ///
+            /// @since{3.5.1}
+#if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
+            [[deprecated("requires firmware >= 3.5.1")]]
+#endif
+            note::ResponseField<bool> usb{};
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
                 if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
                 if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
-                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
                 if (reader_->has("monthly")) rsp.monthly = reader_->get_double("monthly");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
-#endif
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("vavg")) rsp.vavg = reader_->get_double("vavg");
                 if (reader_->has("vmax")) rsp.vmax = reader_->get_double("vmax");
                 if (reader_->has("vmin")) rsp.vmin = reader_->get_double("vmin");
                 if (reader_->has("weekly")) rsp.weekly = reader_->get_double("weekly");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
+#endif
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -409,19 +409,19 @@ struct CardVoltage {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
                 if (reader_.has("daily")) rsp.daily = reader_.get_double("daily");
                 if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
-                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
                 if (reader_.has("monthly")) rsp.monthly = reader_.get_double("monthly");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
-#endif
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("vavg")) rsp.vavg = reader_.get_double("vavg");
                 if (reader_.has("vmax")) rsp.vmax = reader_.get_double("vmax");
                 if (reader_.has("vmin")) rsp.vmin = reader_.get_double("vmin");
                 if (reader_.has("weekly")) rsp.weekly = reader_.get_double("weekly");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
+#endif
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -490,6 +490,10 @@ struct CardVoltage {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
                 n += p.print("\"daily\":");
                 n += note::detail::print_json_value(p, daily.value());
                 if (!first_) n += p.print(",");
@@ -502,18 +506,8 @@ struct CardVoltage {
                 n += note::detail::print_json_value(p, minutes.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"mode\":");
-                n += note::detail::print_json_value(p, mode.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"monthly\":");
                 n += note::detail::print_json_value(p, monthly.value());
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"usb\":");
-                n += note::detail::print_json_value(p, usb.value());
-#endif
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"value\":");
@@ -534,6 +528,12 @@ struct CardVoltage {
                 first_ = false;
                 n += p.print("\"weekly\":");
                 n += note::detail::print_json_value(p, weekly.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+#endif
                 n += p.print("}");
                 return n;
             }
@@ -682,17 +682,17 @@ struct CardVoltage {
             static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char vmin[] NOTE_FLASH_ATTR = "vmin";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
             static constexpr char rsp_daily[] NOTE_FLASH_ATTR = "daily";
             static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
-            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
             static constexpr char rsp_monthly[] NOTE_FLASH_ATTR = "monthly";
-            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_vavg[] NOTE_FLASH_ATTR = "vavg";
             static constexpr char rsp_vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char rsp_vmin[] NOTE_FLASH_ATTR = "vmin";
             static constexpr char rsp_weekly[] NOTE_FLASH_ATTR = "weekly";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
         static constexpr string_view notecard_request = "card.voltage";
@@ -967,6 +967,13 @@ struct CardVoltage {
                 ::note::detail::arena_cost(33) +
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+            /// The current voltage-variable threshold value returned from
+            /// Notecard.
+            ///
+            /// For example, if the voltage threshold is
+            /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
+            /// voltage of `3.9`, the mode value would be `"normal"`.
+            note::ResponseField<note::string_view> mode{};
             /// Change of moving average in the last 24 hours, if relevant to
             /// the time period analyzed.
             note::ResponseField<double> daily{};
@@ -975,25 +982,9 @@ struct CardVoltage {
             /// Represents the Notecard's uptime in minutes. This field is not
             /// present when the device is powered via USB.
             note::ResponseField<note::json_int_t> minutes{};
-            /// The current voltage-variable threshold value returned from
-            /// Notecard.
-            ///
-            /// For example, if the voltage threshold is
-            /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
-            /// voltage of `3.9`, the mode value would be `"normal"`.
-            note::ResponseField<note::string_view> mode{};
             /// Change of moving average in the last 30 days, if relevant to the
             /// time period analyzed.
             note::ResponseField<double> monthly{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            /// `true` if the Notecard is connected to USB power.
-            ///
-            /// @since{3.5.1}
-#if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
-            [[deprecated("requires firmware >= 3.5.1")]]
-#endif
-            note::ResponseField<bool> usb{};
-#endif
             /// The current voltage.
             note::ResponseField<double> value{};
             /// The average voltage value during the measured period.
@@ -1006,25 +997,34 @@ struct CardVoltage {
             /// Change of moving average in the last 7 days, if relevant to the
             /// time period analyzed.
             note::ResponseField<double> weekly{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            /// `true` if the Notecard is connected to USB power.
+            ///
+            /// @since{3.5.1}
+#if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
+            [[deprecated("requires firmware >= 3.5.1")]]
+#endif
+            note::ResponseField<bool> usb{};
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
                 if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
                 if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
-                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
                 if (reader_->has("monthly")) rsp.monthly = reader_->get_double("monthly");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
-#endif
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("vavg")) rsp.vavg = reader_->get_double("vavg");
                 if (reader_->has("vmax")) rsp.vmax = reader_->get_double("vmax");
                 if (reader_->has("vmin")) rsp.vmin = reader_->get_double("vmin");
                 if (reader_->has("weekly")) rsp.weekly = reader_->get_double("weekly");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
+#endif
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1037,19 +1037,19 @@ struct CardVoltage {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
                 if (reader_.has("daily")) rsp.daily = reader_.get_double("daily");
                 if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
-                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
                 if (reader_.has("monthly")) rsp.monthly = reader_.get_double("monthly");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
-#endif
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("vavg")) rsp.vavg = reader_.get_double("vavg");
                 if (reader_.has("vmax")) rsp.vmax = reader_.get_double("vmax");
                 if (reader_.has("vmin")) rsp.vmin = reader_.get_double("vmin");
                 if (reader_.has("weekly")) rsp.weekly = reader_.get_double("weekly");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
+#endif
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -1118,6 +1118,10 @@ struct CardVoltage {
                 bool first_ = true;
                 if (!first_) n += p.print(",");
                 first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
                 n += p.print("\"daily\":");
                 n += note::detail::print_json_value(p, daily.value());
                 if (!first_) n += p.print(",");
@@ -1130,18 +1134,8 @@ struct CardVoltage {
                 n += note::detail::print_json_value(p, minutes.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
-                n += p.print("\"mode\":");
-                n += note::detail::print_json_value(p, mode.value());
-                if (!first_) n += p.print(",");
-                first_ = false;
                 n += p.print("\"monthly\":");
                 n += note::detail::print_json_value(p, monthly.value());
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                if (!first_) n += p.print(",");
-                first_ = false;
-                n += p.print("\"usb\":");
-                n += note::detail::print_json_value(p, usb.value());
-#endif
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"value\":");
@@ -1162,6 +1156,12 @@ struct CardVoltage {
                 first_ = false;
                 n += p.print("\"weekly\":");
                 n += note::detail::print_json_value(p, weekly.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+#endif
                 n += p.print("}");
                 return n;
             }
@@ -1370,19 +1370,19 @@ struct request_traits<::note::api::CardVoltage::Read> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardVoltage::Read::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, mode)), ::note::FieldType::String},
         {::note::api::CardVoltage::Read::keys_::rsp_daily, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, daily)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, hours)), ::note::FieldType::Int},
         {::note::api::CardVoltage::Read::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, minutes)), ::note::FieldType::Int},
-        {::note::api::CardVoltage::Read::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, mode)), ::note::FieldType::String},
         {::note::api::CardVoltage::Read::keys_::rsp_monthly, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, monthly)), ::note::FieldType::Double},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-        {::note::api::CardVoltage::Read::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, usb)), ::note::FieldType::Bool},
-#endif
         {::note::api::CardVoltage::Read::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, value)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_vavg, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, vavg)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_vmax, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, vmax)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_vmin, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, vmin)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_weekly, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, weekly)), ::note::FieldType::Double},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardVoltage::Read::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, usb)), ::note::FieldType::Bool},
+#endif
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -1547,19 +1547,19 @@ struct request_traits<::note::api::CardVoltage::Configure> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardVoltage::Configure::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, mode)), ::note::FieldType::String},
         {::note::api::CardVoltage::Configure::keys_::rsp_daily, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, daily)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, hours)), ::note::FieldType::Int},
         {::note::api::CardVoltage::Configure::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, minutes)), ::note::FieldType::Int},
-        {::note::api::CardVoltage::Configure::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, mode)), ::note::FieldType::String},
         {::note::api::CardVoltage::Configure::keys_::rsp_monthly, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, monthly)), ::note::FieldType::Double},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-        {::note::api::CardVoltage::Configure::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, usb)), ::note::FieldType::Bool},
-#endif
         {::note::api::CardVoltage::Configure::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, value)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_vavg, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, vavg)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_vmax, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, vmax)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_vmin, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, vmin)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_weekly, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, weekly)), ::note::FieldType::Double},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardVoltage::Configure::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, usb)), ::note::FieldType::Bool},
+#endif
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

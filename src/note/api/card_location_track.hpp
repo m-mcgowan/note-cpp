@@ -57,9 +57,9 @@ struct CardLocationTrack {
         static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
         static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char rsp_file[] NOTE_FLASH_ATTR = "file";
-        static constexpr char rsp_heartbeat[] NOTE_FLASH_ATTR = "heartbeat";
         static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
         static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_heartbeat[] NOTE_FLASH_ATTR = "heartbeat";
         static constexpr char rsp_start[] NOTE_FLASH_ATTR = "start";
         static constexpr char rsp_stop[] NOTE_FLASH_ATTR = "stop";
     };
@@ -207,13 +207,13 @@ struct CardLocationTrack {
 
         /// The tracking Notefile, if provided.
         note::ResponseField<note::string_view> file{};
-        /// `true` if heartbeat is enabled.
-        note::ResponseField<bool> heartbeat{};
         /// The `heartbeat` interval in minutes, if provided.
         note::ResponseField<note::json_int_t> minutes{};
         /// If tracking is enabled and a heartbeat `hours` value is not set, the
         /// tracking interval set in `card.location.mode`.
         note::ResponseField<note::json_int_t> seconds{};
+        /// `true` if heartbeat is enabled.
+        note::ResponseField<bool> heartbeat{};
         /// `true` if tracking is enabled.
         note::ResponseField<bool> start{};
         /// `true` if tracking is disabled.
@@ -223,9 +223,9 @@ struct CardLocationTrack {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("file")) rsp.file = reader_->get_string("file");
-            if (reader_->has("heartbeat")) rsp.heartbeat = reader_->get_bool("heartbeat");
             if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
             if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("heartbeat")) rsp.heartbeat = reader_->get_bool("heartbeat");
             if (reader_->has("start")) rsp.start = reader_->get_bool("start");
             if (reader_->has("stop")) rsp.stop = reader_->get_bool("stop");
             rsp.reader_ = std::move(reader_);
@@ -238,9 +238,9 @@ struct CardLocationTrack {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("file")) rsp.file = reader_.get_string("file");
-            if (reader_.has("heartbeat")) rsp.heartbeat = reader_.get_bool("heartbeat");
             if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
             if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("heartbeat")) rsp.heartbeat = reader_.get_bool("heartbeat");
             if (reader_.has("start")) rsp.start = reader_.get_bool("start");
             if (reader_.has("stop")) rsp.stop = reader_.get_bool("stop");
             return rsp;
@@ -292,16 +292,16 @@ struct CardLocationTrack {
             n += note::detail::print_json_value(p, file.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"heartbeat\":");
-            n += note::detail::print_json_value(p, heartbeat.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"minutes\":");
             n += note::detail::print_json_value(p, minutes.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"seconds\":");
             n += note::detail::print_json_value(p, seconds.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"heartbeat\":");
+            n += note::detail::print_json_value(p, heartbeat.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"start\":");
@@ -459,9 +459,9 @@ struct request_traits<::note::api::CardLocationTrack> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardLocationTrack::keys_::rsp_file, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, file)), ::note::FieldType::String},
-        {::note::api::CardLocationTrack::keys_::rsp_heartbeat, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, heartbeat)), ::note::FieldType::Bool},
         {::note::api::CardLocationTrack::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, minutes)), ::note::FieldType::Int},
         {::note::api::CardLocationTrack::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, seconds)), ::note::FieldType::Int},
+        {::note::api::CardLocationTrack::keys_::rsp_heartbeat, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, heartbeat)), ::note::FieldType::Bool},
         {::note::api::CardLocationTrack::keys_::rsp_start, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, start)), ::note::FieldType::Bool},
         {::note::api::CardLocationTrack::keys_::rsp_stop, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, stop)), ::note::FieldType::Bool},
     };

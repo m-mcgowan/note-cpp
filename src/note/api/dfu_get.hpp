@@ -41,10 +41,10 @@ struct DfuGet {
         static constexpr char binary[] NOTE_FLASH_ATTR = "binary";
         static constexpr char length[] NOTE_FLASH_ATTR = "length";
         static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
-        static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
-        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
         static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
     };
 
     static constexpr string_view notecard_request = "dfu.get";
@@ -145,13 +145,6 @@ struct DfuGet {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// When `binary` is `true` in the request, this field contains the COBS
-        /// encoded length of the firmware data in the binary I/O buffer.
-        note::ResponseField<note::json_int_t> cobs{};
-        /// When `binary` is `true` in the request, this field contains the
-        /// actual length of the firmware data in bytes in the binary I/O
-        /// buffer.
-        note::ResponseField<note::json_int_t> length{};
         /// A base64 string containing firmware data of the provided `length`.
         /// This field is only present when `binary` is not used or is `false`
         /// in the request.
@@ -160,14 +153,21 @@ struct DfuGet {
         /// 32-character hex-encoded MD5 hash of the firmware data. Useful for
         /// the host to verify data integrity.
         note::ResponseField<note::string_view> status{};
+        /// When `binary` is `true` in the request, this field contains the COBS
+        /// encoded length of the firmware data in the binary I/O buffer.
+        note::ResponseField<note::json_int_t> cobs{};
+        /// When `binary` is `true` in the request, this field contains the
+        /// actual length of the firmware data in bytes in the binary I/O
+        /// buffer.
+        note::ResponseField<note::json_int_t> length{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
-            if (reader_->has("length")) rsp.length = reader_->get_int("length");
             if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
+            if (reader_->has("length")) rsp.length = reader_->get_int("length");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -177,10 +177,10 @@ struct DfuGet {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
-            if (reader_.has("length")) rsp.length = reader_.get_int("length");
             if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
+            if (reader_.has("length")) rsp.length = reader_.get_int("length");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -223,20 +223,20 @@ struct DfuGet {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"cobs\":");
-            n += note::detail::print_json_value(p, cobs.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"length\":");
-            n += note::detail::print_json_value(p, length.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"payload\":");
             n += note::detail::print_json_value(p, payload.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"status\":");
             n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"cobs\":");
+            n += note::detail::print_json_value(p, cobs.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"length\":");
+            n += note::detail::print_json_value(p, length.value());
             n += p.print("}");
             return n;
         }
@@ -344,10 +344,10 @@ struct request_traits<::note::api::DfuGet> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::DfuGet::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::DfuGet::Response, cobs)), ::note::FieldType::Int},
-        {::note::api::DfuGet::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::DfuGet::Response, length)), ::note::FieldType::Int},
         {::note::api::DfuGet::keys_::rsp_payload, static_cast<uint16_t>(offsetof(::note::api::DfuGet::Response, payload)), ::note::FieldType::String},
         {::note::api::DfuGet::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::DfuGet::Response, status)), ::note::FieldType::String},
+        {::note::api::DfuGet::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::DfuGet::Response, cobs)), ::note::FieldType::Int},
+        {::note::api::DfuGet::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::DfuGet::Response, length)), ::note::FieldType::Int},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

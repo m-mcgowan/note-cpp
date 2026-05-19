@@ -44,13 +44,13 @@ namespace note::api {
 struct CardLocation {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.location";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
         static constexpr char rsp_dop[] NOTE_FLASH_ATTR = "dop";
         static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
         static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
         static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
-        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
     };
 
@@ -105,6 +105,11 @@ struct CardLocation {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+        /// The GPS/GNSS connection mode. Will be `continuous`, `periodic`, or
+        /// `off`.
+        note::ResponseField<note::string_view> mode{};
+        /// The current status of the Notecard GPS/GNSS connection.
+        note::ResponseField<note::string_view> status{};
         /// The number of consecutive recorded GPS/GNSS failures.
         note::ResponseField<note::json_int_t> count{};
         /// The "Dilution of Precision" value from the latest GPS/GNSS reading.
@@ -118,24 +123,19 @@ struct CardLocation {
         /// If a geofence is enabled by `card.location.mode`, meters from the
         /// geofence center.
         note::ResponseField<note::json_int_t> max{};
-        /// The GPS/GNSS connection mode. Will be `continuous`, `periodic`, or
-        /// `off`.
-        note::ResponseField<note::string_view> mode{};
-        /// The current status of the Notecard GPS/GNSS connection.
-        note::ResponseField<note::string_view> status{};
         /// The time of the location capture.
         note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             if (reader_->has("count")) rsp.count = reader_->get_int("count");
             if (reader_->has("dop")) rsp.dop = reader_->get_double("dop");
             if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
             if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
             if (reader_->has("max")) rsp.max = reader_->get_int("max");
-            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
-            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             if (reader_->has("time")) rsp.time = reader_->get_int("time");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -146,13 +146,13 @@ struct CardLocation {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             if (reader_.has("count")) rsp.count = reader_.get_int("count");
             if (reader_.has("dop")) rsp.dop = reader_.get_double("dop");
             if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
             if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
             if (reader_.has("max")) rsp.max = reader_.get_int("max");
-            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
-            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
@@ -206,6 +206,14 @@ struct CardLocation {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"mode\":");
+            n += note::detail::print_json_value(p, mode.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"count\":");
             n += note::detail::print_json_value(p, count.value());
             if (!first_) n += p.print(",");
@@ -224,14 +232,6 @@ struct CardLocation {
             first_ = false;
             n += p.print("\"max\":");
             n += note::detail::print_json_value(p, max.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"mode\":");
-            n += note::detail::print_json_value(p, mode.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"status\":");
-            n += note::detail::print_json_value(p, status.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"time\":");
@@ -313,13 +313,13 @@ struct request_traits<::note::api::CardLocation> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocation::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardLocation::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, status)), ::note::FieldType::String},
         {::note::api::CardLocation::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, count)), ::note::FieldType::Int},
         {::note::api::CardLocation::keys_::rsp_dop, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, dop)), ::note::FieldType::Double},
         {::note::api::CardLocation::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, lat)), ::note::FieldType::Double},
         {::note::api::CardLocation::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, lon)), ::note::FieldType::Double},
         {::note::api::CardLocation::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, max)), ::note::FieldType::Int},
-        {::note::api::CardLocation::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, mode)), ::note::FieldType::String},
-        {::note::api::CardLocation::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, status)), ::note::FieldType::String},
         {::note::api::CardLocation::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardLocation::Response, time)), ::note::FieldType::Int},
     };
 #pragma GCC diagnostic pop

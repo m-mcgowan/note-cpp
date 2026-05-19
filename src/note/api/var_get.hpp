@@ -40,9 +40,9 @@ struct VarGet {
         static constexpr char req[] NOTE_FLASH_ATTR = "var.get";
         static constexpr char file[] NOTE_FLASH_ATTR = "file";
         static constexpr char name[] NOTE_FLASH_ATTR = "name";
-        static constexpr char rsp_flag[] NOTE_FLASH_ATTR = "flag";
         static constexpr char rsp_text[] NOTE_FLASH_ATTR = "text";
         static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+        static constexpr char rsp_flag[] NOTE_FLASH_ATTR = "flag";
     };
 
     static constexpr string_view notecard_request = "var.get";
@@ -114,19 +114,19 @@ struct VarGet {
             ::note::detail::arena_cost(129) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// The boolean value stored in the DB Notefile.
-        note::ResponseField<bool> flag{};
         /// The string-based value stored in the DB Notefile.
         note::ResponseField<note::string_view> text{};
         /// The numeric value stored in the DB Notefile.
         note::ResponseField<double> value{};
+        /// The boolean value stored in the DB Notefile.
+        note::ResponseField<bool> flag{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("flag")) rsp.flag = reader_->get_bool("flag");
             if (reader_->has("text")) rsp.text = reader_->get_string("text");
             if (reader_->has("value")) rsp.value = reader_->get_double("value");
+            if (reader_->has("flag")) rsp.flag = reader_->get_bool("flag");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -136,9 +136,9 @@ struct VarGet {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("flag")) rsp.flag = reader_.get_bool("flag");
             if (reader_.has("text")) rsp.text = reader_.get_string("text");
             if (reader_.has("value")) rsp.value = reader_.get_double("value");
+            if (reader_.has("flag")) rsp.flag = reader_.get_bool("flag");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -180,16 +180,16 @@ struct VarGet {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"flag\":");
-            n += note::detail::print_json_value(p, flag.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"text\":");
             n += note::detail::print_json_value(p, text.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"value\":");
             n += note::detail::print_json_value(p, value.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"flag\":");
+            n += note::detail::print_json_value(p, flag.value());
             n += p.print("}");
             return n;
         }
@@ -288,9 +288,9 @@ struct request_traits<::note::api::VarGet> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::VarGet::keys_::rsp_flag, static_cast<uint16_t>(offsetof(::note::api::VarGet::Response, flag)), ::note::FieldType::Bool},
         {::note::api::VarGet::keys_::rsp_text, static_cast<uint16_t>(offsetof(::note::api::VarGet::Response, text)), ::note::FieldType::String},
         {::note::api::VarGet::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::VarGet::Response, value)), ::note::FieldType::Double},
+        {::note::api::VarGet::keys_::rsp_flag, static_cast<uint16_t>(offsetof(::note::api::VarGet::Response, flag)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

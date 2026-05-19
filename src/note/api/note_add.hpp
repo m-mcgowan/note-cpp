@@ -51,8 +51,8 @@ struct NoteAdd {
         static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
         static constexpr char rsp_noteId[] NOTE_FLASH_ATTR = "note";
-        static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
         static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+        static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
     };
 
     static constexpr string_view notecard_request = "note.add";
@@ -362,17 +362,17 @@ struct NoteAdd {
 
         /// The generated unique Note ID when `note` parameter was set to "?".
         note::ResponseField<note::string_view> noteId{};
-        /// `true` when a template is active on the Notefile.
-        note::ResponseField<bool> template_{};
         /// The total number of Notes in the Notefile.
         note::ResponseField<note::json_int_t> total{};
+        /// `true` when a template is active on the Notefile.
+        note::ResponseField<bool> template_{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("note")) rsp.noteId = reader_->get_string("note");
-            if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
             if (reader_->has("total")) rsp.total = reader_->get_int("total");
+            if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -383,8 +383,8 @@ struct NoteAdd {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("note")) rsp.noteId = reader_.get_string("note");
-            if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
             if (reader_.has("total")) rsp.total = reader_.get_int("total");
+            if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -430,12 +430,12 @@ struct NoteAdd {
             n += note::detail::print_json_value(p, noteId.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"template\":");
-            n += note::detail::print_json_value(p, template_.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"total\":");
             n += note::detail::print_json_value(p, total.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"template\":");
+            n += note::detail::print_json_value(p, template_.value());
             n += p.print("}");
             return n;
         }
@@ -657,8 +657,8 @@ struct request_traits<::note::api::NoteAdd> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::NoteAdd::keys_::rsp_noteId, static_cast<uint16_t>(offsetof(::note::api::NoteAdd::Response, noteId)), ::note::FieldType::String},
-        {::note::api::NoteAdd::keys_::rsp_template_, static_cast<uint16_t>(offsetof(::note::api::NoteAdd::Response, template_)), ::note::FieldType::Bool},
         {::note::api::NoteAdd::keys_::rsp_total, static_cast<uint16_t>(offsetof(::note::api::NoteAdd::Response, total)), ::note::FieldType::Int},
+        {::note::api::NoteAdd::keys_::rsp_template_, static_cast<uint16_t>(offsetof(::note::api::NoteAdd::Response, template_)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

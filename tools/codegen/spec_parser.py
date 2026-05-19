@@ -19,6 +19,7 @@ from .model import (
     ResponseDef,
     SubDescription,
     TogglePairDef,
+    sort_response_props_for_layout,
 )
 from .naming import (
     endpoint_to_header_filename,
@@ -442,7 +443,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         supports_cmd=supports_cmd,
         properties=req_props,
         response=ResponseDef(
-            properties=rsp_props,
+            properties=sort_response_props_for_layout(rsp_props),
             has_body=has_body_response,
             description=_extract_response_description(op),
         ),
@@ -548,7 +549,7 @@ def _expand_intents(
             supports_cmd=intent.get("supports_cmd", base_op.supports_cmd),
             properties=req_props,
             response=ResponseDef(
-                properties=rsp_props,
+                properties=sort_response_props_for_layout(rsp_props),
                 has_body="body" in intent_rsp_names if intent_rsp_names else rsp_has_body,
                 description=intent.get("description", ""),
             ),

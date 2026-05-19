@@ -47,9 +47,9 @@ struct CardSleep {
         static constexpr char on[] NOTE_FLASH_ATTR = "on";
         static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
         static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
-        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
     };
 
     static constexpr string_view notecard_request = "card.sleep";
@@ -196,21 +196,21 @@ struct CardSleep {
         /// Returns `"accel"` if the Notecard is configured to wake from deep
         /// sleep on any movement detected by the onboard accelerometer.
         note::ResponseField<note::string_view> mode{};
+        /// The number of seconds the Notecard will wait before entering sleep
+        /// mode (only included if default settings are overridden).
+        note::ResponseField<note::json_int_t> seconds{};
         /// `true` if sleep mode is disabled.
         note::ResponseField<bool> off{};
         /// `true` if sleep mode is enabled.
         note::ResponseField<bool> on{};
-        /// The number of seconds the Notecard will wait before entering sleep
-        /// mode (only included if default settings are overridden).
-        note::ResponseField<note::json_int_t> seconds{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
             if (reader_->has("off")) rsp.off = reader_->get_bool("off");
             if (reader_->has("on")) rsp.on = reader_->get_bool("on");
-            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -221,9 +221,9 @@ struct CardSleep {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
             if (reader_.has("off")) rsp.off = reader_.get_bool("off");
             if (reader_.has("on")) rsp.on = reader_.get_bool("on");
-            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -270,16 +270,16 @@ struct CardSleep {
             n += note::detail::print_json_value(p, mode.value());
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"seconds\":");
+            n += note::detail::print_json_value(p, seconds.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"off\":");
             n += note::detail::print_json_value(p, off.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"on\":");
             n += note::detail::print_json_value(p, on.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"seconds\":");
-            n += note::detail::print_json_value(p, seconds.value());
             n += p.print("}");
             return n;
         }
@@ -397,9 +397,9 @@ struct request_traits<::note::api::CardSleep> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardSleep::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardSleep::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardSleep::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardSleep::Response, seconds)), ::note::FieldType::Int},
         {::note::api::CardSleep::keys_::rsp_off, static_cast<uint16_t>(offsetof(::note::api::CardSleep::Response, off)), ::note::FieldType::Bool},
         {::note::api::CardSleep::keys_::rsp_on, static_cast<uint16_t>(offsetof(::note::api::CardSleep::Response, on)), ::note::FieldType::Bool},
-        {::note::api::CardSleep::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardSleep::Response, seconds)), ::note::FieldType::Int},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

@@ -38,15 +38,15 @@ struct HubSyncStatus {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "hub.sync.status";
         static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
-        static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
-        static constexpr char rsp_completed[] NOTE_FLASH_ATTR = "completed";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_requested[] NOTE_FLASH_ATTR = "requested";
-        static constexpr char rsp_scan[] NOTE_FLASH_ATTR = "scan";
-        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
-        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_completed[] NOTE_FLASH_ATTR = "completed";
+        static constexpr char rsp_requested[] NOTE_FLASH_ATTR = "requested";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
+        static constexpr char rsp_scan[] NOTE_FLASH_ATTR = "scan";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
     };
 
     static constexpr string_view notecard_request = "hub.sync.status";
@@ -111,24 +111,16 @@ struct HubSyncStatus {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// `true` if an error occurred during the most recent sync.
-        note::ResponseField<bool> alert{};
-        /// Number of seconds since the last sync completion.
-        note::ResponseField<note::json_int_t> completed{};
         /// The current state of the wireless connectivity module in use.
         note::ResponseField<note::string_view> mode{};
+        /// The status of the current or previous sync. Refer to this listing
+        /// for the meaning of the various status codes returned (e.g. `{sync-
+        /// end}`).
+        note::ResponseField<note::string_view> status{};
+        /// Number of seconds since the last sync completion.
+        note::ResponseField<note::json_int_t> completed{};
         /// Number of seconds since the last explicit sync request.
         note::ResponseField<note::json_int_t> requested{};
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-        /// Returns `true` if triangulation data was sent to Notehub in the most
-        /// recent sync.
-        ///
-        /// @since{6.1.1}
-#if NOTE_API_VERSION < NOTE_VERSION(6, 1, 1)
-        [[deprecated("requires firmware >= 6.1.1")]]
-#endif
-        note::ResponseField<bool> scan{};
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// If the Notecard is in a Penalty Box, the number of seconds until the
         /// penalty condition ends.
@@ -139,35 +131,43 @@ struct HubSyncStatus {
 #endif
         note::ResponseField<note::json_int_t> seconds{};
 #endif
-        /// The status of the current or previous sync. Refer to this listing
-        /// for the meaning of the various status codes returned (e.g. `{sync-
-        /// end}`).
-        note::ResponseField<note::string_view> status{};
-        /// `true` if the notecard has unsynchronized notes, or requires a sync
-        /// to set its internal clock.
-        note::ResponseField<bool> sync{};
         /// Time of the last sync completion. Will only populate if the Notecard
         /// has completed a sync to Notehub to obtain the time.
         note::ResponseField<note::json_int_t> time{};
+        /// `true` if an error occurred during the most recent sync.
+        note::ResponseField<bool> alert{};
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+        /// Returns `true` if triangulation data was sent to Notehub in the most
+        /// recent sync.
+        ///
+        /// @since{6.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(6, 1, 1)
+        [[deprecated("requires firmware >= 6.1.1")]]
+#endif
+        note::ResponseField<bool> scan{};
+#endif
+        /// `true` if the notecard has unsynchronized notes, or requires a sync
+        /// to set its internal clock.
+        note::ResponseField<bool> sync{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
-            if (reader_->has("completed")) rsp.completed = reader_->get_int("completed");
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("completed")) rsp.completed = reader_->get_int("completed");
             if (reader_->has("requested")) rsp.requested = reader_->get_int("requested");
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-            if (reader_->has("scan")) rsp.scan = reader_->get_bool("scan");
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-            if (reader_->has("status")) rsp.status = reader_->get_string("status");
-            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
             if (reader_->has("time")) rsp.time = reader_->get_int("time");
+            if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+            if (reader_->has("scan")) rsp.scan = reader_->get_bool("scan");
+#endif
+            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -180,19 +180,19 @@ struct HubSyncStatus {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
-            if (reader_.has("completed")) rsp.completed = reader_.get_int("completed");
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("completed")) rsp.completed = reader_.get_int("completed");
             if (reader_.has("requested")) rsp.requested = reader_.get_int("requested");
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-            if (reader_.has("scan")) rsp.scan = reader_.get_bool("scan");
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-            if (reader_.has("status")) rsp.status = reader_.get_string("status");
-            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
             if (reader_.has("time")) rsp.time = reader_.get_int("time");
+            if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+            if (reader_.has("scan")) rsp.scan = reader_.get_bool("scan");
+#endif
+            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
             return rsp;
         }
 #pragma GCC diagnostic pop
@@ -257,26 +257,20 @@ struct HubSyncStatus {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"alert\":");
-            n += note::detail::print_json_value(p, alert.value());
+            n += p.print("\"mode\":");
+            n += note::detail::print_json_value(p, mode.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"completed\":");
             n += note::detail::print_json_value(p, completed.value());
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"mode\":");
-            n += note::detail::print_json_value(p, mode.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"requested\":");
             n += note::detail::print_json_value(p, requested.value());
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"scan\":");
-            n += note::detail::print_json_value(p, scan.value());
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             if (!first_) n += p.print(",");
             first_ = false;
@@ -285,16 +279,22 @@ struct HubSyncStatus {
 #endif
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"status\":");
-            n += note::detail::print_json_value(p, status.value());
+            n += p.print("\"time\":");
+            n += note::detail::print_json_value(p, time.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"alert\":");
+            n += note::detail::print_json_value(p, alert.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"scan\":");
+            n += note::detail::print_json_value(p, scan.value());
+#endif
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"sync\":");
             n += note::detail::print_json_value(p, sync.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"time\":");
-            n += note::detail::print_json_value(p, time.value());
             n += p.print("}");
             return n;
         }
@@ -384,19 +384,19 @@ struct request_traits<::note::api::HubSyncStatus> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::HubSyncStatus::keys_::rsp_alert, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, alert)), ::note::FieldType::Bool},
-        {::note::api::HubSyncStatus::keys_::rsp_completed, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, completed)), ::note::FieldType::Int},
         {::note::api::HubSyncStatus::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, mode)), ::note::FieldType::String},
+        {::note::api::HubSyncStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, status)), ::note::FieldType::String},
+        {::note::api::HubSyncStatus::keys_::rsp_completed, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, completed)), ::note::FieldType::Int},
         {::note::api::HubSyncStatus::keys_::rsp_requested, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, requested)), ::note::FieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-        {::note::api::HubSyncStatus::keys_::rsp_scan, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, scan)), ::note::FieldType::Bool},
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         {::note::api::HubSyncStatus::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, seconds)), ::note::FieldType::Int},
 #endif
-        {::note::api::HubSyncStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, status)), ::note::FieldType::String},
-        {::note::api::HubSyncStatus::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, sync)), ::note::FieldType::Bool},
         {::note::api::HubSyncStatus::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, time)), ::note::FieldType::Int},
+        {::note::api::HubSyncStatus::keys_::rsp_alert, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, alert)), ::note::FieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::HubSyncStatus::keys_::rsp_scan, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, scan)), ::note::FieldType::Bool},
+#endif
+        {::note::api::HubSyncStatus::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, sync)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

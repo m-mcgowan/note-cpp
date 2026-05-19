@@ -43,8 +43,8 @@ struct CardWireless {
         static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
         static constexpr char method[] NOTE_FLASH_ATTR = "method";
         static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
-        static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
     };
 
     static constexpr string_view notecard_request = "card.wireless";
@@ -237,16 +237,16 @@ struct CardWireless {
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// Number of bars of signal quality.
-        note::ResponseField<note::json_int_t> count{};
         /// The current status of the wireless connection and modem.
         note::ResponseField<note::string_view> status{};
+        /// Number of bars of signal quality.
+        note::ResponseField<note::json_int_t> count{};
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            if (reader_->has("count")) rsp.count = reader_->get_int("count");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("count")) rsp.count = reader_->get_int("count");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -256,8 +256,8 @@ struct CardWireless {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            if (reader_.has("count")) rsp.count = reader_.get_int("count");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("count")) rsp.count = reader_.get_int("count");
             return rsp;
         }
 #endif // !NOTE_NO_JSON_TREE
@@ -296,12 +296,12 @@ struct CardWireless {
             bool first_ = true;
             if (!first_) n += p.print(",");
             first_ = false;
-            n += p.print("\"count\":");
-            n += note::detail::print_json_value(p, count.value());
-            if (!first_) n += p.print(",");
-            first_ = false;
             n += p.print("\"status\":");
             n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"count\":");
+            n += note::detail::print_json_value(p, count.value());
             n += p.print("}");
             return n;
         }
@@ -418,8 +418,8 @@ struct request_traits<::note::api::CardWireless> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {::note::api::CardWireless::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardWireless::Response, count)), ::note::FieldType::Int},
         {::note::api::CardWireless::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardWireless::Response, status)), ::note::FieldType::String},
+        {::note::api::CardWireless::keys_::rsp_count, static_cast<uint16_t>(offsetof(::note::api::CardWireless::Response, count)), ::note::FieldType::Int},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

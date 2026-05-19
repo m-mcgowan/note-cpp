@@ -84,7 +84,7 @@ The table below is auto-generated from the OpenAPI spec — see [`tools/arena_si
 <!-- arena-table:start -->
 | Endpoint | String fields | Error | **Total** |
 |----------|-------------|-------|-----------|
-| `CardAttn::Request` | `files[8]`=48×8, `payload`=256 | 64 | **704** |
+| `CardAttn::Request` | `payload`=256, `files[8]`=48×8 | 64 | **704** |
 | `CardAttn::Query` | `files[8]`=48×8 | 64 | **448** |
 | `DfuGet` | `payload`=256, `status`=80 | 64 | **400** |
 | `Web` | `payload`=256, `status`=80 | 64 | **400** |

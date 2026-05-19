@@ -120,10 +120,17 @@ The library is built to scale from resources-constrained MCUs to desktop-class h
 
 | Target | Defaults | Recommended flags | Typical flash / RAM |
 |---|---|---|---|
-| **AVR Uno** (ATmega328P) | streaming, zero heap | `NOTE_MINIMAL` (auto-enables `NOTE_JSONB`), `JsonView` / `note::scan` for responses | 10.9 – 24.3 KB / 680 – 836 B |
-| **Cortex-M0 / STM32** | streaming, zero heap | `NOTE_MINIMAL` | typed API fits comfortably |
+| **AVR Uno** (ATmega328P) | streaming, arena-backed (zero heap) | `NOTE_MINIMAL` (auto-enables `NOTE_JSONB`), `JsonView` / `note::scan` for responses | 10.9 – 24.3 KB / 680 – 836 B |
+| **Cortex-M0 / STM32** | streaming, arena-backed (zero heap) | `NOTE_MINIMAL` | typed API fits comfortably |
 | **ESP32 / Cortex-M4+** | streaming with arena allocator | defaults | full typed API + body structs |
 | **Linux / macOS host** | tree path with a JSON backend | `cJSON` or `nlohmann` backend | full surface, heap allowed |
+
+"Zero heap" on the constrained tiers means **arena-backed** — string
+interning lands in a user-supplied `MonotonicArena` (or
+`HeapResetPool`) and is reclaimed wholesale by `arena.reset()`. Plug
+in the default `note::Allocator{}` (malloc/free) and you'll get a
+heap; the typed API doesn't care which, but only arenas keep the
+build genuinely heap-free.
 
 ### The full progression (Arduino Uno, 8-endpoint app)
 

@@ -198,6 +198,32 @@ if (r && r.body()) {
 }
 ```
 
+In streaming mode the JSON tree is never built, so `r.body()` returns
+`nullptr` — the same value it returns when the response carried no body
+at all, so the two cases look identical to the caller. For portable code
+that runs on either path, prefer `r.body_or_error()`, which returns an
+explicit `Error::NotReady` when the Notecard parsed in streaming mode:
+
+```cpp
+auto safe = r.body_or_error();
+if (safe.has_value()) {
+    // safe.value() is a const JsonReader*, may still be nullptr if the
+    // response had no body field
+    if (auto* body = *safe) {
+        float temp = body->get_double("temperature");
+    }
+} else {
+    // safe.error().code == Error::NotReady when running streaming.
+    // Use .into(MyStruct&) or .into(JsonSink&) for streaming body
+    // access instead — see the previous section.
+}
+```
+
+`r.was_streaming_parse()` returns the same information as a plain bool
+if all you need is the path discriminator. Both helpers are gated on
+the same flag the streaming `Sink` sets at construction time, so they
+stay accurate even when no SAX events fire (the empty-body case).
+
 ### Body arrays
 
 When the body contains arrays, access them through the raw reader:

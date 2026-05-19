@@ -229,14 +229,22 @@ nc.set_allocator(note::Allocator{});                // optional: arena or heap
 
 | Constructor | Transport | Backend | Heap |
 |---|---|---|---|
-| `Notecard(Protocol&, Allocator)` | Streaming | None needed | Zero (arena) |
+| `Notecard(Protocol&, Allocator)` | Streaming, growable response | None needed | Zero (arena) |
+| `Notecard(ITransact&, Allocator)` | Streaming, bounded response | None needed | Zero (arena) |
 | `Notecard(JsonBackend&, ITransact&)` | String-shaped | Required | Depends on backend |
 | `Notecard(JsonBackend*, ITransact&, Allocator)` | Unified | Optional | Depends on backend / arena |
 
-The streaming-only constructor is the recommended path for production.
-It requires no `JsonBackend` — requests build directly into the transport,
+The streaming-only constructors are the recommended path for production.
+They require no `JsonBackend` — requests build directly into the transport,
 responses SAX-parse directly from the wire. The allocator provides backing
 storage for string interning (typically a `MonotonicArena`).
+
+The `Protocol&` and `ITransact&` streaming variants differ only in the
+response-buffering primitive: `Protocol` exposes the send/read split that
+`transact(string_view) -> OwnedBuffer` uses for the byte-by-byte growable
+response path (no a-priori size cap). The unified `ITransact` ctor only
+gets the bounded `transact(req, span<char>, t)` path — enlargeable via
+`set_response_buffer()` but not unbounded.
 
 The `(JsonBackend&, ITransact&)` constructor pairs a string-shaped
 transport with a backend that owns the request and response buffers —

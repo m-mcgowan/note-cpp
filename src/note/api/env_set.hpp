@@ -15,6 +15,7 @@
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
 #include <note/print.hpp>
+#include <note/response_release.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -115,6 +116,7 @@ struct EnvSet {
 #endif
         note::ResponseField<note::json_int_t> time{};
 #endif
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

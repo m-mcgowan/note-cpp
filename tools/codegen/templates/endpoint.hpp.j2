@@ -21,6 +21,7 @@
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
 #include <note/print.hpp>
+#include <note/response_release.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -550,6 +551,56 @@ namespace note::api {
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
+
+{# RAII cleanup — only emitted when the Response actually owns interned
+ # strings (singletons or arrays). Pure-numeric responses stay trivially
+ # destructible. See docs/memory.md for the lifetime contract. #}
+{% set _string_props = op.response.first_string_field %}
+{% set _string_arrays = op.response.string_array_fields %}
+{% if _string_props or _string_arrays %}
+{{ indent }}    /// Allocator that minted this Response's interned string fields,
+{{ indent }}    /// attached by Notecard execute paths when the Response is parsed.
+{{ indent }}    /// Empty == no cleanup needed (default-constructed Response, or a
+{{ indent }}    /// tree-mode parse with no `set_allocator` configured).
+{{ indent }}    ::note::AllocatorRef alloc_;
+
+{{ indent }}    ~Response() {
+{{ indent }}        if (!alloc_) return;
+{% if _string_props %}
+#if NOTE_RESPONSE_RELEASE_LOOP
+{{ indent }}        ::note::detail::release_string_fields(*alloc_,
+{{ indent }}            &{{ _string_props.accessor_name }},
+{{ indent }}            {{ op.response.n_string_fields }});
+#else
+{% for prop in op.response.properties if prop.cpp_type == "note::string_view" and not prop.is_array %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}        ::note::detail::deallocate_if_present(*alloc_, {{ prop.accessor_name }}.value());
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+#endif
+{% endif %}
+{% for arr in _string_arrays %}
+{{ version_guard_begin(arr.version_guard) -}}
+{{ indent }}        ::note::detail::release_string_array(*alloc_, {{ arr.accessor_name }});
+{{ version_guard_end(arr.version_guard) -}}
+{% endfor %}
+{{ indent }}    }
+
+{{ indent }}    // Move-only: copying a Response would alias the interned-string
+{{ indent }}    // ownership and double-free on the second destruction. AllocatorRef
+{{ indent }}    // nulls the source's pointer so only the live owner runs cleanup.
+{{ indent }}    Response() = default;
+{{ indent }}    Response(Response&&) noexcept = default;
+{{ indent }}    Response& operator=(Response&& o) noexcept {
+{{ indent }}        if (this != &o) {
+{{ indent }}            this->~Response();
+{{ indent }}            ::new (this) Response(::std::move(o));
+{{ indent }}        }
+{{ indent }}        return *this;
+{{ indent }}    }
+{{ indent }}    Response(const Response&) = delete;
+{{ indent }}    Response& operator=(const Response&) = delete;
+{% endif %}
 {% if op.response.has_body %}
 
 #if !NOTE_NO_JSON_TREE

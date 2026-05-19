@@ -15,6 +15,7 @@
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
 #include <note/print.hpp>
+#include <note/response_release.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -94,6 +95,7 @@ struct CardIllumination {
 
         /// An illumination reading (in lux) from the attached OPT3001 sensor.
         note::ResponseField<double> value{};
+
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {

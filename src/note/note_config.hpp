@@ -145,6 +145,23 @@
 #define NOTE_NO_API_GROUPS 0
 #endif
 
+// NOTE_RESPONSE_RELEASE_LOOP — when 1, the generated Response destructor
+// frees its interned string fields with a tight loop over a contiguous
+// run of ResponseField<string_view> members. When 0, the destructor
+// unrolls the deallocate calls field-by-field. The loop variant is
+// smaller flash on AVR but relies on pointer arithmetic across sibling
+// members which is only well-defined when ResponseField<string_view> is
+// standard-layout — true everywhere except Arduino with NOTE_PRINTABLE=1
+// (Printable's virtual function table breaks standard-layout). Default
+// flips off only in that one combination.
+#ifndef NOTE_RESPONSE_RELEASE_LOOP
+#  if defined(ARDUINO) && NOTE_PRINTABLE
+#    define NOTE_RESPONSE_RELEASE_LOOP 0
+#  else
+#    define NOTE_RESPONSE_RELEASE_LOOP 1
+#  endif
+#endif
+
 #ifndef NOTE_EXTRAS
 #define NOTE_EXTRAS 1
 #endif

@@ -135,6 +135,7 @@ public:
             }
             if (arena_exhausted)
                 return ApiResult<Rsp>(ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("arena exhausted")});
+            detail::attach_allocator(rsp_val, alloc_);
             return ApiResult<Rsp>(std::move(rsp_val));
         } else if constexpr (NOTE_PRINTABLE) {
             // Custom sink path: per-type Sink when ResponseField implements
@@ -164,6 +165,7 @@ public:
             if (!rv) return Unexpected(rv.error());
             if (!nc_err.empty())
                 return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
+            detail::attach_allocator(rsp_val, alloc_);
             return ApiResult<Rsp>(std::move(rsp_val));
         } else {
             static_assert(detail::has_field_descs<RequestT>::value,

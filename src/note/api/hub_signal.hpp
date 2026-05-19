@@ -17,6 +17,7 @@
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
 #include <note/print.hpp>
+#include <note/response_release.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -189,6 +190,7 @@ struct HubSignal {
         note::ResponseField<note::json_int_t> signals{};
         /// `true` if the Notecard is connected to Notehub.
         note::ResponseField<bool> connected{};
+
 
 #if !NOTE_NO_JSON_TREE
         /// Access the body as a JsonReader (JSON tree-mode path only).

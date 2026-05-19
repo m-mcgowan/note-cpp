@@ -76,6 +76,26 @@ namespace detail {
     template<typename T>
     struct has_set_body_handler<T, std::void_t<decltype(std::declval<T>().set_body_handler(std::declval<BodyHandler>()))>> : std::true_type {};
 
+    template<typename T, typename = void>
+    struct has_alloc_ref : std::false_type {};
+    template<typename T>
+    struct has_alloc_ref<T, std::void_t<decltype(std::declval<T>().alloc_)>> : std::true_type {};
+
+    /// Attach the Allocator value to the Response (by value — see
+    /// AllocatorRef in response_release.hpp for why we don't pointer-track
+    /// the Notecard's storage) so its destructor can free interned string
+    /// fields. Only fires on Response types whose codegen emitted the
+    /// `alloc_` member (i.e. those that own at least one string field or
+    /// string-array field).
+    template<typename T>
+    void attach_allocator(T& rsp, const Allocator& a) {
+        if constexpr (has_alloc_ref<T>::value) {
+            rsp.alloc_.reset(a);
+        } else {
+            (void)rsp; (void)a;
+        }
+    }
+
     /// Per-request-type metadata for runtime dispatch. Specialized by codegen
     /// only for endpoints whose Response has simple (scalar / string / string-array)
     /// fields — for those we ship a FieldDesc table + count and the generic
@@ -301,6 +321,11 @@ public:
                         });
                     debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
                     if (ei.code != Error{}) return ApiResult<Rsp>(ei);
+                    // Capture the Allocator value on the Response so its
+                    // destructor can release interned strings when the caller
+                    // drops the result. Only fires on Responses that carry
+                    // string fields (codegen-gated).
+                    detail::attach_allocator(rsp, *alloc_);
                     return ApiResult<Rsp>(std::move(rsp));
                 }
             }
@@ -1135,6 +1160,10 @@ private:
                 if (alloc_.has_value()) {
                     StringPool pool(*alloc_);
                     result.intern_strings(pool);
+                    // Same RAII attach as the streaming path — once strings
+                    // have been interned via *alloc_, the Response owns the
+                    // cleanup until it's destroyed.
+                    detail::attach_allocator(static_cast<Rsp&>(result), *alloc_);
                 }
             }
 

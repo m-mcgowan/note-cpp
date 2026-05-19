@@ -15,6 +15,7 @@
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
 #include <note/print.hpp>
+#include <note/response_release.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -143,6 +144,38 @@ struct CardStatus {
         note::ResponseField<bool> usb{};
         /// `true` if the Notecard's WiFi radio is currently powered on.
         note::ResponseField<bool> wifi{};
+
+        /// Allocator that minted this Response's interned string fields,
+        /// attached by Notecard execute paths when the Response is parsed.
+        /// Empty == no cleanup needed (default-constructed Response, or a
+        /// tree-mode parse with no `set_allocator` configured).
+        ::note::AllocatorRef alloc_;
+
+        ~Response() {
+            if (!alloc_) return;
+#if NOTE_RESPONSE_RELEASE_LOOP
+            ::note::detail::release_string_fields(*alloc_,
+                &status,
+                1);
+#else
+            ::note::detail::deallocate_if_present(*alloc_, status.value());
+#endif
+        }
+
+        // Move-only: copying a Response would alias the interned-string
+        // ownership and double-free on the second destruction. AllocatorRef
+        // nulls the source's pointer so only the live owner runs cleanup.
+        Response() = default;
+        Response(Response&&) noexcept = default;
+        Response& operator=(Response&& o) noexcept {
+            if (this != &o) {
+                this->~Response();
+                ::new (this) Response(::std::move(o));
+            }
+            return *this;
+        }
+        Response(const Response&) = delete;
+        Response& operator=(const Response&) = delete;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

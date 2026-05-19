@@ -15,6 +15,7 @@
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
 #include <note/print.hpp>
+#include <note/response_release.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -125,6 +126,7 @@ struct NtnGps {
         /// Returned and `true` if a Starnote will use the GPS/GNSS location
         /// from its paired Notecard.
         note::ResponseField<bool> on{};
+
 
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {

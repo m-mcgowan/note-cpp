@@ -134,12 +134,13 @@ constexpr const char* k_version_response =
 // Heap-backed Allocator on the streaming path
 // =============================================================================
 //
-// Pins the current behaviour: the library allocates one block per interned
-// response string and *never* calls deallocate. With std::malloc backing,
-// every interned string stays live for the rest of the process. This is fine
-// for short-lived hosts; for long-running embedded code, switch to an arena.
+// Phase 1 contract: each Response captures the Allocator that minted its
+// interned strings and frees them when it goes out of scope. Consecutive
+// executes therefore see alloc and free counts climbing in lockstep — no
+// accumulation, no leaks. Compare to the arena path below, where free is
+// a no-op and `arena.reset()` is what reclaims.
 
-TEST_CASE("allocator-lifetime: heap-backed streaming intern's per string, never frees") {
+TEST_CASE("allocator-lifetime: heap-backed streaming frees on Response destruction") {
     CountedAllocCtx ctx;
 
     CannedHal hal;
@@ -151,36 +152,27 @@ TEST_CASE("allocator-lifetime: heap-backed streaming intern's per string, never 
         note::Api api(nc);
 
         // Three back-to-back executes that each return three string fields.
+        // Each loop iteration constructs a Response in `r`, then drops it
+        // at the iteration's closing brace — alloc and free fire together.
         for (int i = 0; i < 3; ++i) {
             hal.queue(k_version_response);
             auto r = api.card.version().execute();
             REQUIRE(r.has_value());
-            // The string_views point into allocator-backed storage; check
-            // they're independent of the transport buffer by reading them
-            // post-call.
             CHECK(r.version == "notecard-7.2.1");
             CHECK(r.device == "dev:864475");
             CHECK(r.sku == "NOTE-WBNA");
         }
 
-        // Public contract for the heap-backed default:
-        //   * allocate() is called once per interned string (3 strings × 3 calls = 9)
-        //   * deallocate() is never called by the library
+        // Three loops × three strings each = 9 allocate + 9 deallocate.
         CHECK(ctx.alloc_calls == 9);
-        CHECK(ctx.free_calls == 0);
+        CHECK(ctx.free_calls == 9);
+        CHECK(ctx.bytes_allocated == ctx.bytes_freed);
     }
 
-    // Notecard destruction does not drain the pool either — `~Notecard()` has
-    // no path to the per-call StringPool, and StringPool itself only tracks
-    // the latest interned pointer (the rest are reachable solely through the
-    // caller's Response views).
-    CHECK(ctx.free_calls == 0);
-
-    // Final leak audit: 9 mallocs, 0 frees. Process exit reclaims via the OS.
-    // A real `std::malloc`-backed Allocator would land here too. Tests that
-    // need to be leak-clean should use an arena instead (next section).
-    CHECK(ctx.bytes_allocated > 0);
-    CHECK(ctx.bytes_freed == 0);
+    // Notecard destruction adds nothing — the cleanup already happened
+    // each time a Response went out of scope.
+    CHECK(ctx.alloc_calls == 9);
+    CHECK(ctx.free_calls == 9);
 }
 
 // =============================================================================
@@ -281,7 +273,7 @@ TEST_CASE("allocator-lifetime: tree mode without set_allocator does not touch Al
     CHECK(r2.version == "notecard-7.2.1");
 }
 
-TEST_CASE("allocator-lifetime: tree mode WITH set_allocator interns the same way streaming does") {
+TEST_CASE("allocator-lifetime: tree mode WITH set_allocator runs Phase 1 cleanup too") {
     note::backends::StaticJsonBackend<512, 64> backend;
     note::test::ScriptedTransport transport;
     transport.response = k_version_response;
@@ -300,14 +292,17 @@ TEST_CASE("allocator-lifetime: tree mode WITH set_allocator interns the same way
         CHECK(r.sku == "NOTE-WBNA");
     }
 
-    // Once `set_allocator` is configured, the buffered execute path runs
-    // `intern_strings(pool)` over the parsed Response. Three string fields
-    // × three calls → nine `allocate` calls; the library never calls
-    // `deallocate`. Same leak shape as the streaming default — a long-
-    // running tree-mode program with `set_allocator(heap)` accumulates
-    // bytes per interned string and only reclaims on process exit.
+    // Tree-mode + set_allocator runs the same intern-then-attach pattern
+    // as streaming — `intern_strings(pool)` allocates, the attach hook
+    // points the Response at the allocator, and the Response's destructor
+    // frees on scope exit. Counts climb in lockstep.
     CHECK(ctx.alloc_calls == 9);
-    CHECK(ctx.free_calls == 0);
+    CHECK(ctx.free_calls == 9);
+    CHECK(ctx.bytes_allocated == ctx.bytes_freed);
+
+    // (Old behaviour, pre-Phase 1, leaked one allocation per interned
+    // string — this test exists to prevent regression. See git history
+    // for the previous shape.)
 }
 
 // =============================================================================
@@ -390,6 +385,84 @@ TEST_CASE("HeapResetPool: ~HeapResetPool() drains outstanding allocations") {
     }
 
     CHECK(dtor_ran);
+}
+
+// =============================================================================
+// Phase 1 RAII contract — Response destructor frees what it interned
+// =============================================================================
+//
+// The headline behaviour the codegen now bakes in: every Response captures
+// the Allocator that minted its interned strings (via `note::AllocatorRef`)
+// and frees each one when the Response goes out of scope. With a counted
+// allocator, allocate calls match deallocate calls after the Response's
+// scope ends.
+
+TEST_CASE("allocator-lifetime: Response destructor frees every string the Sink interned") {
+    CountedAllocCtx ctx;
+
+    CannedHal hal;
+    note::Protocol transport{hal};
+
+    note::Notecard nc = note::test::make_test_notecard(
+        transport, counted_malloc_allocator(ctx));
+    note::Api api(nc);
+
+    {
+        hal.queue(k_version_response);
+        auto r = api.card.version().execute();
+        REQUIRE(r.has_value());
+        CHECK(r.version == "notecard-7.2.1");
+        // Strings live as long as `r` does. allocate has fired once per
+        // string field (3 here); deallocate has not yet been called.
+        CHECK(ctx.alloc_calls == 3);
+        CHECK(ctx.free_calls == 0);
+    }
+    // Response dropped at the closing brace. Its destructor walked the
+    // captured Allocator and freed each interned string.
+    CHECK(ctx.alloc_calls == 3);
+    CHECK(ctx.free_calls == 3);
+    CHECK(ctx.bytes_allocated == ctx.bytes_freed);
+
+    // A second execute repeats the cycle cleanly — alloc and free counts
+    // climb in lockstep.
+    {
+        hal.queue(k_version_response);
+        auto r = api.card.version().execute();
+        REQUIRE(r.has_value());
+        CHECK(ctx.alloc_calls == 6);
+        CHECK(ctx.free_calls == 3);
+    }
+    CHECK(ctx.alloc_calls == 6);
+    CHECK(ctx.free_calls == 6);
+    CHECK(ctx.bytes_allocated == ctx.bytes_freed);
+}
+
+TEST_CASE("allocator-lifetime: moving a Response transfers cleanup to the new owner") {
+    CountedAllocCtx ctx;
+    CannedHal hal;
+    note::Protocol transport{hal};
+
+    note::Notecard nc = note::test::make_test_notecard(
+        transport, counted_malloc_allocator(ctx));
+    note::Api api(nc);
+
+    {
+        hal.queue(k_version_response);
+        auto r1 = api.card.version().execute();
+        REQUIRE(r1.has_value());
+        CHECK(ctx.alloc_calls == 3);
+        CHECK(ctx.free_calls == 0);
+
+        // Move r1 into r2. r1 should now be "empty" (its AllocatorRef nulled
+        // by the move), so when r1 goes out of scope at the inner brace it
+        // does nothing. r2 still holds the strings and cleans up when *it*
+        // is destroyed.
+        auto r2 = std::move(r1);
+        CHECK(ctx.free_calls == 0);   // move alone doesn't free
+    }
+    // Both r1 and r2 are gone now. The cleanup ran once — on r2.
+    CHECK(ctx.free_calls == 3);
+    CHECK(ctx.bytes_allocated == ctx.bytes_freed);
 }
 
 TEST_CASE("HeapResetPool: move ctor transfers ownership; source is empty") {

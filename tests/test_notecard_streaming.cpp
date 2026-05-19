@@ -873,8 +873,12 @@ TEST_CASE("Streaming: binary PUT post-verify query failure") {
 
 // ===========================================================================
 // Streaming: execute with explicit allocator
+//
+// The per-call overload is gated out under NOTE_SINGLETON=1 — see the
+// comment on `Notecard::execute(req, Allocator)`.
 // ===========================================================================
 
+#if !NOTE_SINGLETON
 TEST_CASE("Streaming: execute with temp allocator interns strings") {
     StreamHarness h;
     h.hal.queue_response(R"({"version":"1.2.3","board":"notecard"})");
@@ -895,6 +899,7 @@ TEST_CASE("Streaming: execute with temp allocator interns strings") {
     CHECK(ver_ptr >= arena_start);
     CHECK(ver_ptr < arena_end);
 }
+#endif // !NOTE_SINGLETON
 
 // ===========================================================================
 // Streaming: set_debug propagates to streaming transport

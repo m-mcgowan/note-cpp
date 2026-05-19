@@ -59,9 +59,9 @@ public:
     template<typename... Args>
     explicit StaticNotecard(Allocator alloc, Args&&... args)
         : stack_(std::forward<Args>(args)...)
-        , alloc_(alloc) {}
+        , alloc_(alloc) { publish_singleton_allocator_(); }
 
-    void set_allocator(Allocator alloc) { alloc_ = alloc; }
+    void set_allocator(Allocator alloc) { alloc_ = alloc; publish_singleton_allocator_(); }
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
@@ -495,6 +495,17 @@ private:
         timing_.has_previous = true;
     }
 #endif
+
+    /// Copy `alloc_` into `note::detail::g_singleton_allocator` under
+    /// `NOTE_SINGLETON=1`. Captured by value so the global survives any
+    /// StaticNotecard moves or factory patterns. No-op when SINGLETON
+    /// is disabled.
+    void publish_singleton_allocator_() {
+#if NOTE_SINGLETON
+        ::note::detail::g_singleton_allocator = alloc_;
+        ::note::detail::g_singleton_allocator_present = true;
+#endif
+    }
 
     Stack stack_;
     Allocator alloc_;

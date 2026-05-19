@@ -680,6 +680,13 @@ inline ApiResult<typename CardBinary::Status::Response> CardBinary::Status::exec
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    // The type-erased thunk couldn't reach `attach_allocator`. Mark the
+    // Response as owning its interned strings so its dtor frees them on
+    // the SINGLETON path (parity with the Notecard::execute template path,
+    // which attaches via `detail::attach_allocator`). The dtor still gates
+    // the actual free on `g_singleton_allocator_present`, so marking when
+    // no allocator is configured stays safe.
+    rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
     return ApiResult<Response>(std::move(rsp_));
 }
 inline Result<void> CardBinary::Status::command() const {
@@ -742,6 +749,13 @@ inline ApiResult<typename CardBinary::Clear::Response> CardBinary::Clear::execut
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    // The type-erased thunk couldn't reach `attach_allocator`. Mark the
+    // Response as owning its interned strings so its dtor frees them on
+    // the SINGLETON path (parity with the Notecard::execute template path,
+    // which attaches via `detail::attach_allocator`). The dtor still gates
+    // the actual free on `g_singleton_allocator_present`, so marking when
+    // no allocator is configured stays safe.
+    rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
     return ApiResult<Response>(std::move(rsp_));
 }
 inline Result<void> CardBinary::Clear::command() const {

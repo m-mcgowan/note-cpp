@@ -7,6 +7,7 @@
 #include "json.hpp"
 #include "json_render.hpp"
 #include "md5.hpp"
+#include "response_release.hpp"
 #include "retry.hpp"
 #include "retry_policy.hpp"
 #include "safety.hpp"
@@ -187,7 +188,7 @@ public:
 #if !NOTE_NO_POLYMORPHIC
 class Notecard {
 public:
-    Notecard() = default;
+    Notecard() { publish_singleton_allocator_(); }
 
     /// Streaming ctor — preferred for new code. Responses are SAX-parsed
     /// off the wire; typed fields (`r.version`, `.into(struct&)`) work
@@ -196,7 +197,7 @@ public:
     explicit Notecard(ITransact& transport, Allocator alloc = {})
         : transport_(&transport)
         , alloc_(alloc)
-    {}
+    { publish_singleton_allocator_(); }
 
     /// Tree-mode ctor: a JsonBackend builds a walkable response tree so
     /// `Response::body()` returns a JsonReader for ad-hoc field access.
@@ -206,7 +207,7 @@ public:
     Notecard(JsonBackend& backend, ITransact& transport)
         : backend_(&backend)
         , transport_(&transport)
-    {}
+    { publish_singleton_allocator_(); }
 
     /// Unified ctor (Phase 5a step 8a). `backend` may be nullptr — pass
     /// nullptr + a non-null allocator for streaming-only mode; pass a
@@ -218,7 +219,7 @@ public:
         : backend_(backend)
         , transport_(&transport)
         , alloc_(alloc)
-    {}
+    { publish_singleton_allocator_(); }
 
     /// Protocol-typed ctors. `Protocol` exposes the send/read split that
     /// `transact(string_view) -> OwnedBuffer` uses for the growable
@@ -242,8 +243,8 @@ public:
     // allocator's backing store (e.g. a MonotonicArena) so they survive
     // transport buffer reuse. The parsing strategy is still dictated by
     // the backend (tree-parse or SAX).
-    void set_allocator(Allocator alloc) { alloc_ = alloc; }
-    void clear_allocator() { alloc_.reset(); }
+    void set_allocator(Allocator alloc) { alloc_ = alloc; publish_singleton_allocator_(); }
+    void clear_allocator() { alloc_.reset(); publish_singleton_allocator_(); }
 
     // Configure the working buffer for COBS encode/decode in binary transfers.
     // Set once at startup; all binary execute() calls use it automatically.
@@ -373,7 +374,15 @@ public:
         return execute(static_cast<const RequestT&>(req));
     }
 
+#if !NOTE_SINGLETON
     // Execute with an explicit allocator (one-off string interning).
+    //
+    // Gated out under NOTE_SINGLETON=1: Response cleanup under SINGLETON
+    // resolves the allocator through a single global pointer instead of
+    // a per-Response copy, and the swap-and-restore done by this overload
+    // can't be reconciled with that scheme when Responses outlive the
+    // call. Callers that need per-call allocators should use the default
+    // (non-singleton) build.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req, Allocator alloc) {
         auto saved = alloc_;
@@ -382,6 +391,7 @@ public:
         alloc_ = saved;
         return result;
     }
+#endif
 
 #if !NOTE_NO_STD_STRING
     // Ad-hoc request with a builder callback.
@@ -1315,6 +1325,22 @@ private:
     }
 
     Allocator alloc_value() const { return alloc_.value_or(Allocator{}); }
+
+    /// Copy `alloc_` (when present) into `note::detail::g_singleton_allocator`
+    /// under `NOTE_SINGLETON=1`. Captured by value so the global survives
+    /// Notecard moves / returns-by-value (factory patterns) without
+    /// requiring a custom move ctor to chase the storage. No-op when
+    /// SINGLETON is disabled.
+    void publish_singleton_allocator_() {
+#if NOTE_SINGLETON
+        if (alloc_.has_value()) {
+            ::note::detail::g_singleton_allocator = *alloc_;
+            ::note::detail::g_singleton_allocator_present = true;
+        } else {
+            ::note::detail::g_singleton_allocator_present = false;
+        }
+#endif
+    }
 
     JsonBackend* backend_ = nullptr;
     ITransact* transport_ = nullptr;

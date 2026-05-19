@@ -499,10 +499,11 @@ private:
     /// Copy `alloc_` into `note::detail::g_singleton_allocator` under
     /// `NOTE_SINGLETON=1`. Captured by value so the global survives any
     /// StaticNotecard moves or factory patterns. No-op when SINGLETON
-    /// is disabled or `NOTE_NO_RESPONSE_RAII=1` (the global slot has no
-    /// consumers in that build).
+    /// is disabled. See the Notecard counterpart for the two consumers
+    /// (Response dtor under RAII, streaming-path discriminator under
+    /// both RAII and NO_RAII).
     void publish_singleton_allocator_() {
-#if NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
+#if NOTE_SINGLETON
         ::note::detail::g_singleton_allocator = alloc_;
         ::note::detail::g_singleton_allocator_present = true;
 #endif

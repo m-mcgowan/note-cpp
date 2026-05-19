@@ -333,11 +333,14 @@ struct HubSignal {
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
-        /// Set by the streaming Sink when this Response is populated via
-        /// SAX parsing (no JSON tree). `body_or_error()` reads this
-        /// to surface an explicit error instead of a silent nullptr.
+        /// Set by the streaming Sink (typed path) or by the enclosing op's
+        /// generated SINGLETON `execute()` (GenericResponseSink path) when
+        /// this Response is populated via SAX parsing (no JSON tree).
+        /// `body_or_error()` reads this to surface an explicit error
+        /// instead of a silent nullptr.
         bool streaming_parse_used_ = false;
         friend struct Sink;
+        friend struct HubSignal;
 #endif
     };
 
@@ -478,6 +481,15 @@ inline ApiResult<typename HubSignal::Response> HubSignal::execute() const {
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+#if !NOTE_NO_JSON_TREE
+    // The typed Sink would set this in its ctor; the SINGLETON path uses
+    // GenericResponseSink instead, which doesn't touch the flag. Set it
+    // here to keep `body_or_error()` / `was_streaming_parse()` accurate
+    // when the streaming path runs (i.e. when an allocator is configured;
+    // execute_generic_with_body picks the buffered fallback otherwise).
+    if (::note::detail::g_singleton_allocator_present)
+        rsp_.streaming_parse_used_ = true;
+#endif
     return ApiResult<Response>(std::move(rsp_));
 }
 inline Result<void> HubSignal::command() const {

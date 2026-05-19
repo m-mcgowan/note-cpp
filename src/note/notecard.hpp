@@ -1337,10 +1337,13 @@ private:
     /// under `NOTE_SINGLETON=1`. Captured by value so the global survives
     /// Notecard moves / returns-by-value (factory patterns) without
     /// requiring a custom move ctor to chase the storage. No-op when
-    /// SINGLETON is disabled or `NOTE_NO_RESPONSE_RAII=1` (the global slot
-    /// has no consumers in that build).
+    /// SINGLETON is disabled. The slot has two consumers: the per-Response
+    /// dtor under !NOTE_NO_RESPONSE_RAII, and the generated SINGLETON
+    /// execute() which reads `g_singleton_allocator_present` to track
+    /// the streaming-vs-tree path for body-having responses (latter is
+    /// active under both RAII and NO_RAII builds).
     void publish_singleton_allocator_() {
-#if NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
+#if NOTE_SINGLETON
         if (alloc_.has_value()) {
             ::note::detail::g_singleton_allocator = *alloc_;
             ::note::detail::g_singleton_allocator_present = true;

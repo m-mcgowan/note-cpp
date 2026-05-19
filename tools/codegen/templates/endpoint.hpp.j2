@@ -967,11 +967,14 @@ namespace note::api {
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}
 {{ indent }}    std::unique_ptr<JsonReader> body_;
-{{ indent }}    /// Set by the streaming Sink when this Response is populated via
-{{ indent }}    /// SAX parsing (no JSON tree). `body_or_error()` reads this
-{{ indent }}    /// to surface an explicit error instead of a silent nullptr.
+{{ indent }}    /// Set by the streaming Sink (typed path) or by the enclosing op's
+{{ indent }}    /// generated SINGLETON `execute()` (GenericResponseSink path) when
+{{ indent }}    /// this Response is populated via SAX parsing (no JSON tree).
+{{ indent }}    /// `body_or_error()` reads this to surface an explicit error
+{{ indent }}    /// instead of a silent nullptr.
 {{ indent }}    bool streaming_parse_used_ = false;
 {{ indent }}    friend struct Sink;
+{{ indent }}    friend struct {{ op.struct_name }};
 {% endif %}
 #endif
 {{ indent }}};
@@ -1384,6 +1387,17 @@ inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execut
     // the actual free on `g_singleton_allocator_present`, so marking when
     // no allocator is configured stays safe.
     rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
+#endif
+{% endif %}
+{% if op.response.has_body %}
+#if !NOTE_NO_JSON_TREE
+    // The typed Sink would set this in its ctor; the SINGLETON path uses
+    // GenericResponseSink instead, which doesn't touch the flag. Set it
+    // here to keep `body_or_error()` / `was_streaming_parse()` accurate
+    // when the streaming path runs (i.e. when an allocator is configured;
+    // execute_generic_with_body picks the buffered fallback otherwise).
+    if (::note::detail::g_singleton_allocator_present)
+        rsp_.streaming_parse_used_ = true;
 #endif
 {% endif %}
     return ApiResult<Response>(std::move(rsp_));

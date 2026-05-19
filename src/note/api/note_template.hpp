@@ -588,11 +588,14 @@ struct NoteTemplate {
         private:
             std::unique_ptr<JsonReader> reader_;
             std::unique_ptr<JsonReader> body_;
-            /// Set by the streaming Sink when this Response is populated via
-            /// SAX parsing (no JSON tree). `body_or_error()` reads this
-            /// to surface an explicit error instead of a silent nullptr.
+            /// Set by the streaming Sink (typed path) or by the enclosing op's
+            /// generated SINGLETON `execute()` (GenericResponseSink path) when
+            /// this Response is populated via SAX parsing (no JSON tree).
+            /// `body_or_error()` reads this to surface an explicit error
+            /// instead of a silent nullptr.
             bool streaming_parse_used_ = false;
             friend struct Sink;
+            friend struct Define;
 #endif
         };
 
@@ -1246,11 +1249,14 @@ struct NoteTemplate {
         private:
             std::unique_ptr<JsonReader> reader_;
             std::unique_ptr<JsonReader> body_;
-            /// Set by the streaming Sink when this Response is populated via
-            /// SAX parsing (no JSON tree). `body_or_error()` reads this
-            /// to surface an explicit error instead of a silent nullptr.
+            /// Set by the streaming Sink (typed path) or by the enclosing op's
+            /// generated SINGLETON `execute()` (GenericResponseSink path) when
+            /// this Response is populated via SAX parsing (no JSON tree).
+            /// `body_or_error()` reads this to surface an explicit error
+            /// instead of a silent nullptr.
             bool streaming_parse_used_ = false;
             friend struct Sink;
+            friend struct Remove;
 #endif
         };
 
@@ -1476,6 +1482,15 @@ inline ApiResult<typename NoteTemplate::Define::Response> NoteTemplate::Define::
     // no allocator is configured stays safe.
     rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
 #endif
+#if !NOTE_NO_JSON_TREE
+    // The typed Sink would set this in its ctor; the SINGLETON path uses
+    // GenericResponseSink instead, which doesn't touch the flag. Set it
+    // here to keep `body_or_error()` / `was_streaming_parse()` accurate
+    // when the streaming path runs (i.e. when an allocator is configured;
+    // execute_generic_with_body picks the buffered fallback otherwise).
+    if (::note::detail::g_singleton_allocator_present)
+        rsp_.streaming_parse_used_ = true;
+#endif
     return ApiResult<Response>(std::move(rsp_));
 }
 inline Result<void> NoteTemplate::Define::command() const {
@@ -1625,6 +1640,15 @@ inline ApiResult<typename NoteTemplate::Remove::Response> NoteTemplate::Remove::
     // the actual free on `g_singleton_allocator_present`, so marking when
     // no allocator is configured stays safe.
     rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
+#endif
+#if !NOTE_NO_JSON_TREE
+    // The typed Sink would set this in its ctor; the SINGLETON path uses
+    // GenericResponseSink instead, which doesn't touch the flag. Set it
+    // here to keep `body_or_error()` / `was_streaming_parse()` accurate
+    // when the streaming path runs (i.e. when an allocator is configured;
+    // execute_generic_with_body picks the buffered fallback otherwise).
+    if (::note::detail::g_singleton_allocator_present)
+        rsp_.streaming_parse_used_ = true;
 #endif
     return ApiResult<Response>(std::move(rsp_));
 }

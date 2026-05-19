@@ -27,14 +27,17 @@
 
 namespace note {
 
-#if !NOTE_NO_RESPONSE_RAII
-
 #if NOTE_SINGLETON
 namespace detail {
     /// Singleton allocator slot. Set by Notecard and StaticNotecard ctors
-    /// / `set_allocator()` / `clear_allocator()`; read by every generated
-    /// Response destructor under SINGLETON in place of a per-Response
-    /// Allocator copy.
+    /// / `set_allocator()` / `clear_allocator()`. Read by every generated
+    /// Response destructor under SINGLETON+RAII as the source of the
+    /// Allocator (replaces a per-Response Allocator copy). Also read by
+    /// the generated SINGLETON `execute()` after a successful parse so
+    /// `streaming_parse_used_` (when the response has a body) reflects
+    /// which path actually ran — including under NOTE_NO_RESPONSE_RAII
+    /// where the dtor is gone but the path discriminator still matters
+    /// for `body()` / `body_or_error()`.
     ///
     /// Captured BY VALUE rather than by pointer so the slot survives any
     /// Notecard moves / returns-by-value (factory patterns) without
@@ -49,6 +52,8 @@ namespace detail {
     inline bool g_singleton_allocator_present = false;
 }
 #endif
+
+#if !NOTE_NO_RESPONSE_RAII
 
 // Move-only owner of allocator information for a parsed Response.
 //

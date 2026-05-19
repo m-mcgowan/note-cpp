@@ -157,7 +157,8 @@ struct CardPower {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
@@ -394,7 +395,8 @@ struct CardPower {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
@@ -619,7 +621,8 @@ struct CardPower {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }

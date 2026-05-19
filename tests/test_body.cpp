@@ -9,6 +9,7 @@
 #include <note/api.hpp>
 #include <memory>
 #include <map>
+#include <deque>
 #include <string>
 #include <variant>
 
@@ -428,17 +429,19 @@ TEST_CASE("note.get response body() returns reader when body present") {
 }
 
 TEST_CASE("note.get streaming-parsed response: body_or_error reports streaming mode") {
-    // Streaming Sink::reset sets streaming_parse_used_ on the Response. Even
-    // when the Response is otherwise default-initialised, body_or_error must
-    // surface an explicit Error::NotReady so callers can react instead of
-    // silently dereferencing a null body() pointer.
+    // Streaming Sink construction marks the Response as streaming-parsed.
+    // Even when the Response is otherwise default-initialised, body_or_error
+    // must surface an explicit Error::NotReady so callers can react instead
+    // of silently dereferencing a null body() pointer.
     using Rsp = note::api::NoteGet::Get::Response;
     Rsp rsp;
     char arena_buf[256];
     note::MonotonicArena arena(arena_buf);
     note::StringPool pool(note::arena_allocator(arena));
     Rsp::Sink sink(rsp, pool);
-    sink.reset();
+    // No sink.reset() — the flag must be set by the Sink constructor itself,
+    // so successful first-attempt executes (which never call reset()) still
+    // report streaming mode.
     REQUIRE(rsp.was_streaming_parse());
     REQUIRE(rsp.body() == nullptr);
     auto safe = rsp.body_or_error();
@@ -451,6 +454,47 @@ TEST_CASE("note.get streaming-parsed response: body_or_error reports streaming m
     CHECK_MESSAGE(msg.find(".into(") != note::string_view::npos,
                   "should name .into(...) alternative; got: ", std::string{msg});
 #endif
+}
+
+// End-to-end coverage of the same invariant — drives the streaming path
+// through Notecard::execute() so a successful first attempt (no retry)
+// has to set the flag on its own. Catches the gap where Sink::reset()
+// was the only writer of streaming_parse_used_.
+TEST_CASE("note.get via streaming execute: was_streaming_parse + body_or_error") {
+    struct StreamingHal : note::Hal {
+        std::deque<uint8_t> rx;
+        void queue(const std::string& s) {
+            for (char c : s) rx.push_back(static_cast<uint8_t>(c));
+            rx.push_back('\n');
+        }
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        bool write_line_terminator() override { return true; }
+        note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
+            if (rx.empty())
+                return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "no data");
+            size_t n = std::min(max_len, rx.size());
+            for (size_t i = 0; i < n; ++i) { buf[i] = rx.front(); rx.pop_front(); }
+            return n;
+        }
+        bool reset() override { return true; }
+        void delay(uint32_t) override {}
+        uint32_t millis() override { return 0; }
+    };
+
+    StreamingHal hal;
+    hal.queue(R"({"body":{"temperature":22.5,"humidity":60},"time":1700000000})");
+    note::Protocol transport{hal};
+    note::Notecard nc = note::test::make_test_notecard(transport, note::Allocator{});
+    note::Api api(nc);
+
+    auto r = api.note.read("sensors.qi").execute();
+    REQUIRE(r.has_value());
+    CHECK(r.was_streaming_parse());
+    CHECK(r.body() == nullptr);
+
+    auto safe = r.body_or_error();
+    REQUIRE_FALSE(safe.has_value());
+    CHECK(safe.error().code == note::Error::NotReady);
 }
 
 #if __cplusplus >= 202002L

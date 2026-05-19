@@ -151,7 +151,8 @@ struct FileChanges {
         struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
-            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+            }
             NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_pending) == k_) { rsp.pending = v_; return; }
             }

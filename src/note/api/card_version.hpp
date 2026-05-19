@@ -274,7 +274,16 @@ struct CardVersion {
             ::note::StringPool& pool_;
             ::note::BodyHandler body_handler_{};
             int body_depth_ = 0;
-            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+#if !NOTE_NO_JSON_TREE
+                // Mark the Response as streaming-parsed at construction
+                // time, before any SAX events fire. Successful first
+                // attempts never call reset(), so the flag has to be set
+                // here for body_or_error()/was_streaming_parse() to be
+                // accurate on the happy path.
+                rsp.streaming_parse_used_ = true;
+#endif
+            }
             void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
             NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
                 if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));

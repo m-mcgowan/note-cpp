@@ -648,7 +648,18 @@ namespace note::api {
 {{ indent }}        ::note::BodyHandler body_handler_{};
 {{ indent }}        int body_depth_ = 0;
 {% endif %}
-{{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+{{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+{% if op.response.has_body %}
+#if !NOTE_NO_JSON_TREE
+{{ indent }}            // Mark the Response as streaming-parsed at construction
+{{ indent }}            // time, before any SAX events fire. Successful first
+{{ indent }}            // attempts never call reset(), so the flag has to be set
+{{ indent }}            // here for body_or_error()/was_streaming_parse() to be
+{{ indent }}            // accurate on the happy path.
+{{ indent }}            rsp.streaming_parse_used_ = true;
+#endif
+{% endif %}
+{{ indent }}        }
 {% if op.response.has_body %}
 {{ indent }}        void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
 {% endif %}

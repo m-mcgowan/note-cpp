@@ -156,7 +156,8 @@ struct EnvTemplate {
         struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
-            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+            }
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
             }

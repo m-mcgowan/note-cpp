@@ -161,7 +161,8 @@ struct EnvModified {
         struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
-            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+            }
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }

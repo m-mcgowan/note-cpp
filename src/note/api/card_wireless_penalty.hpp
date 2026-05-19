@@ -239,7 +239,8 @@ struct CardWirelessPenalty {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
@@ -584,7 +585,8 @@ struct CardWirelessPenalty {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
@@ -920,7 +922,8 @@ struct CardWirelessPenalty {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }

@@ -432,7 +432,8 @@ struct CardAttn {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 enum class ArrayCtx_ : uint8_t { none, files } array_ctx_{};
                 NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
                     if (note::flash(keys_::rsp_files) == k_) { array_ctx_ = ArrayCtx_::files; return; }
@@ -855,7 +856,8 @@ struct CardAttn {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_set) == k_) { rsp.set = v_; return; }
                 }
@@ -1207,7 +1209,8 @@ struct CardAttn {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_set) == k_) { rsp.set = v_; return; }
                 }
@@ -1687,7 +1690,8 @@ struct CardAttn {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
@@ -2249,7 +2253,8 @@ struct CardAttn {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
-                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+                }
                 enum class ArrayCtx_ : uint8_t { none, files } array_ctx_{};
                 NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
                     if (note::flash(keys_::rsp_files) == k_) { array_ctx_ = ArrayCtx_::files; return; }

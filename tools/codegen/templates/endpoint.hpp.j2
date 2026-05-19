@@ -554,10 +554,16 @@ namespace note::api {
 
 {# RAII cleanup — only emitted when the Response actually owns interned
  # strings (singletons or arrays). Pure-numeric responses stay trivially
- # destructible. See docs/memory.md for the lifetime contract. #}
+ # destructible. See docs/memory.md for the lifetime contract.
+ #
+ # NOTE_NO_RESPONSE_RAII opt-out: drops the whole block (dtor, AllocatorRef,
+ # custom move ops) so Response becomes a trivial value type. Users opt in
+ # when their allocator's `free` is a no-op (arena / heap-reset pool) and
+ # they reclaim memory wholesale. #}
 {% set _string_props = op.response.first_string_field %}
 {% set _string_arrays = op.response.string_array_fields %}
 {% if _string_props or _string_arrays %}
+#if !NOTE_NO_RESPONSE_RAII
 {{ indent }}    /// Allocator that minted this Response's interned string fields,
 {{ indent }}    /// attached by Notecard execute paths when the Response is parsed.
 {{ indent }}    /// Empty == no cleanup needed (default-constructed Response, or a
@@ -600,6 +606,7 @@ namespace note::api {
 {{ indent }}    }
 {{ indent }}    Response(const Response&) = delete;
 {{ indent }}    Response& operator=(const Response&) = delete;
+#endif // !NOTE_NO_RESPONSE_RAII
 {% endif %}
 {% if op.response.has_body %}
 
@@ -1369,6 +1376,7 @@ inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execut
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
 {% if op.response.first_string_field or op.response.string_array_fields %}
+#if !NOTE_NO_RESPONSE_RAII
     // The type-erased thunk couldn't reach `attach_allocator`. Mark the
     // Response as owning its interned strings so its dtor frees them on
     // the SINGLETON path (parity with the Notecard::execute template path,
@@ -1376,6 +1384,7 @@ inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execut
     // the actual free on `g_singleton_allocator_present`, so marking when
     // no allocator is configured stays safe.
     rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
+#endif
 {% endif %}
     return ApiResult<Response>(std::move(rsp_));
 }

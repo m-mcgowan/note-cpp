@@ -567,12 +567,13 @@ TEST_CASE("Notecard error without allocator keeps reader alive for message") {
 // ---------------------------------------------------------------------------
 // Execute with temporary allocator overload
 //
-// The per-call overload is gated out under NOTE_SINGLETON=1 — see the
-// comment on `Notecard::execute(req, Allocator)` for why. Skip the tests
-// when SINGLETON is on so the rest of the file still compiles.
+// The per-call overload is gated out under NOTE_SINGLETON=1 and under
+// NOTE_NO_RESPONSE_RAII=1 — see the comment on `Notecard::execute(req,
+// Allocator)` for why. Skip the tests when either flag is on so the rest
+// of the file still compiles.
 // ---------------------------------------------------------------------------
 
-#if !NOTE_SINGLETON
+#if !NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
 TEST_CASE("execute(req, Allocator) uses the temporary allocator then restores") {
     // Use a real JSON backend so we can exercise the full buffered path
     // including string interning.
@@ -633,7 +634,7 @@ TEST_CASE("execute(req, Allocator) with error interns via temporary allocator") 
     CHECK(msg_ptr >= arena_start);
     CHECK(msg_ptr < arena_end);
 }
-#endif // !NOTE_SINGLETON
+#endif // !NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
 
 // ---------------------------------------------------------------------------
 // Binary pre-flight failures

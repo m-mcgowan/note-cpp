@@ -374,15 +374,22 @@ public:
         return execute(static_cast<const RequestT&>(req));
     }
 
-#if !NOTE_SINGLETON
+#if !NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
     // Execute with an explicit allocator (one-off string interning).
     //
     // Gated out under NOTE_SINGLETON=1: Response cleanup under SINGLETON
-    // resolves the allocator through a single global pointer instead of
-    // a per-Response copy, and the swap-and-restore done by this overload
+    // resolves the allocator through a single global slot instead of a
+    // per-Response copy, and the swap-and-restore done by this overload
     // can't be reconciled with that scheme when Responses outlive the
-    // call. Callers that need per-call allocators should use the default
-    // (non-singleton) build.
+    // call.
+    //
+    // Gated out under NOTE_NO_RESPONSE_RAII=1: the whole point of the
+    // overload is "this Response is owned by a different allocator than
+    // the Notecard's configured one." Without per-Response cleanup that
+    // contract no longer holds — the caller would have to track the
+    // temp allocator's lifetime against every parsed Response themselves.
+    // Callers that need per-call allocators should use the default
+    // (non-singleton, RAII-enabled) build.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req, Allocator alloc) {
         auto saved = alloc_;
@@ -1330,9 +1337,10 @@ private:
     /// under `NOTE_SINGLETON=1`. Captured by value so the global survives
     /// Notecard moves / returns-by-value (factory patterns) without
     /// requiring a custom move ctor to chase the storage. No-op when
-    /// SINGLETON is disabled.
+    /// SINGLETON is disabled or `NOTE_NO_RESPONSE_RAII=1` (the global slot
+    /// has no consumers in that build).
     void publish_singleton_allocator_() {
-#if NOTE_SINGLETON
+#if NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
         if (alloc_.has_value()) {
             ::note::detail::g_singleton_allocator = *alloc_;
             ::note::detail::g_singleton_allocator_present = true;

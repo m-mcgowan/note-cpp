@@ -65,6 +65,7 @@ struct CountedAllocCtx {
     }
 };
 
+[[maybe_unused]]
 inline note::Allocator counted_malloc_allocator(CountedAllocCtx& ctx) {
     return note::Allocator{
         // alloc
@@ -139,7 +140,11 @@ constexpr const char* k_version_response =
 // executes therefore see alloc and free counts climbing in lockstep — no
 // accumulation, no leaks. Compare to the arena path below, where free is
 // a no-op and `arena.reset()` is what reclaims.
+//
+// These tests pin the *with-RAII* contract — they're gated out under
+// NOTE_NO_RESPONSE_RAII=1 (which intentionally disables the dtor).
 
+#if !NOTE_NO_RESPONSE_RAII
 TEST_CASE("allocator-lifetime: heap-backed streaming frees on Response destruction") {
     CountedAllocCtx ctx;
 
@@ -174,6 +179,7 @@ TEST_CASE("allocator-lifetime: heap-backed streaming frees on Response destructi
     CHECK(ctx.alloc_calls == 9);
     CHECK(ctx.free_calls == 9);
 }
+#endif // !NOTE_NO_RESPONSE_RAII
 
 // =============================================================================
 // Arena-backed Allocator on the streaming path
@@ -273,6 +279,7 @@ TEST_CASE("allocator-lifetime: tree mode without set_allocator does not touch Al
     CHECK(r2.version == "notecard-7.2.1");
 }
 
+#if !NOTE_NO_RESPONSE_RAII
 TEST_CASE("allocator-lifetime: tree mode WITH set_allocator runs Phase 1 cleanup too") {
     note::backends::StaticJsonBackend<512, 64> backend;
     note::test::ScriptedTransport transport;
@@ -304,6 +311,7 @@ TEST_CASE("allocator-lifetime: tree mode WITH set_allocator runs Phase 1 cleanup
     // string — this test exists to prevent regression. See git history
     // for the previous shape.)
 }
+#endif // !NOTE_NO_RESPONSE_RAII
 
 // =============================================================================
 // HeapResetPool — malloc-backed arena lifecycle
@@ -397,6 +405,7 @@ TEST_CASE("HeapResetPool: ~HeapResetPool() drains outstanding allocations") {
 // allocator, allocate calls match deallocate calls after the Response's
 // scope ends.
 
+#if !NOTE_NO_RESPONSE_RAII
 TEST_CASE("allocator-lifetime: Response destructor frees every string the Sink interned") {
     CountedAllocCtx ctx;
 
@@ -464,6 +473,7 @@ TEST_CASE("allocator-lifetime: moving a Response transfers cleanup to the new ow
     CHECK(ctx.free_calls == 3);
     CHECK(ctx.bytes_allocated == ctx.bytes_freed);
 }
+#endif // !NOTE_NO_RESPONSE_RAII
 
 TEST_CASE("HeapResetPool: move ctor transfers ownership; source is empty") {
     note::HeapResetPool src;

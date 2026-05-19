@@ -27,6 +27,8 @@
 
 namespace note {
 
+#if !NOTE_NO_RESPONSE_RAII
+
 #if NOTE_SINGLETON
 namespace detail {
     /// Singleton allocator slot. Set by Notecard and StaticNotecard ctors
@@ -133,6 +135,8 @@ public:
     void reset(const Allocator& a) noexcept { alloc_ = a; present_ = true; }
 #endif
 };
+
+#endif // !NOTE_NO_RESPONSE_RAII
 
 namespace detail {
 

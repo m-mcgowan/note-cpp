@@ -145,6 +145,34 @@
 #define NOTE_NO_API_GROUPS 0
 #endif
 
+// NOTE_NO_RESPONSE_RAII — when 1, drop every per-Response cleanup hook:
+// the `~Response()` body, the `note::AllocatorRef alloc_` member, the
+// custom move ctor/op, and the SINGLETON-path `attach_allocator` line.
+// Response becomes a trivial value type that holds string views into
+// allocator-backed storage; the user owns lifetime via the allocator
+// (`arena.reset()`, `pool.reset()`, etc.).
+//
+// Only define this when your Notecard uses an allocator whose `free`
+// is a no-op and you reclaim memory wholesale via reset() — that is,
+// `arena_allocator`, `heap_reset_allocator`, or a custom allocator
+// with the same shape. Wrong with the default heap `Allocator{}`:
+// every interned response string leaks until process exit.
+//
+// Saves ~248 B AVR flash on `avr-notecpp` (Response dtors + the
+// `release_string_fields` helper + `AllocatorRef::operator bool`),
+// plus per-Response RAM (drops the 1-byte present_ flag under
+// SINGLETON, or the full Allocator value under !SINGLETON).
+//
+// The per-call `nc.execute(req, temp_alloc)` overload is also gated
+// out — its swap-and-restore semantics depend on per-Response
+// allocator tracking, which this flag removes.
+//
+// Default: 0. Not auto-implied by NOTE_MINIMAL because NOTE_MINIMAL
+// does not pin the allocator type.
+#ifndef NOTE_NO_RESPONSE_RAII
+#define NOTE_NO_RESPONSE_RAII 0
+#endif
+
 // NOTE_RESPONSE_RELEASE_LOOP — when 1, the generated Response destructor
 // frees its interned string fields with a tight loop over a contiguous
 // run of ResponseField<string_view> members. When 0, the destructor

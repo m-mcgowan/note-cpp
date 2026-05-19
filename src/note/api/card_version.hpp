@@ -195,6 +195,7 @@ struct CardVersion {
         note::ResponseField<bool> wifi{};
 #endif
 
+#if !NOTE_NO_RESPONSE_RAII
         /// Allocator that minted this Response's interned string fields,
         /// attached by Notecard execute paths when the Response is parsed.
         /// Empty == no cleanup needed (default-constructed Response, or a
@@ -230,6 +231,7 @@ struct CardVersion {
         }
         Response(const Response&) = delete;
         Response& operator=(const Response&) = delete;
+#endif // !NOTE_NO_RESPONSE_RAII
 
 #if !NOTE_NO_JSON_TREE
         /// Access the body as a JsonReader (JSON tree-mode path only).
@@ -557,6 +559,7 @@ inline ApiResult<typename CardVersion::Response> CardVersion::execute() const {
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+#if !NOTE_NO_RESPONSE_RAII
     // The type-erased thunk couldn't reach `attach_allocator`. Mark the
     // Response as owning its interned strings so its dtor frees them on
     // the SINGLETON path (parity with the Notecard::execute template path,
@@ -564,6 +567,7 @@ inline ApiResult<typename CardVersion::Response> CardVersion::execute() const {
     // the actual free on `g_singleton_allocator_present`, so marking when
     // no allocator is configured stays safe.
     rsp_.alloc_.reset(::note::detail::g_singleton_allocator);
+#endif
     return ApiResult<Response>(std::move(rsp_));
 }
 inline Result<void> CardVersion::command() const {

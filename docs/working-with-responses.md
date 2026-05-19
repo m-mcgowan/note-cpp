@@ -229,24 +229,53 @@ field present"), it returns an explicit `Error::NotReady`. Useful
 when porting tree-only code to a streaming build and you want a
 compile-time pointer at the lines that need `.into(...)` instead.
 
-### Raw body access (tree path only)
+### Walking the body as a JSON tree (tree path only)
 
-On the tree path the raw `JsonReader` is also available directly on
-the typed response, which is convenient for ad-hoc reads when you
-already know the tree is built:
+When the Notecard is configured with a `JsonBackend`, the response is
+parsed into a walkable tree and `r.body()` returns a `JsonReader*` over
+it. This is the closest shape to note-c's `JNum(rsp, "x")` /
+`JString(rsp, "y")` pattern and is the simplest target for ports:
 
 ```cpp
-auto r = nc.note.read("sensors.qi").execute();
+note::backends::CJsonBackend backend;        // or nlohmann, or your own
+note::link::I2cFramer transport(hal);
+note::Notecard nc(backend, transport);       // tree-mode ctor — no allocator
+note::Api api(nc);
+
+auto r = api.note.read("sensors.qi").execute();
 if (r && r.body()) {
-    auto* body = r.body();  // const JsonReader*
-    float temp = body->get_double("temperature");
-    int32_t humidity = body->get_int("humidity");
+    auto* body = r.body();   // const JsonReader*
+    float    temp     = body->get_double("temperature");
+    int32_t  humidity = body->get_int("humidity");
+    auto     label    = body->get_string("label");   // string_view
+
+    // Nested objects:
+    if (auto* loc = body->get_object("location")) {
+        double lat = loc->get_double("lat");
+        double lon = loc->get_double("lon");
+    }
+
+    // Arrays:
+    note::string_view tags[8];
+    size_t n = body->get_string_array("tags", tags, 8);
+
+    // Existence check (note-c equivalent of JIsPresent):
+    if (body->has("optional_field")) { /* ... */ }
 }
 ```
 
-`r.body()` returns `nullptr` in streaming mode (the JSON tree is
-never built). For portable code, use `.into(MyStruct&)` or
-`.into(JsonSink&)` above — both work on either path.
+Lifetime: `body` and the views it returns are valid until the next
+`execute()` (the backend reuses its parse storage). Copy out anything
+you need to keep — `std::string{label}` for a heap-backed durable
+copy, or set an arena allocator on the Notecard so the
+allocator-interned `r.<top-level-field>` views survive past the next
+call.
+
+In streaming mode (no `JsonBackend`), `r.body()` returns `nullptr`
+because the JSON tree is never built. Use `.into(MyStruct&)` or
+`.into(JsonSink&)` above for portable code; reach for `r.body()` only
+when you've explicitly chosen the tree path (e.g. during a note-c
+port, or when ad-hoc field reads matter more than memory footprint).
 
 ### Body arrays
 

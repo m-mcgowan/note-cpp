@@ -64,7 +64,8 @@ inline Allocator arena_allocator(MonotonicArena& a) {
     };
 }
 
-#if !defined(NOTE_NO_STD_STRING)
+#include <note/note_config.hpp>
+#if NOTE_NO_STD_STRING == 0
 // HeapResetPool adapter — same shape as arena_allocator, malloc-backed.
 // Free is a no-op (pool reclaims on reset). Use when you want the arena
 // lifecycle (allocate fast, free all at once) but don't want to size a
@@ -86,7 +87,7 @@ inline Allocator heap_reset_allocator(HeapResetPool& p) {
         &p
     };
 }
-#endif // !NOTE_NO_STD_STRING
+#endif // NOTE_NO_STD_STRING == 0
 
 } // namespace note
 

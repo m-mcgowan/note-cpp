@@ -64,7 +64,8 @@ constexpr size_t arena_cost(size_t n) {
 
 } // namespace detail
 
-#if !defined(NOTE_NO_STD_STRING)
+#include <note/note_config.hpp>
+#if NOTE_NO_STD_STRING == 0
 // HeapResetPool — malloc/free with batched lifecycle. The malloc-backed
 // counterpart to MonotonicArena: every allocate() goes to std::malloc,
 // every deallocate() is a no-op, and reset() (or destruction) frees the
@@ -122,6 +123,6 @@ private:
     };
     Block* head_ = nullptr;
 };
-#endif // !NOTE_NO_STD_STRING
+#endif // NOTE_NO_STD_STRING == 0
 
 } // namespace note

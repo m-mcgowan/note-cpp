@@ -184,10 +184,39 @@ if (result) {
 This works on both the streaming and tree paths and gives you full
 control over field-name mapping.
 
-### Raw body access (tree path)
+### Dynamic keys — `.into(JsonSink&)`
 
-On the tree parse path, the raw `JsonReader` is also available
-directly on the typed response:
+When the body's field names are not known at compile time — for
+example, an `env.get` response that returns a map of variable names
+— pass a `JsonSink` subclass to `.into()` and dispatch by key at
+runtime:
+
+```cpp
+struct EnvSink : note::JsonSink {
+    void on_string(note::string_view k, note::string_view v) override {
+        // one callback per body field; k is the wire name
+        std::printf("%.*s = %.*s\n",
+                    (int)k.size(), k.data(),
+                    (int)v.size(), v.data());
+    }
+    void on_int(note::string_view k, note::json_int_t v) override { /* ... */ }
+};
+
+EnvSink sink;
+auto r = nc.env.get().into(sink).execute();
+```
+
+`.into(JsonSink&)` is the streaming-mode counterpart to walking a
+`JsonReader` tree. Works on every platform — no `JsonBackend` needed
+and no staging buffer to size. The sink receives body events only;
+top-level Response fields (`r.time`, etc.) still go through the typed
+Response.
+
+### Raw body access (tree path only)
+
+On the tree path the raw `JsonReader` is also available directly on
+the typed response, which is convenient for ad-hoc reads when you
+already know the tree is built:
 
 ```cpp
 auto r = nc.note.read("sensors.qi").execute();
@@ -198,31 +227,9 @@ if (r && r.body()) {
 }
 ```
 
-In streaming mode the JSON tree is never built, so `r.body()` returns
-`nullptr` — the same value it returns when the response carried no body
-at all, so the two cases look identical to the caller. For portable code
-that runs on either path, prefer `r.body_or_error()`, which returns an
-explicit `Error::NotReady` when the Notecard parsed in streaming mode:
-
-```cpp
-auto safe = r.body_or_error();
-if (safe.has_value()) {
-    // safe.value() is a const JsonReader*, may still be nullptr if the
-    // response had no body field
-    if (auto* body = *safe) {
-        float temp = body->get_double("temperature");
-    }
-} else {
-    // safe.error().code == Error::NotReady when running streaming.
-    // Use .into(MyStruct&) or .into(JsonSink&) for streaming body
-    // access instead — see the previous section.
-}
-```
-
-`r.was_streaming_parse()` returns the same information as a plain bool
-if all you need is the path discriminator. Both helpers are gated on
-the same flag the streaming `Sink` sets at construction time, so they
-stay accurate even when no SAX events fire (the empty-body case).
+`r.body()` returns `nullptr` in streaming mode (the JSON tree is
+never built). For portable code, use `.into(MyStruct&)` or
+`.into(JsonSink&)` above — both work on either path.
 
 ### Body arrays
 

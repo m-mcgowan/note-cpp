@@ -13,13 +13,12 @@ The short version for both: **by default things work**. You only need this guide
 
 | Scenario | What to do |
 |----------|------------|
-| Read a response, use it immediately, call the next request | **Nothing.** The default allocator (heap-backed) is fine. |
-| Keep response fields around past the next `execute()` | Set an **arena allocator** (below). |
-| Collect data from several requests before processing | Arena allocator. |
+| Read a response, use it immediately, drop it | **Nothing.** The default allocator (heap-backed) frees the response's interned strings when the `Response` goes out of scope. |
 | Fire-and-forget commands (no response) | Nothing. |
-| Running for hours, can't afford accumulating heap allocations | Arena allocator with periodic `reset()`. The default heap-backed allocator does not free interned response strings — fine for short-lived processes, not for long-running embedded ones. |
+| Collect data from several requests before processing them as a batch | Arena allocator with one `reset()` at the end of the batch. Avoids per-Response malloc/free churn on the hot path. |
 | Running on a target with no `malloc` available | Arena allocator. The library never calls `malloc` directly; the `Allocator` you supply is the only source of dynamic memory. |
 | Running on a target with no heap / strict flash budget | Use the streaming path with an arena, or `StaticJsonBackend`. See [Backend profiles](#backend-memory-profiles). |
+| Sharing response strings with other components after the `Response` is destroyed | Copy each field into `std::string` before the Response goes out of scope, or use an arena and keep the arena alive. |
 
 If you're in the first row, stop reading. If you're anywhere else, continue.
 
@@ -27,27 +26,33 @@ If you're in the first row, stop reading. If you're anywhere else, continue.
 
 Every `Notecard` carries one `Allocator` (set at construction or via `set_allocator()`). The allocator is where response string interning happens — the SAX parser copies wire strings into allocator-backed storage so the views in your typed `Response` outlive the transport buffer.
 
-You have four choices, all the same `note::Allocator` shape so the surface code does not change:
+Each `Response` captures its allocator (by value) and releases its interned strings in its destructor — that's the **Phase 1 RAII contract** the library guarantees regardless of which allocator you picked. The difference between allocators is where the bytes come from, what `deallocate` does when the Response dtor runs, and what other lifecycle hooks (`reset()`) you have available.
 
-| Allocator | When to use | Lifetime of response strings | Heap calls |
+| Allocator | When to use | Lifetime of response strings | What `~Response()` does |
 |---|---|---|---|
-| **Default (heap-backed)** — `Notecard nc(transport);` or `Notecard(backend, transport)` with no `set_allocator` | Desktop, prototyping, short-running scripts. Anywhere `malloc`/`free` is available and you don't need bounded RAM. | Survive across `execute()` calls but accumulate — `note-cpp` never frees them, so a long-running process leaks one allocation per interned string. | `malloc` per interned string. |
-| **`MonotonicArena`** — `note::arena_allocator(arena)` | Embedded targets, long-running services, anywhere you want bounded and predictable memory use. The arena can live on the stack, in `.bss`, or in a member buffer. | Valid until `arena.reset()`. After reset, every view that pointed into the arena is invalid. | Zero. |
-| **`HeapResetPool`** — `note::heap_reset_allocator(pool)` | Desktop / Linux hosts that want arena-style "drain on reset" semantics without sizing a buffer up front. Storage comes from `malloc`; `pool.reset()` (or destruction) frees everything in one pass. | Valid until `pool.reset()` or the pool's destructor runs. | `malloc` per interned string; matched by a `free` in `reset()`/`~HeapResetPool()`. |
-| **`std::pmr`** — `note::pmr_allocator(&resource)` (C++17+) | Mixed projects already using `std::pmr::memory_resource`. Lets you reuse a `monotonic_buffer_resource`, a `synchronized_pool_resource`, or your own. | Determined by the resource. | Determined by the resource. |
-| **Custom function-pointer** — fill in `note::Allocator{ alloc, free, realloc, ctx }` | RTOS pool, locked region, instrumented allocator for tests. | You decide. | You decide. |
+| **Default (heap-backed)** — `Notecard nc(transport);` or `Notecard(backend, transport)` with no `set_allocator` | Desktop, prototyping, short-running scripts. Anywhere `malloc`/`free` is available and you don't need bounded RAM. | Valid until the `Response` goes out of scope; the destructor calls `free` on every interned string. No accumulation across `execute()` calls. | One `free` per interned string field. |
+| **`MonotonicArena`** — `note::arena_allocator(arena)` | Embedded targets, long-running services, anywhere you want bounded and predictable memory use. The arena can live on the stack, in `.bss`, or in a member buffer. | Valid until `arena.reset()` (you call it). After reset, every view that pointed into the arena is invalid even if the Response is still in scope. | No-op — the arena's `deallocate` does nothing; `arena.reset()` is what reclaims memory. |
+| **`HeapResetPool`** — `note::heap_reset_allocator(pool)` | Desktop / Linux hosts that want arena-style "drain on reset" semantics without sizing a buffer up front. Storage comes from `malloc`; `pool.reset()` (or destruction) frees everything in one pass. | Valid until `pool.reset()` or the pool's destructor runs. | No-op — same shape as MonotonicArena; cleanup batched at `reset()`. |
+| **`std::pmr`** — `note::pmr_allocator(&resource)` (C++17+) | Mixed projects already using `std::pmr::memory_resource`. Lets you reuse a `monotonic_buffer_resource`, a `synchronized_pool_resource`, or your own. | Determined by the resource's lifetime. | Whatever the resource's `deallocate` does — per-block free for pool resources, no-op for monotonic resources. |
+| **Custom function-pointer** — fill in `note::Allocator{ alloc, free, realloc, ctx }` | RTOS pool, locked region, instrumented allocator for tests. | You decide. | Whatever your `free` function does. |
 
 The library never calls `malloc`/`new` of its own accord — `Allocator` is the only entry point. That makes "where does response memory come from" a one-line decision you can audit at the construction site.
 
+The reason all five options share the same surface is that the Response captures the allocator value at parse time and uses it during destruction. Moving a `Response` (which `ApiResult<T>` does on the return path) transfers ownership; copying is deleted, so you can't accidentally end up with two Responses sharing the same string allocations. See `tests/test_allocator_lifetime.cpp` for the executable form of this contract — the alloc and free counters move in lockstep on every allocator backend.
+
 ## Response string lifetimes
 
-Response fields like `r.version`, `r.device`, and most string fields are `std::string_view` — pointers into memory the library owns, not copies. They're cheap, but they have an expiry date that depends on which allocator the Notecard is using.
+Response fields like `r.version`, `r.device`, and most string fields are `std::string_view` — pointers into memory the library owns, not copies. They're cheap, but they have an expiry date that depends on which allocator the Notecard is using and how the `Response` is held.
 
-- **Default heap allocator (tree mode, no `set_allocator` called):** views are valid **until the next `execute()` call** — the response buffer is reused.
-- **Default heap allocator (streaming mode, no `set_allocator` called):** views live for the full process lifetime; the library does not free interned strings. Fine for short-lived programs, not what you want for long-running embedded code.
-- **Arena allocator (any mode):** views are copied into the arena and are valid **until you call `arena.reset()`**.
+The high-level rule is **the `Response` owns its strings**: when the `Response` (or the `ApiResult<T>` wrapping it) goes out of scope, the destructor releases every interned string back to the allocator that minted them.
 
-The arena is the "keep this string around" mechanism. Without it, response memory is either recycled (tree mode) or left dangling on the heap (streaming mode).
+Mode-by-mode:
+
+- **Tree mode, no `set_allocator`:** strings live inside the JSON reader, which is replaced on the next `execute()`. Views from the previous call become invalid as soon as the next request runs.
+- **Default heap allocator (any mode):** strings live until the `Response` goes out of scope. The dtor calls `free` on each one; nothing accumulates across calls.
+- **Arena allocator (any mode):** strings live in the arena buffer. The Response dtor calls `deallocate` (a no-op for arenas), so views stay valid as long as the arena hasn't been `reset()` — even after the Response has been moved or destroyed.
+
+The arena is the "keep this string around past the Response" mechanism. With the default heap allocator the `Response` *is* the keep-alive scope; with an arena the *arena* is.
 
 ### Setting an arena
 

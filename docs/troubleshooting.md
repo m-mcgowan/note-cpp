@@ -95,7 +95,25 @@ Cause: the I2C bus needs pull-up resistors on both SDA and SCL, and the Notecard
 
 ## `response.body()` returns null
 
-Cause: you're running in [streaming mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Streaming-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in streaming mode and parse the body via `req.into(my_struct).execute()` for typed extraction. See [`streaming-and-tree.md`](streaming-and-tree.md) for the trade-off between the two modes, and [`body-values.md`](body-values.md) for typed body parsing.
+Cause: you're running in [streaming mode](glossary.md) (no `JsonBackend`), and `body()` requires a tree to walk. Streaming-mode builds skip the JSON tree entirely — the body is dispatched as SAX events into `Rsp::Sink` instead. Fix: either pass a `JsonBackend` to the `Notecard` constructor (tree mode — `body()` then returns a walkable `JsonReader*`), or stay in streaming mode and parse the body via `req.into(my_struct).execute()` for typed extraction. For portable code that should work in either mode, prefer `r.body_or_error()` — it returns `Error::NotReady` with an actionable message when the response was parsed in streaming mode, instead of looking identical to "tree mode but no body field". See [`streaming-and-tree.md`](streaming-and-tree.md) for the full trade-off and [`body-values.md`](body-values.md) for typed body parsing.
+
+## `overflow: response exceeds buffer`
+
+Cause: a tree-mode execute parsed a response that didn't fit in the
+Notecard's default 1024-byte staging buffer. The most common trigger is
+`env.get` with no `name` — the response size scales with the Notehub
+project's environment-variable count, which is outside the firmware's
+control. Two ways out:
+
+1. **Enlarge the staging buffer.** `nc.set_response_buffer(span)` lets
+   you point the Notecard at a larger user-owned buffer. Sized once at
+   startup; no further bookkeeping. Works for tree mode.
+2. **Stream the body straight into a sink.** Wire
+   `req.into(JsonSink&).execute()` and consume body events live off the
+   wire. No staging buffer is needed at all — the response can be
+   arbitrarily large. Works in any mode.
+
+See [`environment-variables.md` § Dynamic body keys](environment-variables.md#dynamic-body-keys-envget-with-all-variables) for the streaming variant on the canonical "unbounded env.get" case, and the [Arduino guide § Setup](platforms/arduino/guide.md#setup) for `set_response_buffer` setup on Arduino builds.
 
 ## consteval validation rejects a string the Notecard accepts
 

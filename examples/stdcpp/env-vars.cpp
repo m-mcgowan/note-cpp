@@ -148,6 +148,42 @@ void run_demo_on(ApiT& api) {
         }
     }
 
+    // ── 5. All variables, dynamic keys → JsonSink ─────────────────────────
+    // For `env.get` with no `name`/`names`, the response body's keys are
+    // whatever Notehub has provisioned — not known at compile time. `.into(struct)`
+    // can't match keys it doesn't have. The streaming-friendly answer is a
+    // `JsonSink`: a tiny subclass that receives one callback per body field,
+    // so you can dispatch by key at runtime.
+    //
+    // This is the streaming-mode counterpart to walking a tree via
+    // `r.body()`. Works on every platform — no `JsonBackend` needed, no
+    // staging buffer to size.
+    std::puts("\n--- dynamic keys: env.get + .into(JsonSink&) ---");
+    {
+        // The `.into(JsonSink&)` overload wires your sink to body events
+        // only — top-level Response fields like `time` go through the
+        // typed Response, not through the sink. So every on_* call your
+        // sink receives is a body field; no depth tracking needed.
+        struct EnvSink : note::JsonSink {
+            void on_string(note::string_view k, note::string_view v) override {
+                std::printf("  %.*s = %.*s\n",
+                            (int)k.size(), k.data(),
+                            (int)v.size(), v.data());
+            }
+            void on_int(note::string_view k, note::json_int_t v) override {
+                std::printf("  %.*s = %lld\n",
+                            (int)k.size(), k.data(),
+                            static_cast<long long>(v));
+            }
+            // on_bool, on_float etc. left as defaults; extend as needed.
+        };
+        EnvSink sink;
+        auto r = api.env.get().into(sink).execute();
+        if (r) {
+            std::printf("  (time=%lld)\n", static_cast<long long>(r.time));
+        }
+    }
+
     // ── Related: setting variables and cheap change detection ─────────────
     std::puts("\n--- env.default / env.set / env.modified ---");
     api.env.setDefault("interval", "300").execute();

@@ -78,8 +78,10 @@ When the body shape is known ahead of time, `.into(struct)` is the preferred idi
 Streaming mode does not need a `JsonBackend` and does not link one. Tree mode requires a `JsonBackend` — the backend is what turns response bytes into the walkable tree, and what serializes outgoing requests from typed inputs.
 
 ```cpp
-// Streaming mode — no backend, zero heap, smallest flash.
-note::Notecard nc(transport, note::Allocator{});
+// Streaming mode — no backend linked, smallest flash. Pair with an
+// arena allocator for bounded RAM (see memory.md § Picking an allocator);
+// the default heap-backed Notecard works without one.
+note::Notecard nc(transport);
 
 // Tree mode (default backend) — cJSON-backed, heap-allocated nodes,
 // familiar from note-c projects.

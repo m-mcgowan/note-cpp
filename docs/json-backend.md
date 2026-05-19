@@ -15,12 +15,16 @@ A `JsonBackend` selects tree mode: every response is parsed into a `JsonReader` 
 | Already using cJSON (ESP-IDF, note-c) | `CjsonBackend` | Yes |
 | Already using nlohmann-json | `NlohmannBackend` | Yes |
 
-For streaming mode (no backend), construct the Notecard with the
-streaming-only ctor:
+For streaming mode (no backend), construct the Notecard with just a
+transport:
 
 ```cpp
-note::Notecard nc(transport, note::Allocator{});  // no backend → streaming mode
+note::Notecard nc(transport);  // no backend → streaming mode
 ```
+
+Pair with an arena allocator (`note::arena_allocator(arena)`) when you
+need bounded RAM or want response strings to survive past the next
+`execute()`. See [memory.md § Picking an allocator](memory.md#picking-an-allocator).
 
 `.into(T&)` populates user structs in this mode just as it does in
 tree mode. `response.body()` returns `nullptr`.

@@ -126,6 +126,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_arduino_printable.cpp
     test_transport_agnostic_api.cpp
     test_allocator_growth.cpp
+    test_allocator_lifetime.cpp
     test_attention.cpp
     test_bare_notecard.cpp
     test_binary_execute.cpp

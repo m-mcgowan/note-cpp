@@ -8,7 +8,7 @@ No. Streaming mode parses responses with a SAX pipeline directly into your typed
 
 ## Do I need an arena?
 
-No, by default. The `Notecard` constructor with a `JsonBackend` lets fields use the heap, and response strings stay valid until the next `execute()`. Add a `MonotonicArena` when you want zero allocation, or when you need response strings to outlive the next call — `NOTE_MINIMAL` switches AVR to the streaming path that requires one. See [`memory.md`](memory.md#do-i-need-to-do-anything-special).
+Not necessarily — every `Notecard` has an allocator, you just choose which one. The default heap-backed allocator works without setup and is fine for desktop / short-running programs. Switch to a `MonotonicArena` (or `std::pmr`, or a custom `note::Allocator`) when you want zero heap, bounded RAM, or response strings that survive past the next `execute()`. The typed API surface is identical in either case. See [`memory.md` § Picking an allocator](memory.md#picking-an-allocator).
 
 ## Is `note-cpp` Arduino-only?
 

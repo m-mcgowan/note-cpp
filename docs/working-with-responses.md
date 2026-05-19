@@ -212,6 +212,23 @@ and no staging buffer to size. The sink receives body events only;
 top-level Response fields (`r.time`, etc.) still go through the typed
 Response.
 
+### Asking which path actually ran (rare)
+
+Most code doesn't need to care. For the occasional test, diagnostic,
+or fallback that has to discriminate, two helpers are available on
+every body-having Response:
+
+```cpp
+r.was_streaming_parse()  // bool: true if SAX-parsed, false if tree
+r.body_or_error()        // Result<const JsonReader*>: NotReady in streaming
+```
+
+`body_or_error()` is the safe variant of `body()` — instead of
+returning `nullptr` in streaming mode (which collides with "no body
+field present"), it returns an explicit `Error::NotReady`. Useful
+when porting tree-only code to a streaming build and you want a
+compile-time pointer at the lines that need `.into(...)` instead.
+
 ### Raw body access (tree path only)
 
 On the tree path the raw `JsonReader` is also available directly on

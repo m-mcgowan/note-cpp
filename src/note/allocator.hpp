@@ -19,6 +19,7 @@
 #pragma once
 
 #include <note/arena.hpp>
+#include <note/heap_reset_pool.hpp>
 
 #include <cstddef>
 #include <cstdlib>

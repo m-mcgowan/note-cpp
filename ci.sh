@@ -9,10 +9,15 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 # ── Multi-compiler support ──────────────────────────────────────────────────
 # Usage:
 #   ./ci.sh                  Quick check: codegen + unit tests (default)
-#   ./ci.sh --full           Full CI: headers, examples, version gating, docs
+#   ./ci.sh --full           Full CI: headers, examples, version gating, docs,
+#                            *plus* the hardware-in-the-loop sweep when
+#                            $PIO_LABGRID_DEVICE points at an available board
 #   ./ci.sh --all-compilers  Full CI with all available compilers
 #   ./ci.sh --coverage       Build with coverage instrumentation and generate report
-#   ./ci.sh --integrations   Build and run JSON backend integration tests
+#   ./ci.sh --integrations   Build and run JSON backend integration tests (host)
+#   ./ci.sh --hil            Hardware-in-the-loop sweep — upload + run all
+#                            test groups on $PIO_LABGRID_DEVICE for the
+#                            `serial` and `i2c` envs in tests/integration/firmware
 #   CXX=g++-13 ./ci.sh       Run with a specific compiler
 #
 # --all-compilers discovers compilers matching the CI matrix (g++-13, clang++-18) plus
@@ -980,7 +985,11 @@ run_quick() {
         # `pio run`: `pio run` only compiles src/, so the integration test
         # files under test/ are skipped silently. The build-only form of
         # `pio test` exercises the test/ tree without needing hardware.
-        for env in serial i2c; do
+        # `both` exists so the build catches conflicts between the serial
+        # and I2C pin sets when both transports are linked into one image;
+        # `nointerface` is intentionally broken (negative compile test)
+        # and is not run here.
+        for env in serial i2c both; do
             echo "  Building $env..."
             NOTECARD_SERIAL_RX=38 NOTECARD_SERIAL_TX=39 \
             NOTECARD_I2C_SDA=14 NOTECARD_I2C_SCL=21 \
@@ -1050,6 +1059,61 @@ run_integrations() {
     echo "All integration tests passed."
 }
 
+# ── Hardware integration sweep ────────────────────────────────────────────
+# Upload + run every test group in tests/integration/firmware on the device
+# named by $PIO_LABGRID_DEVICE, for both the `serial` and `i2c` envs.
+# Exercises the typed API on real ESP32-S3 silicon — catches anything host
+# tests miss (allocator interaction with real malloc/free, timing-sensitive
+# transport behaviour, codegen output on a non-host CPU).
+#
+# Requires:
+#   - $PIO_LABGRID_DEVICE set to a registered usb-device name
+#     (e.g. "MPCB 1.9 Development") — pio-labgrid auto-acquires/releases
+#     the device lock for each `pio test` invocation.
+#   - The board powered, connected, and not locked by another session.
+#
+# Skips with a clear message (does not error) when $PIO_LABGRID_DEVICE is
+# unset, so GitHub CI and headless `--full` runs degrade gracefully.
+run_integration_hardware() {
+    ci_stage "Hardware integration sweep"
+
+    if [ -z "${PIO_LABGRID_DEVICE:-}" ]; then
+        echo "  PIO_LABGRID_DEVICE not set — skipping hardware sweep."
+        echo "  To run on hardware:"
+        echo "    PIO_LABGRID_DEVICE='MPCB 1.9 Development' $0 --hil"
+        return 0
+    fi
+
+    if ! command -v pio >/dev/null 2>&1; then
+        echo "  pio not on PATH — skipping hardware sweep."
+        return 0
+    fi
+
+    local PIO_DIR="$ROOT/tests/integration/firmware"
+
+    # `serial` first (streaming Protocol path), then `i2c`. Each env runs
+    # all four test groups discovered under test/ (test_fixtures plus
+    # test_units_a/b/c). pio-labgrid locks/unlocks the device per
+    # invocation; the loop is sequential because there is one device.
+    local failed=0
+    for env in serial i2c; do
+        echo "  Running $env env on '$PIO_LABGRID_DEVICE'..."
+        if ! pio test -d "$PIO_DIR" -e "$env" -v; then
+            failed=1
+            echo "  FAIL: $env env reported failures."
+        fi
+    done
+
+    if [ "$failed" -ne 0 ]; then
+        echo
+        echo "Hardware integration sweep FAILED."
+        return 1
+    fi
+
+    echo
+    echo "Hardware integration sweep passed (serial + i2c)."
+}
+
 # Log every run
 CI_LOG="$ROOT/ci.log"
 
@@ -1060,9 +1124,17 @@ run_and_log() {
     return $rc
 }
 
+run_full() {
+    # Host CI + hardware sweep. The hardware step is self-skipping when
+    # $PIO_LABGRID_DEVICE isn't set, so this stays safe in headless
+    # environments.
+    run_ci "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+    run_integration_hardware
+}
+
 case "${1:-}" in
     --full)
-        run_and_log run_ci "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+        run_and_log run_full
         ;;
     --coverage)
         run_and_log run_coverage
@@ -1072,6 +1144,9 @@ case "${1:-}" in
         ;;
     --integrations)
         run_and_log run_integrations
+        ;;
+    --hil)
+        run_and_log run_integration_hardware
         ;;
     --all-compilers)
         echo "Discovering compilers..."

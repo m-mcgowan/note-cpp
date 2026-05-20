@@ -61,7 +61,8 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
         note::test::TestJsonBackend backend;
         std::string last_request;
         note::test::CallbackTransport transport;
-        note::Notecard nc;
+        std::unique_ptr<note::Notecard> nc_ptr;
+        note::Notecard& nc;
         TestHarness()
             : transport(
                 [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
@@ -72,7 +73,8 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
                     last_request = std::string(req);
                     return {};
                 })
-            , nc(note::test::make_test_notecard(backend, transport)) {}
+            , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+            , nc(*nc_ptr) {}
     } h;
 
     note::Api api(h.nc);
@@ -143,7 +145,8 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
         note::test::TestJsonBackend backend;
         std::string last_request;
         note::test::CallbackTransport transport;
-        note::Notecard nc;
+        std::unique_ptr<note::Notecard> nc_ptr;
+        note::Notecard& nc;
         TestHarness()
             : transport(
                 [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
@@ -153,7 +156,8 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
                 [](note::string_view) -> note::Result<void> {
                     return {};
                 })
-            , nc(note::test::make_test_notecard(backend, transport)) {}
+            , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+            , nc(*nc_ptr) {}
     } h;
     note::api::HubSet req;
     req.mode("periodic").extra("exp_feature", true);

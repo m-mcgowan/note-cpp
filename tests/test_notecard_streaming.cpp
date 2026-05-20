@@ -76,16 +76,19 @@ public:
 struct StreamHarness {
     MockStreamHal hal;
     note::Protocol transport{hal};
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     // Construct with allocator (exercises streaming execute path).
     StreamHarness()
-        : nc(note::test::make_test_notecard(transport, note::Allocator{}))
+        : nc_ptr(note::test::make_test_notecard_heap(transport, note::Allocator{}))
+        , nc(*nc_ptr)
     {}
 
     // Construct with explicit allocator.
     explicit StreamHarness(note::Allocator alloc)
-        : nc(note::test::make_test_notecard(transport, alloc))
+        : nc_ptr(note::test::make_test_notecard_heap(transport, alloc))
+        , nc(*nc_ptr)
     {}
 };
 
@@ -95,10 +98,12 @@ struct StreamHarness {
 struct StreamNoAllocHarness {
     MockStreamHal hal;
     note::Protocol transport{hal};
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     StreamNoAllocHarness()
-        : nc(transport)  // default alloc — clear below
+        : nc_ptr(std::make_unique<note::Notecard>(transport))  // default alloc — clear below
+        , nc(*nc_ptr)
     {
         nc.clear_allocator();
         nc.set_retry_policy({.max_retries = 0});
@@ -626,7 +631,8 @@ TEST_CASE("Streaming: binary PUT write failure triggers binary_io_reset") {
     // So fail_after=2 means the handshake succeeds but binary write fails.
     FailAfterNHal hal(2);
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     hal.queue_response("{}");  // handshake response
 
@@ -646,7 +652,8 @@ TEST_CASE("Streaming: binary PUT write failure triggers binary_io_reset") {
 TEST_CASE("Streaming: binary PUT with verify does pre-flight and post-transmit") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     uint8_t data[] = {1, 2, 3};
     note::SoftwareMd5 md5;
@@ -672,7 +679,8 @@ TEST_CASE("Streaming: binary PUT with verify does pre-flight and post-transmit")
 TEST_CASE("Streaming: binary PUT verify detects MD5 mismatch") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     uint8_t data[] = {1, 2, 3};
 
@@ -692,7 +700,8 @@ TEST_CASE("Streaming: binary PUT verify detects MD5 mismatch") {
 TEST_CASE("Streaming: binary PUT pre-flight reset failure") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     // No response queued for reset → transact fails
 
@@ -708,7 +717,8 @@ TEST_CASE("Streaming: binary PUT pre-flight reset failure") {
 TEST_CASE("Streaming: binary PUT pre-flight status failure") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     hal.queue_response("{}");  // reset OK
     // No response for status query → transact fails
@@ -725,7 +735,8 @@ TEST_CASE("Streaming: binary PUT pre-flight status failure") {
 TEST_CASE("Streaming: binary PUT pre-flight max=0 returns Overflow") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     hal.queue_response("{}");              // reset
     hal.queue_response(R"({"max":0})");    // max=0
@@ -742,7 +753,8 @@ TEST_CASE("Streaming: binary PUT pre-flight max=0 returns Overflow") {
 TEST_CASE("Streaming: binary PUT data exceeds max returns Overflow") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     hal.queue_response("{}");              // reset
     hal.queue_response(R"({"max":2})");    // max=2, data is 3 bytes
@@ -854,7 +866,8 @@ TEST_CASE("Streaming: binary GET handshake failure returns error") {
 TEST_CASE("Streaming: binary PUT post-verify query failure") {
     MockStreamHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     uint8_t data[] = {1, 2, 3};
 

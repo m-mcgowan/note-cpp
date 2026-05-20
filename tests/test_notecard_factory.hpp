@@ -9,6 +9,8 @@
 
 #include <note/notecard.hpp>
 
+#include <memory>
+
 #if !NOTE_NO_POLYMORPHIC
 
 namespace note::test {
@@ -27,6 +29,27 @@ inline Notecard make_test_notecard(Protocol& transport, Allocator alloc = {}) {
     Notecard nc(transport, alloc);
     nc.set_request_ids(false);
     nc.set_retry_policy({.max_retries = 0});
+    return nc;
+}
+
+/// Heap-allocated test Notecard. Use when running on MCUs whose loop
+/// task stack is too small to host a value-typed Notecard alongside the
+/// test's other locals. The Notecard footprint (~1.4 KB) moves to heap;
+/// stack pays for a `unique_ptr` only.
+inline std::unique_ptr<Notecard> make_test_notecard_heap(
+        JsonBackend& backend, ITransact& transport) {
+    auto nc = std::make_unique<Notecard>(backend, transport);
+    nc->set_request_ids(false);
+    nc->set_retry_policy({.max_retries = 0});
+    return nc;
+}
+
+/// Heap-allocated streaming variant.
+inline std::unique_ptr<Notecard> make_test_notecard_heap(
+        Protocol& transport, Allocator alloc = {}) {
+    auto nc = std::make_unique<Notecard>(transport, alloc);
+    nc->set_request_ids(false);
+    nc->set_retry_policy({.max_retries = 0});
     return nc;
 }
 

@@ -1,4 +1,5 @@
 #include <doctest.h>
+#include <memory>
 #include <string>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
@@ -7,9 +8,9 @@
 
 namespace {
 
-note::Notecard make_nc(note::test::TestJsonBackend& backend,
-                       note::test::CallbackTransport& transport) {
-    return note::test::make_test_notecard(backend, transport);
+std::unique_ptr<note::Notecard> make_nc(note::test::TestJsonBackend& backend,
+                                        note::test::CallbackTransport& transport) {
+    return note::test::make_test_notecard_heap(backend, transport);
 }
 
 } // namespace
@@ -30,7 +31,8 @@ TEST_CASE("make_api(nc) returns unconstrained Api") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     auto api = note::make_api(nc);
 
     // Unconstrained: all endpoints accessible regardless of SKU
@@ -62,7 +64,8 @@ TEST_CASE("make_api with constrained target — supported endpoints work") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     auto api = note::make_api(nc, note::target<note::Radios::WiFi>());
 
     // card.sleep is WiFi-only — should work on WiFi target
@@ -90,7 +93,8 @@ TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     auto api = note::make_api(nc, note::target<note::Radios::Cell>());
 
     api.execute(api.hub.set());
@@ -112,7 +116,8 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     auto api = note::make_api(nc, note::Target<note::Radios::WiFi, true>{});
 
     // card.sleep is WiFi-only — available on WiFi strict target
@@ -140,7 +145,8 @@ TEST_CASE("Api(nc, target) — constrained via constructor") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     note::Api api(nc, note::target<note::Radios::WiFi>());
 
     // card.wifi needs WiFi — available
@@ -164,7 +170,8 @@ TEST_CASE("Api(nc, target) — strict mode via constructor") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     note::Api api(nc, note::Target<note::Radios::WiFi, true>{});
 
     api.execute(api.card.sleep());
@@ -196,7 +203,8 @@ TEST_CASE("Api with MinFirmware — firmware-gated endpoints work when version i
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     // card.illumination requires firmware 9.1.1
     note::Api api(nc, note::min_firmware<9, 1, 1>());
 
@@ -220,7 +228,8 @@ TEST_CASE("Api with combined Hardware + Firmware target") {
             last_req = std::string(r);
             return {};
         });
-    auto nc = make_nc(backend, transport);
+    auto nc_ptr = make_nc(backend, transport);
+    auto& nc = *nc_ptr;
     // WiFi hardware + firmware 9.1.1
     note::Api api(nc, note::target<note::Radios::WiFi, 9, 1, 1>());
 

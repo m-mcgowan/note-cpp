@@ -6,6 +6,7 @@
 // Wire format correctness is covered separately in test_samples.cpp.
 
 #include <doctest.h>
+#include <memory>
 #include <string>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
@@ -24,7 +25,8 @@ struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
 
     Harness()
@@ -37,7 +39,8 @@ struct Harness {
                 last_req = std::string(r);
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
         , api(nc)
     {}
 };

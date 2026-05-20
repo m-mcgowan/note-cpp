@@ -38,7 +38,8 @@ struct TestHarness {
     std::string last_request;
     std::string last_response{"{}"}; // persists for string_view return
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     TestHarness()
         : transport(
@@ -51,7 +52,8 @@ struct TestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport)) {}
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr) {}
 };
 
 // ── Schema test types ───────────────────────────────────────────────────────
@@ -484,7 +486,8 @@ TEST_CASE("note.get via streaming execute: was_streaming_parse + body_or_error")
     StreamingHal hal;
     hal.queue(R"({"body":{"temperature":22.5,"humidity":60},"time":1700000000})");
     note::Protocol transport{hal};
-    note::Notecard nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
     note::Api api(nc);
 
     auto r = api.note.read("sensors.qi").execute();

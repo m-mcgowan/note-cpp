@@ -126,7 +126,8 @@ TEST_CASE("§1 typed API: .into() populates struct on streaming transport") {
     hal.queue_response(kCannedResponse);
 
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else
@@ -148,7 +149,8 @@ TEST_CASE("§1 typed API: .into() populates struct on buffered transport") {
             return note::string_view(kCannedResponse);
         });
 
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else
@@ -197,7 +199,8 @@ TEST_CASE("§1b typed API: .into(JsonSink&) on streaming transport") {
     hal.queue_response(kCannedResponse);
 
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else
@@ -218,7 +221,8 @@ TEST_CASE("§1b typed API: .into(JsonSink&) on buffered transport") {
             return note::string_view(kCannedResponse);
         });
 
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else
@@ -246,7 +250,8 @@ TEST_CASE("§1c typed API: .into(BodyBytes) captures body JSON on streaming tran
     MockHal hal;
     hal.queue_response(kCannedResponse);
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else
@@ -271,7 +276,8 @@ TEST_CASE("§1c typed API: .into(BodyBytes) captures body JSON on buffered trans
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(kCannedResponse);
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else
@@ -294,7 +300,8 @@ TEST_CASE("§1c BodyBytes truncated when buffer too small") {
     MockHal hal;
     hal.queue_response(kCannedResponse);
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else

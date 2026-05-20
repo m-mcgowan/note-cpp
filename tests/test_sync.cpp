@@ -18,7 +18,8 @@ struct TestFixture {
     note::test::TestJsonBackend backend;
     std::vector<std::string> captured;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     note::detail::app::DirectChannel ch;
     Store store;
 
@@ -28,7 +29,8 @@ struct TestFixture {
                 captured.emplace_back(req);
                 return note::string_view("{}");
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
         , ch(nc) {}
 };
 
@@ -197,7 +199,8 @@ TEST_CASE("Sync::sync() propagates transport errors") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
     note::detail::app::DirectChannel ch(nc);
     Store store;
     note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(ch, store);

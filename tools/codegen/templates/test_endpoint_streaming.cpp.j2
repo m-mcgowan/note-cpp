@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <deque>
+#include <memory>
 #include <string>
 
 #if __cplusplus >= 202002L
@@ -63,11 +64,13 @@ public:
 struct StreamingHarness {
     MockHal hal;
     note::Protocol transport{hal};
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
 
     StreamingHarness()
-        : nc(note::test::make_test_notecard(transport, note::Allocator{}))
+        : nc_ptr(note::test::make_test_notecard_heap(transport, note::Allocator{}))
+        , nc(*nc_ptr)
         , api(nc)
     {}
 };
@@ -77,7 +80,8 @@ struct BufferedHarness {
     note::backends::StaticJsonBackend<1024, 64> backend;
     std::string canned_response;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
 
     explicit BufferedHarness(const std::string& response)
@@ -89,7 +93,8 @@ struct BufferedHarness {
             [](note::string_view) -> note::Result<void> {
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
         , api(nc)
     {}
 };

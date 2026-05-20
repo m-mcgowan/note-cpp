@@ -55,7 +55,8 @@ TEST_CASE("DirectChannel::execute() forwards to Notecard::execute()") {
             captured = std::string(req);
             return note::string_view("{}");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     note::detail::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
@@ -73,7 +74,8 @@ TEST_CASE("DirectChannel::execute() propagates transport errors") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "timed out");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     note::detail::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
@@ -91,7 +93,8 @@ TEST_CASE("DirectChannel::execute() propagates protocol errors") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view("{}");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     note::detail::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
@@ -111,7 +114,8 @@ TEST_CASE("DirectChannel::command() forwards to Notecard::command_typed()") {
             captured = std::string(req);
             return note::string_view("{}");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     note::detail::app::DirectChannel ch(nc);
     auto r = ch.command(note::api::HubSet{});
@@ -129,7 +133,8 @@ TEST_CASE("DirectChannel::tick() is a no-op") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view("{}");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     note::detail::app::DirectChannel ch(nc);
     ch.tick();  // should compile and not crash
@@ -145,7 +150,8 @@ TEST_CASE("DirectChannel::notecard() returns the wrapped Notecard") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view("{}");
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     note::detail::app::DirectChannel ch(nc);
     REQUIRE(&ch.notecard() == &nc);

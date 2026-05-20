@@ -23,7 +23,8 @@ struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     TestHarness()
         : transport(
@@ -35,7 +36,8 @@ struct TestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport)) {}
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr) {}
 };
 
 } // namespace

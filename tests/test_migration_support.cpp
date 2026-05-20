@@ -18,7 +18,8 @@ struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     Harness()
         : transport(
@@ -26,7 +27,8 @@ struct Harness {
                 last_req = std::string(r);
                 return note::string_view("{}");
             })
-        , nc(note::test::make_test_notecard(backend, transport)) {}
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr) {}
 };
 
 } // namespace
@@ -172,7 +174,8 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(canned);
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     // Parse response via the buffered path — uses real JSON parser
     auto rsp = nc.request("card.aux");
@@ -267,7 +270,8 @@ TEST_CASE("Issue 6: transact returns overflow error for large response") {
 
     MockHal hal(200);  // response > 64 bytes
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(transport);
+    auto& nc = *nc_ptr;
 
     char buf[64];  // intentionally small
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -304,7 +308,8 @@ TEST_CASE("Issue 6b: buffered passthrough preserves nested objects") {
             last_req = std::string(r);
             return note::string_view(canned_rsp);
         });
-    auto nc = note::test::make_test_notecard(backend, transport);
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
 
     char buf[512];
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -345,7 +350,8 @@ TEST_CASE("Issue 6b: streaming passthrough preserves nested objects") {
 
     MockHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     char buf[512];
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -377,7 +383,8 @@ TEST_CASE("Issue 6b: streaming passthrough preserves arrays") {
 
     MockHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     char buf[512];
     auto rsp = nc.transact(R"({"req":"file.changes"})", buf);

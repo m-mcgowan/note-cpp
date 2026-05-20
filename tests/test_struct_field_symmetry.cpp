@@ -53,7 +53,8 @@ struct Harness {
     std::string last_request;
     std::string last_response{"{}"};
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     Harness()
         : transport(
@@ -66,7 +67,8 @@ struct Harness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport)) {}
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr) {}
 
     // Serialise `s` as a request body; return just the "body":{...} JSON
     // fragment (the TestRequest wrapper is `{"req":"test.req","body":{...}}`).

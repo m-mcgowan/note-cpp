@@ -624,7 +624,8 @@ TEST_CASE("into<T>() parses body from streaming SAX path") {
     hal.queue_response(R"({"payload":"dGVzdA==","time":1234,"body":{"temperature":23.5,"humidity":65}})");
 
     Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
 #else

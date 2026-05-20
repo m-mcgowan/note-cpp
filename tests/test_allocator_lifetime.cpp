@@ -152,8 +152,9 @@ TEST_CASE("allocator-lifetime: heap-backed streaming frees on Response destructi
     note::Protocol transport{hal};
 
     {
-        note::Notecard nc = note::test::make_test_notecard(
+        auto nc_ptr = note::test::make_test_notecard_heap(
             transport, counted_malloc_allocator(ctx));
+        auto& nc = *nc_ptr;
         note::Api api(nc);
 
         // Three back-to-back executes that each return three string fields.
@@ -197,8 +198,9 @@ TEST_CASE("allocator-lifetime: arena-backed streaming reclaims on reset()") {
     CannedHal hal;
     note::Protocol transport{hal};
 
-    note::Notecard nc = note::test::make_test_notecard(
+    auto nc_ptr = note::test::make_test_notecard_heap(
         transport, counted_arena_allocator(ctx));
+    auto& nc = *nc_ptr;
     note::Api api(nc);
 
     // First execute — the library allocates from the arena.
@@ -352,8 +354,9 @@ TEST_CASE("HeapResetPool: reset() frees every block in one pass") {
     note::Protocol transport{hal};
 
     note::HeapResetPool pool;
-    note::Notecard nc = note::test::make_test_notecard(
+    auto nc_ptr = note::test::make_test_notecard_heap(
         transport, note::heap_reset_allocator(pool));
+    auto& nc = *nc_ptr;
     note::Api api(nc);
 
     // Three executes accumulate allocations in the pool.
@@ -412,8 +415,9 @@ TEST_CASE("allocator-lifetime: Response destructor frees every string the Sink i
     CannedHal hal;
     note::Protocol transport{hal};
 
-    note::Notecard nc = note::test::make_test_notecard(
+    auto nc_ptr = note::test::make_test_notecard_heap(
         transport, counted_malloc_allocator(ctx));
+    auto& nc = *nc_ptr;
     note::Api api(nc);
 
     {
@@ -451,8 +455,9 @@ TEST_CASE("allocator-lifetime: moving a Response transfers cleanup to the new ow
     CannedHal hal;
     note::Protocol transport{hal};
 
-    note::Notecard nc = note::test::make_test_notecard(
+    auto nc_ptr = note::test::make_test_notecard_heap(
         transport, counted_malloc_allocator(ctx));
+    auto& nc = *nc_ptr;
     note::Api api(nc);
 
     {

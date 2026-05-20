@@ -12,6 +12,7 @@
 //      calls Response::parse(), verifies each field was read correctly.
 
 #include <doctest.h>
+#include <memory>
 #include <string>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
@@ -37,7 +38,8 @@ struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
 
     Harness()
@@ -50,7 +52,8 @@ struct Harness {
                 last_req = std::string(r);
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
         , api(nc)
     {}
 };
@@ -59,7 +62,8 @@ struct Harness {
 struct FailHarness {
     note::test::TestJsonBackend backend;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
 
     FailHarness()
@@ -70,7 +74,8 @@ struct FailHarness {
             [](note::string_view) -> note::Result<void> {
                 return note::make_error(note::Error::SendFailed, "test");
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
         , api(nc)
     {}
 };
@@ -79,7 +84,8 @@ struct FailHarness {
 struct NcErrorHarness {
     note::test::ErrorJsonBackend backend;
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
 
     NcErrorHarness()
@@ -90,7 +96,8 @@ struct NcErrorHarness {
             [](note::string_view) -> note::Result<void> {
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
         , api(nc)
     {}
 };
@@ -119,10 +126,12 @@ public:
 struct StreamingHarness {
     CoverageMockHal hal;
     note::Protocol transport{hal};
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
     UnconstrainedApi api;
     StreamingHarness()
-        : nc(note::test::make_test_notecard(transport, note::Allocator{}))
+        : nc_ptr(note::test::make_test_notecard_heap(transport, note::Allocator{}))
+        , nc(*nc_ptr)
         , api(nc) {}
 };
 

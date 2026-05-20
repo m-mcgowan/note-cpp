@@ -279,7 +279,8 @@ TEST_CASE("streaming: empty JSON object") {
 TEST_CASE("streaming: initial reset failure returns error") {
     ErrorInjectHal hal;
     note::Protocol transport(hal);
-    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+    auto nc_ptr = note::test::make_test_notecard_heap(transport, note::Allocator{});
+    auto& nc = *nc_ptr;
 
     // This test verifies the init path is reached.
     hal.queue_response(R"({})");

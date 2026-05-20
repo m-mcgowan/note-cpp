@@ -36,7 +36,8 @@ struct BinaryTestHarness {
     std::string json_response = "{}";
 
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     BinaryTestHarness()
         : transport(
@@ -48,7 +49,8 @@ struct BinaryTestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
     {
         transport.set_write([this](const uint8_t* data, size_t len) -> note::Result<void> {
             written_bytes.insert(written_bytes.end(), data, data + len);
@@ -92,7 +94,8 @@ struct BinaryGetHarness {
     std::string json_response = "{}";
 
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     BinaryGetHarness()
         : transport(
@@ -100,7 +103,8 @@ struct BinaryGetHarness {
                 last_request = std::string(req);
                 return note::string_view(json_response);
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
     {
         transport.set_write([](const uint8_t*, size_t) -> note::Result<void> { return {}; });
         transport.set_read([this](uint8_t* buf, size_t max_len, uint32_t) -> note::Result<size_t> {
@@ -419,7 +423,8 @@ struct VerifyTestHarness {
     std::vector<std::string> responses;  // queued JSON responses
 
     note::test::CallbackTransport transport;
-    note::Notecard nc;
+    std::unique_ptr<note::Notecard> nc_ptr;
+    note::Notecard& nc;
 
     VerifyTestHarness(std::initializer_list<std::string> resps)
         : responses(resps)
@@ -430,7 +435,8 @@ struct VerifyTestHarness {
                     return note::string_view(responses[idx]);
                 return note::string_view("{}");
             })
-        , nc(note::test::make_test_notecard(backend, transport))
+        , nc_ptr(note::test::make_test_notecard_heap(backend, transport))
+        , nc(*nc_ptr)
     {
         transport.set_write([this](const uint8_t* d, size_t n) -> note::Result<void> {
             written_bytes.insert(written_bytes.end(), d, d + n);

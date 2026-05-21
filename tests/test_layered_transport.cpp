@@ -1,10 +1,10 @@
-// SPIKE: layered transport — IByteTransport (pure bytes) + ITransact (wire
-// format / presentation) — proves the design end-to-end on the production
-// Protocol's MockHal infrastructure.
+// Layered transport — IByteTransport (pure bytes) + ITransact (wire format
+// / presentation) — exercises the canonical HalByteTransport + JsonTransact
+// pair end-to-end on the same MockHal scaffolding used by Protocol's tests.
 //
 // Two layers:
-//   - HalByteTransport       : IByteTransport over note::Hal
-//   - JsonTransact           : ITransact wrapping any IByteTransport
+//   - HalByteTransport : IByteTransport over note::Hal
+//   - JsonTransact     : ITransact wrapping any IByteTransport
 //
 // Tests run a full transaction through JsonTransact(HalByteTransport(hal)),
 // validating CRC injection, sax-streaming parse on sink mode, and
@@ -13,8 +13,8 @@
 #include <doctest.h>
 
 #include <note/transport.hpp>
-#include <note/spike/hal_byte_transport.hpp>
-#include <note/spike/json_transact.hpp>
+#include <note/hal_byte_transport.hpp>
+#include <note/json_transact.hpp>
 #include <note/lexer/parse.hpp>
 #include <note/json_sax.hpp>
 #include <note/json_buf.hpp>
@@ -84,12 +84,12 @@ struct EmitReq {
 
 } // namespace
 
-TEST_CASE("spike: JsonTransact over HalByteTransport — sink-mode end-to-end") {
+TEST_CASE("layered: JsonTransact over HalByteTransport — sink-mode end-to-end") {
     MockHal hal;
     hal.queue_response(R"({"ok":true,"n":42})");
 
-    note::spike::HalByteTransport byte_tx(hal);
-    note::spike::JsonTransact transact(byte_tx);
+    note::HalByteTransport byte_tx(hal);
+    note::JsonTransact transact(byte_tx);
 
     EmitReq emit;
     note::BuilderRequestSource<EmitReq> src(emit);
@@ -109,12 +109,12 @@ TEST_CASE("spike: JsonTransact over HalByteTransport — sink-mode end-to-end") 
     CHECK(sink.int_value == 42);
 }
 
-TEST_CASE("spike: JsonTransact over HalByteTransport — buffered-mode end-to-end") {
+TEST_CASE("layered: JsonTransact over HalByteTransport — buffered-mode end-to-end") {
     MockHal hal;
     hal.queue_response(R"({"foo":"bar"})");
 
-    note::spike::HalByteTransport byte_tx(hal);
-    note::spike::JsonTransact transact(byte_tx);
+    note::HalByteTransport byte_tx(hal);
+    note::JsonTransact transact(byte_tx);
 
     EmitReq emit;
     note::BuilderRequestSource<EmitReq> src(emit);
@@ -127,10 +127,10 @@ TEST_CASE("spike: JsonTransact over HalByteTransport — buffered-mode end-to-en
     CHECK(hal.transmitted.find(R"("req":"card.version")") != std::string::npos);
 }
 
-TEST_CASE("spike: JsonTransact — send (fire-and-forget) over byte transport") {
+TEST_CASE("layered: JsonTransact — send (fire-and-forget) over byte transport") {
     MockHal hal;
-    note::spike::HalByteTransport byte_tx(hal);
-    note::spike::JsonTransact transact(byte_tx);
+    note::HalByteTransport byte_tx(hal);
+    note::JsonTransact transact(byte_tx);
 
     EmitReq emit;
     note::BuilderRequestSource<EmitReq> src(emit);
@@ -141,10 +141,10 @@ TEST_CASE("spike: JsonTransact — send (fire-and-forget) over byte transport") 
     CHECK(hal.transmitted.find(R"("crc":"0001:)") != std::string::npos);
 }
 
-TEST_CASE("spike: EndOfFrame is distinct from ResponseLost at byte layer") {
+TEST_CASE("layered: EndOfFrame is distinct from ResponseLost at byte layer") {
     MockHal hal;
     hal.queue_response(R"({"x":1})");
-    note::spike::HalByteTransport byte_tx(hal);
+    note::HalByteTransport byte_tx(hal);
 
     // Reading without begin_transaction (idle) is harmless — the byte
     // transport returns whatever the HAL serves. Real failure scenarios

@@ -543,6 +543,106 @@ public:
         return {};
     }
 
+    // ─── SPIKE: ITransport primitive method set ────────────────────────
+    //
+    // These methods expose Protocol's transaction lifecycle as discrete
+    // primitives — the building blocks of the proposed `ITransport`
+    // interface. Once the spike validates the shape, ITransact's
+    // transact/send overloads collapse to compositions of these primitives
+    // at the Notecard layer (and Protocol drops ITransact inheritance in
+    // favour of ITransport directly).
+    //
+    // Layered:
+    //   spike_begin_transaction(t) — handshake, init, ++crc_seq
+    //   spike_emit_request(src)    — stream_request_source (CRC + brace + terminator)
+    //   spike_read_frame(...)      — frame-aware read; EndOfFrame at \n boundary
+    //   spike_end_transaction()    — release handshake, drain residue
+
+    Result<void> spike_begin_transaction(uint32_t timeout_ms) {
+#if NOTE_TXN_HANDSHAKE
+        if (handshake_) {
+            if (!handshake_->start(timeout_ms))
+                return make_error(Error::NotReady, Cause::Timeout,
+                                  NOTE_ERR("txn handshake timeout"));
+            spike_handshake_started_ = true;
+        }
+#else
+        (void)timeout_ms;
+#endif
+        if (!ensure_init())
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+#if !NOTE_NO_CRC
+        ++crc_seq_;
+#endif
+        spike_frame_terminated_ = false;
+        spike_any_data_received_ = false;
+        return {};
+    }
+
+    void spike_end_transaction() {
+        if (!spike_frame_terminated_ && spike_any_data_received_)
+            drain_frame_boundary();
+#if NOTE_TXN_HANDSHAKE
+        if (spike_handshake_started_) {
+            handshake_->stop();
+            spike_handshake_started_ = false;
+        }
+#endif
+    }
+
+    Result<void> spike_emit_request(RequestSource src) {
+        if (!stream_request_source(src))
+            return make_error(Error::SendFailed, Cause::HalError,
+                              NOTE_ERR("transmit failed"));
+        return {};
+    }
+
+    /// Frame-aware byte read. Returns up-to-`max` bytes from the current
+    /// response frame, stopping at the `\n` terminator. After the terminator
+    /// has been consumed, subsequent calls return Err(EndOfFrame). Bytes
+    /// arriving after `\n` in the same HAL chunk are stashed in `lookahead_`
+    /// for binary-transfer consumers (same lookahead as `frame_read`).
+    Result<size_t> spike_read_frame(uint8_t* buf, size_t max, uint32_t timeout_ms) {
+        if (spike_frame_terminated_)
+            return make_error(Error::EndOfFrame, NOTE_ERR("frame complete"));
+
+        // Block until at least one byte arrives. Mirrors frame_read inside
+        // receive_dispatch — HAL contract allows 0-byte returns; we retry
+        // with delay until timeout.
+        size_t n = 0;
+        uint32_t start = hal_.millis();
+        while (n == 0) {
+            auto r = read_hal(buf, max, timeout_ms);
+            if (!r) return r;
+            n = *r;
+            if (n == 0) {
+                if (timeout_ms > 0 && hal_.millis() - start >= timeout_ms)
+                    return make_error(Error::ResponseLost, Cause::Timeout,
+                                      NOTE_ERR("timeout"));
+                hal_.delay(1);
+            }
+        }
+        spike_any_data_received_ = true;
+
+        for (size_t i = 0; i < n; ++i) {
+            if (buf[i] == '\n') {
+                spike_frame_terminated_ = true;
+#if !NOTE_NO_POLYMORPHIC
+                size_t after = n - i - 1;
+                if (after > 0 && after <= sizeof(lookahead_)) {
+                    memcpy(lookahead_, buf + i + 1, after);
+                    lookahead_pos_ = 0;
+                    lookahead_len_ = after;
+                }
+#endif
+                return i;
+            }
+        }
+        return n;
+    }
+
+    // ─── /SPIKE ────────────────────────────────────────────────────────
+
     void reset()
 #if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
         override
@@ -896,7 +996,14 @@ private:
 
 #if NOTE_TXN_HANDSHAKE
     TxnHandshake* handshake_ = nullptr;
+    bool spike_handshake_started_ = false;
 #endif
+
+    // SPIKE: state for ITransport adapter — managed by spike_*_transaction
+    // and spike_read_frame. Folded into the main transport state once the
+    // full refactor lands.
+    bool spike_frame_terminated_ = false;
+    bool spike_any_data_received_ = false;
 };
 
 } // namespace note

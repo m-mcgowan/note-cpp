@@ -59,7 +59,12 @@ using UsedRequests = note::RequestSet<
 >;
 static note::StaticArena<UsedRequests> arena;
 
+#ifdef SPIKE_LAYERED
+#include <note/arduino/begin_spike_layered.hpp>
+using SerialNotecard = note::StaticNotecard<note::arduino::SpikeLayeredSerialTransportStack<>>;
+#else
 using SerialNotecard = note::StaticNotecard<note::arduino::SerialTransportStack<>>;
+#endif
 #if defined(ARDUINO_AVR_MEGA2560)
 // Mega has multiple UARTs; use Serial1 for the Notecard to leave Serial
 // available as a console (and to side-step the USB-Serial bridge on pins 0/1).

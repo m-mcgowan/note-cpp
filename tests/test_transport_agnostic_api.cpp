@@ -238,6 +238,131 @@ TEST_CASE("§1b typed API: .into(JsonSink&) on buffered transport") {
 
 
 // ────────────────────────────────────────────────────────────────────────────
+// § 1d — Tree path: body fan-out × debug_wire fan-out, all four cells.
+//
+// Exercises the non-template `Notecard::transact_tree_` helper. Each case
+// hits one of the four sink-chain shapes:
+//
+//   1. no body, no debug    → transport.transact(src, tree_sink)
+//   2. body only            → TeeSink(tree, body)
+//   3. debug only           → TeeSink(tree, debug)
+//   4. body + debug         → TeeSink(TeeSink(tree, body), debug)
+//
+// Before the helper was extracted, these branches were per-RequestT-template
+// copies — coverage exercised at most one shape per endpoint. The
+// non-template form means a single test per shape covers every RequestT.
+// ────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("§1d tree path sink-chain fan-out") {
+    auto make_tracker = []() {
+        struct Tracker {
+            int send_count = 0;
+            int recv_count = 0;
+            std::string last_recv;
+        };
+        return std::make_unique<Tracker>();
+    };
+
+    auto attach_debug = [](note::Notecard& nc, auto& tracker_ref) {
+        note::DebugListener d;
+        d.ctx = &tracker_ref;
+        d.on_wire = [](const note::WireEvent& ev, void* ctx) {
+            auto& t = *static_cast<decltype(&tracker_ref)>(ctx);
+            if (ev.direction == note::WireDirection::Send) t->send_count++;
+            else {
+                t->recv_count++;
+                t->last_recv.assign(ev.json.data(), ev.json.size());
+            }
+        };
+        nc.set_debug(d);
+    };
+
+    SUBCASE("no body, no debug") {
+        note::backends::StaticJsonBackend<1024, 64> backend;
+        note::test::CallbackTransport transport(
+            [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+                return note::string_view(kCannedResponse);
+            });
+        auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+#if __cplusplus >= 202002L
+        note::Api<> api(*nc_ptr);
+#else
+        note::Api api(*nc_ptr);
+#endif
+        auto rsp = api.note.read("test.db").noteId("x").execute();
+        REQUIRE(rsp.has_value());
+        CHECK(rsp.time == 1234);
+    }
+
+    SUBCASE("body only") {
+        note::backends::StaticJsonBackend<1024, 64> backend;
+        note::test::CallbackTransport transport(
+            [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+                return note::string_view(kCannedResponse);
+            });
+        auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+#if __cplusplus >= 202002L
+        note::Api<> api(*nc_ptr);
+#else
+        note::Api api(*nc_ptr);
+#endif
+        SensorReading reading{};
+        auto rsp = api.note.read("test.db").noteId("x").into(reading).execute();
+        REQUIRE(rsp.has_value());
+        CHECK(reading.temperature == doctest::Approx(23.5f));
+        CHECK(reading.humidity == 65);
+    }
+
+    SUBCASE("debug only") {
+        note::backends::StaticJsonBackend<1024, 64> backend;
+        note::test::CallbackTransport transport(
+            [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+                return note::string_view(kCannedResponse);
+            });
+        auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+        auto tracker = make_tracker();
+        attach_debug(*nc_ptr, tracker);
+#if __cplusplus >= 202002L
+        note::Api<> api(*nc_ptr);
+#else
+        note::Api api(*nc_ptr);
+#endif
+        auto rsp = api.note.read("test.db").noteId("x").execute();
+        REQUIRE(rsp.has_value());
+        CHECK(tracker->send_count >= 1);
+        CHECK(tracker->recv_count >= 1);
+        CHECK(tracker->last_recv.find("temperature") != std::string::npos);
+    }
+
+    SUBCASE("body + debug") {
+        note::backends::StaticJsonBackend<1024, 64> backend;
+        note::test::CallbackTransport transport(
+            [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+                return note::string_view(kCannedResponse);
+            });
+        auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+        auto tracker = make_tracker();
+        attach_debug(*nc_ptr, tracker);
+#if __cplusplus >= 202002L
+        note::Api<> api(*nc_ptr);
+#else
+        note::Api api(*nc_ptr);
+#endif
+        SensorReading reading{};
+        auto rsp = api.note.read("test.db").noteId("x").into(reading).execute();
+        REQUIRE(rsp.has_value());
+        // Body handler populated the struct
+        CHECK(reading.temperature == doctest::Approx(23.5f));
+        CHECK(reading.humidity == 65);
+        // Debug wire observed both directions
+        CHECK(tracker->send_count >= 1);
+        CHECK(tracker->recv_count >= 1);
+        CHECK(tracker->last_recv.find("temperature") != std::string::npos);
+    }
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
 // § 1c — High-level typed API: `.into(BodyBytes)` captures body as JSON text.
 //
 // BodyBytes is a JsonSink that re-serializes events back to JSON. Used via

@@ -1,5 +1,18 @@
 // Tests for BodyValue: string, builder, schema, and response body parsing.
+//
+// The whole file exercises JSON wire shape via `h.last_request ==
+// "<exact JSON text>"` assertions. Under NOTE_JSONB the wire carries
+// binary opcodes (and the `BodyValue::operator=(string_view)` for raw
+// JSON splices is gated out of `body.hpp` because JSON text can't be
+// embedded in a JSONB stream). The whole file is therefore JSON-only.
+//
+// JSONB-side body-value coverage lives in tests/test_jsonb.cpp and the
+// hardware suite under tests/integration/firmware/.
 #include <doctest.h>
+#include <note/note_config.hpp>
+
+#if !NOTE_JSONB
+
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
@@ -630,3 +643,5 @@ TEST_CASE("note.template response: parse<T>(body) parses existing template body"
 }
 
 #endif // C++20
+
+#endif // !NOTE_JSONB — whole file is JSON-wire-shape testing

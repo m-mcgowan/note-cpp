@@ -1,12 +1,12 @@
 // Layered transport — IByteTransport (pure bytes) + ITransact (wire format
-// / presentation) — exercises the canonical HalByteTransport + JsonTransact
+// / presentation) — exercises the canonical HalByteTransport + JsonRequestTransport
 // pair end-to-end on the same MockHal scaffolding used by Protocol's tests.
 //
 // Two layers:
 //   - HalByteTransport : IByteTransport over note::Hal
-//   - JsonTransact     : ITransact wrapping any IByteTransport
+//   - JsonRequestTransport     : ITransact wrapping any IByteTransport
 //
-// Tests run a full transaction through JsonTransact(HalByteTransport(hal)),
+// Tests run a full transaction through JsonRequestTransport(HalByteTransport(hal)),
 // validating CRC injection, sax-streaming parse on sink mode, and
 // buffered-mode reads to a caller span.
 
@@ -14,7 +14,7 @@
 
 #include <note/transport.hpp>
 #include <note/hal_byte_transport.hpp>
-#include <note/json_transact.hpp>
+#include <note/json_request_transport.hpp>
 #include <note/lexer/parse.hpp>
 #include <note/json_sax.hpp>
 #include <note/json_buf.hpp>
@@ -84,12 +84,12 @@ struct EmitReq {
 
 } // namespace
 
-TEST_CASE("layered: JsonTransact over HalByteTransport — sink-mode end-to-end") {
+TEST_CASE("layered: JsonRequestTransport over HalByteTransport — sink-mode end-to-end") {
     MockHal hal;
     hal.queue_response(R"({"ok":true,"n":42})");
 
     note::HalByteTransport byte_tx(hal);
-    note::JsonTransact transact(byte_tx);
+    note::JsonRequestTransport transact(byte_tx);
 
     EmitReq emit;
     note::BuilderRequestSource<EmitReq> src(emit);
@@ -109,12 +109,12 @@ TEST_CASE("layered: JsonTransact over HalByteTransport — sink-mode end-to-end"
     CHECK(sink.int_value == 42);
 }
 
-TEST_CASE("layered: JsonTransact over HalByteTransport — buffered-mode end-to-end") {
+TEST_CASE("layered: JsonRequestTransport over HalByteTransport — buffered-mode end-to-end") {
     MockHal hal;
     hal.queue_response(R"({"foo":"bar"})");
 
     note::HalByteTransport byte_tx(hal);
-    note::JsonTransact transact(byte_tx);
+    note::JsonRequestTransport transact(byte_tx);
 
     EmitReq emit;
     note::BuilderRequestSource<EmitReq> src(emit);
@@ -127,10 +127,10 @@ TEST_CASE("layered: JsonTransact over HalByteTransport — buffered-mode end-to-
     CHECK(hal.transmitted.find(R"("req":"card.version")") != std::string::npos);
 }
 
-TEST_CASE("layered: JsonTransact — send (fire-and-forget) over byte transport") {
+TEST_CASE("layered: JsonRequestTransport — send (fire-and-forget) over byte transport") {
     MockHal hal;
     note::HalByteTransport byte_tx(hal);
-    note::JsonTransact transact(byte_tx);
+    note::JsonRequestTransport transact(byte_tx);
 
     EmitReq emit;
     note::BuilderRequestSource<EmitReq> src(emit);

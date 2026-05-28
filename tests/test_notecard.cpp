@@ -539,7 +539,7 @@ TEST_CASE("Request IDs do not appear when disabled") {
 TEST_CASE("Notecard error with allocator interns the error message via pool") {
     // Use a backend whose reader reports a Notecard error (has_error=false,
     // get_error="firmware error"). This exercises the alloc_.has_value()
-    // branch in execute_buffered.
+    // branch in execute_tree.
     NotecardErrorJsonBackend backend("firmware error");
     note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {

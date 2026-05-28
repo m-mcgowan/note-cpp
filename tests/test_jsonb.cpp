@@ -1206,7 +1206,8 @@ TEST_CASE("jsonb end-to-end: Notecard card.version") {
     auto rsp = api.card.version().execute();
     if (!rsp) {
         auto e = rsp.error();
-        printf("execute error: code=%d cause=%d\n", (int)e.code, (int)e.cause);
+        printf("execute error: code=%d cause=%d\n",
+               static_cast<int>(e.code), static_cast<int>(e.cause));
     }
     REQUIRE(rsp.has_value());
     CHECK(rsp.version.has_value());

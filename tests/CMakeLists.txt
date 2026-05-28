@@ -24,10 +24,20 @@ include(${NOTE_CPP_ROOT}/cmake/note-cpp-generated.cmake)
 # Check CMAKE_CXX_FLAGS for either flag (passed via -DCMAKE_CXX_FLAGS="-DNOTE_MINIMAL").
 string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_MINIMAL" _minimal_pos)
 string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_NO_POLYMORPHIC" _no_poly_pos)
+string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_JSONB" _jsonb_pos)
 if(_minimal_pos GREATER -1 OR _no_poly_pos GREATER -1)
     set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES_COMMON})
 else()
     set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES} ${NOTE_CPP_GENERATED_TEST_SOURCES})
+endif()
+
+# Exclude JSON-wire-shape tests under NOTE_JSONB. The wire carries
+# binary opcodes, so `last_request == "<JSON literal>"` assertions
+# fail by design. See cmake/note-cpp-sources.cmake for the full
+# rationale and the list of files in NOTE_CPP_TEST_SOURCES_JSON_WIRE.
+if(_jsonb_pos GREATER -1)
+    list(REMOVE_ITEM ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES_JSON_WIRE})
+    list(REMOVE_ITEM ALL_TEST_SOURCES ${NOTE_CPP_GENERATED_TEST_SOURCES_JSON_WIRE})
 endif()
 
 # Non-Arduino build (default host environment)
@@ -145,6 +155,7 @@ if(_minimal_pos EQUAL -1 AND _no_poly_pos EQUAL -1)
         ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_alloc_profile.cpp
         ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_parser.cpp
         ${NOTE_CPP_ROOT}/tests/integration/cjson/test_alloc_profile.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/cjson/test_tree_jsonb.cpp
     )
     target_include_directories(note-cpp-integration-backends PRIVATE
         ${NOTE_CPP_ROOT}/include

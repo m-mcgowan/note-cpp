@@ -578,3 +578,87 @@ TEST_CASE("scan::into pick_t leaves String field alone for non-quoted value") {
     note::scan::into(R"({"s":42})", a, note::scan::pick);
     REQUIRE(a.s == "keep");
 }
+
+// ---------------------------------------------------------------------------
+// Cover the remaining FieldType arms in populate_from_json (Bool, Int32,
+// Float32) and a few escape / malformed-input edges in value_end / for_each.
+// ---------------------------------------------------------------------------
+namespace {
+struct WideTypes {
+    bool     b;
+    int32_t  i32;
+    float    f32;
+    NOTE_FIELDS(b, i32, f32)
+};
+} // namespace
+
+TEST_CASE("scan::into pick_t handles Bool/Int32/Float32 fields") {
+    SUBCASE("bool true, int32, float32") {
+        WideTypes w{false, 0, 0.0f};
+        note::scan::into(R"({"b":true,"i32":-2147483000,"f32":1.5})", w, note::scan::pick);
+        CHECK(w.b == true);
+        CHECK(w.i32 == -2147483000);
+        CHECK(w.f32 == doctest::Approx(1.5f));
+    }
+    SUBCASE("bool false") {
+        WideTypes w{true, 0, 0.0f};
+        note::scan::into(R"({"b":false})", w, note::scan::pick);
+        CHECK(w.b == false);
+    }
+    SUBCASE("bool neither true nor false leaves field alone") {
+        WideTypes w{true, 0, 0.0f};
+        note::scan::into(R"({"b":"yes"})", w, note::scan::pick);
+        CHECK(w.b == true);  // unchanged
+    }
+}
+
+// value_end: backslash as the very last byte of input (no following char to
+// escape). The `pos + 1 < s.size()` half of the guard must be reachable.
+TEST_CASE("scan::field tolerates trailing backslash in unterminated string value") {
+    // Last byte of input is '\' with no following char — value_end's
+    // string-mode loop exits via end-of-input rather than via the
+    // escape-pair branch.
+    auto v = note::scan::field("{\"s\":\"abc\\", "s");
+    // value_end returns the input length; field returns the substring
+    // starting at the opening quote.
+    REQUIRE(!v.empty());
+    REQUIRE(v.front() == '"');
+}
+
+// value_end (nested-object string loop): same shape, inside an object.
+TEST_CASE("scan::object tolerates trailing backslash in inner unterminated string") {
+    auto v = note::scan::object("{\"o\":{\"k\":\"abc\\", "o");
+    // Object substring is whatever value_end can produce — non-empty,
+    // starts with '{'. Don't pin the exact end; the test exercises the
+    // escape-at-EOF branch in the inner string-skip loop.
+    REQUIRE(!v.empty());
+    REQUIRE(v.front() == '{');
+}
+
+// find_value: matched "key" not followed by ':' (treated as a string value
+// to skip, not a key). Need an object where the same token appears both
+// as a string-value and later as a real key.
+TEST_CASE("scan::field skips quoted token that is not followed by colon") {
+    // First "tag" is a string-value (no colon after); second is the real key.
+    auto v = note::scan::field(R"({"note":"tag","tag":"real"})", "tag");
+    REQUIRE(v == R"("real")");
+}
+
+// FlashString overloads: scan::object/array variants returning empty for
+// wrong shape (closes line 373/equivalent on the FlashString path).
+static constexpr char k_x[] = "x";
+
+TEST_CASE("scan::object (FlashString key) returns empty when value is not an object") {
+    auto v = note::scan::object(R"({"x":[1,2]})", note::flash(k_x));
+    REQUIRE(v.empty());
+}
+
+TEST_CASE("scan::array (FlashString key) returns empty when value is not an array") {
+    auto v = note::scan::array(R"({"x":{"a":1}})", note::flash(k_x));
+    REQUIRE(v.empty());
+}
+
+TEST_CASE("scan::object (FlashString key) returns empty when key is missing") {
+    auto v = note::scan::object(R"({"y":{"a":1}})", note::flash(k_x));
+    REQUIRE(v.empty());
+}

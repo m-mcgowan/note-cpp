@@ -36,7 +36,7 @@ using Api = note::Api<>;
 // is a `note::Hal` (byte conduit with framing), so the Notecard's
 // ITransact slot needs a `note::Protocol` wrapping the framer.
 struct I2cFixture {
-    NotecardI2cHal hal{notecardWire()};
+    NotecardI2cHal hal{notecardWire(), NOTECARD_I2C_SDA, NOTECARD_I2C_SCL};
     note::link::I2cFramer<> framer{hal};
     note::Protocol transport{framer};
     note::backends::CjsonBackend backend;

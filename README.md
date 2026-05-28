@@ -112,6 +112,21 @@ TODO - let's mention that it can work with zero heap.
 
 [C++ version compatibility matrix](./docs/cpp-version-compatibility.md) — what's available on C++17, what unlocks on C++20/23.
 
+## Composition: three orthogonal axes
+
+The library exposes three independent choices that compose freely. The typed API surface looks the same in every combination — pick each axis where it makes sense for your target, mix and match without changing call-site code.
+
+```mermaid
+graph LR
+    A["Wire format<br/>JSON · JSONB"] --- B["Response presentation<br/>streaming · tree"] --- C["Binary payload<br/>text-only · with-binary"]
+```
+
+1. **Wire format** — JSON text or JSONB binary opcodes (`-DNOTE_JSONB=1`). Smaller payloads on bandwidth-sensitive links; the typed API at the call site is byte-identical between the two.
+2. **Response presentation** — *streaming* (SAX events directly into your typed `Response` and `.into(struct)` sinks; no tree held in memory) or *tree* (a `JsonBackend` assembles a walkable `JsonReader` you can query by key after the call). Picked by which `Notecard` constructor you call.
+3. **Binary payload** — `card.binary.put()` / `.get()` and large note bodies use a COBS-framed binary channel alongside the JSON/JSONB request channel. Works in every cell of the first-two-axes matrix.
+
+The four combinations of wire format × presentation — JSON×streaming, JSON×tree, JSONB×streaming, JSONB×tree — all have host-side and on-device coverage. See [`docs/composition.md`](docs/composition.md) for the full matrix and the configuration-by-configuration breakdown, and [`examples/stdcpp/wire-format-and-presentation.cpp`](examples/stdcpp/wire-format-and-presentation.cpp) for a runnable demo where the same `demo()` body walks all four cells.
+
 ## How it scales
 
 The library is built to scale from resources-constrained MCUs to desktop-class hardware. The same API surface can be used from ATmega328P (32 KB flash / 2 KB RAM) up to ESP32, Cortex-M, and desktop hosts. For additional optimization, you dial resource use by choosing how much of the stack to pull in.

@@ -45,6 +45,7 @@ Lookup material — keep tab-handy, scan as needed.
 Understanding-oriented — read when you want to know *why* the library is shaped the way it is.
 
 - **[Using the API](using-the-api.md)** — calling styles, three layers (typed → lambda → raw), focused operations, escape hatches
+- **[Composition](composition.md)** — wire format × response presentation × binary payload as three independent axes, with the matrix of combinations
 - **[Streaming and tree modes](streaming-and-tree.md)** — the two JSON-parsing strategies, what they share, where they diverge
 - **[JSON backends](json-backend.md)** — `CjsonBackend`, `StaticJsonBackend`, `NlohmannBackend`, when to pick which
 - **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
@@ -82,3 +83,5 @@ Internal documentation for contributors working on `note-cpp` itself:
 | [target-filtering.cpp](../examples/stdcpp/target-filtering.cpp) | Hardware and firmware targeting with compile-time warnings/errors |
 | [zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) | Zero-allocation patterns: StaticJsonBackend, StringPool, CjsonArena |
 | [env-vars.cpp](../examples/stdcpp/env-vars.cpp) | All four env.get modes: single, multi-into-struct, all, change-polling |
+| [streaming-and-tree.cpp](../examples/stdcpp/streaming-and-tree.cpp) | Streaming vs tree response presentation with `body()` / `.into()` patterns |
+| [wire-format-and-presentation.cpp](../examples/stdcpp/wire-format-and-presentation.cpp) | The wire × presentation matrix end to end — same demo() runs in all four cells |

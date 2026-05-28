@@ -21,6 +21,14 @@ Linux (no Notecard hardware needed — they use the shared
   end to end.
 - `zero-alloc.cpp` — zero-allocation patterns for memory-constrained
   systems: `StaticJsonBackend`, `StringPool`, `MonotonicArena`.
+- `streaming-and-tree.cpp` — the two response presentations
+  (streaming SAX into `Response` vs tree via `JsonBackend`) side by
+  side, with `body()` / `body_or_error()` / `.into(T&)` patterns.
+- `wire-format-and-presentation.cpp` — walks the 2×2 matrix of
+  wire format × presentation. Same `demo()` call against four
+  configurations (JSON × streaming, JSON × tree, JSONB × streaming,
+  JSONB × tree). Recompile with `-DNOTE_JSONB=1` to see the JSONB
+  cells.
 - `note-c-bridge.cpp` — implementing `ITransact` on top of
   `note-c`'s `NoteRequestResponseJSON()`. The migration-bridge
   pattern for projects that already have `note-c` wiring they don't

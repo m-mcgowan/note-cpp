@@ -337,7 +337,7 @@ public:
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
-#if !NOTE_NO_CRC
+#if !NOTE_NO_CRC && !NOTE_JSONB
         ++crc_seq_;
 #endif
 
@@ -357,7 +357,7 @@ public:
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
-#if !NOTE_NO_CRC
+#if !NOTE_NO_CRC && !NOTE_JSONB
         ++crc_seq_;
 #endif
 
@@ -378,7 +378,7 @@ public:
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
-#if !NOTE_NO_CRC
+#if !NOTE_NO_CRC && !NOTE_JSONB
         ++crc_seq_;
 #endif
 
@@ -432,7 +432,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
         }
 
-#if !NOTE_NO_CRC
+#if !NOTE_NO_CRC && !NOTE_JSONB
         ++crc_seq_;
 #endif
 
@@ -494,7 +494,7 @@ public:
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
-#if !NOTE_NO_CRC
+#if !NOTE_NO_CRC && !NOTE_JSONB
         ++crc_seq_;
 #endif
 
@@ -889,7 +889,10 @@ private:
     size_t lookahead_len_ = 0;
 #endif
 
-#if !NOTE_NO_CRC
+// CRC state — used only by the JSON+CRC wire path. JSONB carries its
+// own framing (COBS) and doesn't run the CRC accumulator, so the field
+// is gated out under NOTE_JSONB to avoid -Wunused-private-field.
+#if !NOTE_NO_CRC && !NOTE_JSONB
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;
 #endif

@@ -12,13 +12,13 @@
 
 #include <note/arduino/serial.hpp>
 #include <note/hal_byte_transport.hpp>
-#include <note/json_transact.hpp>
+#include <note/json_request_transport.hpp>
 #include <note/link/serial.hpp>
 
 namespace note::arduino {
 
 /// Owns the full serial transport stack: SerialHal → SerialFramer →
-/// HalByteTransport → JsonTransact. Static/templated builds collapse the
+/// HalByteTransport → JsonRequestTransport. Static/templated builds collapse the
 /// two transport layers through templates; polymorphic builds keep the
 /// virtual interfaces.
 template<typename SerialT = HardwareSerial>
@@ -27,11 +27,11 @@ struct SerialTransportStack {
 #if NOTE_STATIC_HAL
     using NcSerial = link::SerialFramer<Hal>;
     using ByteTransport = note::HalByteTransportT<NcSerial>;
-    using Transport = note::JsonTransactT<ByteTransport>;
+    using Transport = note::JsonRequestTransportT<ByteTransport>;
 #else
     using NcSerial = link::SerialFramer<>;
     using ByteTransport = note::HalByteTransport;
-    using Transport = note::JsonTransact;
+    using Transport = note::JsonRequestTransport;
 #endif
 
     Hal hal;

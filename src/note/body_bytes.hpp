@@ -44,7 +44,7 @@ public:
 
     void on_bool(string_view k, bool v)               override { kv(k); put(v ? "true" : "false"); need_comma_ = true; }
     void on_int(string_view k, json_int_t v)          override { kv(k); char t[24]; auto n = detail::itoa(t, sizeof(t), v); put({t, n}); need_comma_ = true; }
-    void on_float(string_view k, double v)            override { kv(k); char t[24]; auto n = detail::dtoa(t, sizeof(t), v); put({t, n}); need_comma_ = true; }
+    void on_float(string_view k, double v)            override { kv(k); char t[24]; auto n = detail::dtoa_shortest(t, sizeof(t), v); put({t, n}); need_comma_ = true; }
     void on_number(string_view k, string_view raw)    override { kv(k); put(raw); need_comma_ = true; }
     void on_string(string_view k, string_view v)      override { kv(k); quoted(v); need_comma_ = true; }
     void on_object_begin(string_view k)               override { kv(k); put('{'); need_comma_ = false; }

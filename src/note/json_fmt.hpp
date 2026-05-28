@@ -169,7 +169,7 @@ auto json_fmt(Args&&... args) {
                             for (std::size_t j = 0; j < n; ++j) result.put(tmp[j]);
                         } else if constexpr (std::is_floating_point_v<V>) {
                             char tmp[32];
-                            auto n = detail::dtoa(tmp, sizeof(tmp), static_cast<double>(v));
+                            auto n = detail::dtoa_shortest(tmp, sizeof(tmp), static_cast<double>(v));
                             for (std::size_t j = 0; j < n; ++j) result.put(tmp[j]);
                         } else if constexpr (std::is_convertible_v<V, std::string_view>) {
                             std::string_view sv(v);

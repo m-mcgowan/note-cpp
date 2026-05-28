@@ -51,7 +51,7 @@ public:
     StaticJsonBuilder& add(string_view key, double value) override {
         kv(key);
         char tmp[32];
-        size_t len = note::detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = note::detail::dtoa_shortest(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
@@ -106,7 +106,7 @@ public:
     StaticJsonBuilder& add_element(double value) override {
         comma();
         char tmp[32];
-        size_t len = note::detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = note::detail::dtoa_shortest(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }

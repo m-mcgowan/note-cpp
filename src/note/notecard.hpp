@@ -22,7 +22,27 @@
 #include <optional>
 #include <type_traits>
 
+// Response buffer + debug wire-capture buffer sizing. Both default to
+// 1 KB; override via `-DNOTE_RSP_BUF_SIZE=N` / `-DNOTE_DBG_WIRE_BUF_SIZE=N`.
+// Declared up here so all Notecard methods can use them; the storage
+// itself is allocated below in the class body.
+#ifndef NOTE_RSP_BUF_SIZE
+#define NOTE_RSP_BUF_SIZE 1024
+#endif
+// Stack-allocated scratch for on_wire debug capture (per execute_tree
+// call). Only consumed when debug.on_wire is set; otherwise the
+// allocation is purely stack reservation. Sized to match RSP_BUF so
+// the typical response fits.
+#ifndef NOTE_DBG_WIRE_BUF_SIZE
+#define NOTE_DBG_WIRE_BUF_SIZE NOTE_RSP_BUF_SIZE
+#endif
+
 namespace note {
+
+// Forward declaration so generated request headers can `friend struct
+// ::note::test::JsonbWireProbe;` without making the test header visible
+// to production builds. The probe is defined in tests/common/jsonb_request_builder.hpp.
+namespace test { struct JsonbWireProbe; }
 
 /// Optional seed-supplying function for `Notecard::ping()` /
 /// `StaticNotecard::ping()`. The probe's 16-character nonce is derived
@@ -118,12 +138,15 @@ namespace detail {
         BodyHandler handler;
         int body_depth = 0;
 
+        /// Construct with a non-empty handler. Only callers that have a
+        /// real factory should instantiate this — see execute_tree for
+        /// the `optional<BodyDispatchSink>` pattern that enforces it.
         explicit BodyDispatchSink(BodyHandler h) : handler(h) {}
 
         void on_object_begin(string_view k) override {
             if (body_depth > 0) {
                 ++body_depth;
-                if (handler) handler.send(BodyEvent::make_object_begin(k));
+                handler.send(BodyEvent::make_object_begin(k));
                 return;
             }
             if (detail::flash_key_eq(k, detail::common_keys::body)) body_depth = 1;
@@ -131,28 +154,28 @@ namespace detail {
         void on_object_end(string_view k) override {
             if (body_depth > 0) {
                 --body_depth;
-                if (body_depth > 0 && handler) handler.send(BodyEvent::make_object_end(k));
+                if (body_depth > 0) handler.send(BodyEvent::make_object_end(k));
             }
         }
         void on_array_begin(string_view k) override {
-            if (body_depth > 0 && handler) handler.send(BodyEvent::make_array_begin(k));
+            if (body_depth > 0) handler.send(BodyEvent::make_array_begin(k));
         }
         void on_array_end(string_view k) override {
-            if (body_depth > 0 && handler) handler.send(BodyEvent::make_array_end(k));
+            if (body_depth > 0) handler.send(BodyEvent::make_array_end(k));
         }
         void on_string(string_view k, string_view v) override {
-            if (body_depth > 0 && handler) handler.send(BodyEvent::make_string(k, v));
+            if (body_depth > 0) handler.send(BodyEvent::make_string(k, v));
         }
         void on_number(string_view k, string_view raw) override {
-            if (body_depth > 0 && handler) handler.send(BodyEvent::make_number(k, raw));
+            if (body_depth > 0) handler.send(BodyEvent::make_number(k, raw));
         }
         void on_bool(string_view k, bool v) override {
-            if (body_depth > 0 && handler) handler.send(BodyEvent::make_bool(k, v));
+            if (body_depth > 0) handler.send(BodyEvent::make_bool(k, v));
         }
         void on_null(string_view k) override { (void)k; }
         void reset() override {
             body_depth = 0;
-            if (handler) handler.send(BodyEvent::make_reset());
+            handler.send(BodyEvent::make_reset());
         }
     };
 }
@@ -260,7 +283,7 @@ public:
     void set_md5_provider(Md5Provider& provider) { md5_ = &provider; }
 
     // Override the response staging buffer used by buffered execute paths
-    // (`request()`, `execute_buffered()`, `transact(json) -> OwnedBuffer`).
+    // (`request()`, `execute_tree()`, `transact(json) -> OwnedBuffer`).
     // By default Notecard uses an internal NOTE_RSP_BUF_SIZE-byte buffer
     // (1024 bytes); supply a larger / smaller span for a particular
     // Notecard instance if the default doesn't fit your largest expected
@@ -289,46 +312,16 @@ public:
             return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
         }
 
-        // Full streaming path: SAX-parse response directly from transport.
+        // Streaming path: SAX-stream the response straight into the
+        // typed Rsp::Sink, no intermediate tree. Parallel to
+        // execute_tree below — the two are siblings, picked at this
+        // call site by (a) whether the response type has a sink and
+        // (b) whether an allocator is configured.
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
             if (alloc_.has_value()) {
-                auto build = [&](JsonBuilder& b) { req.build(b); };
-                BuildFn build_fn = [](JsonBuilder& b, void* p) {
-                    (*static_cast<decltype(build)*>(p))(b);
-                };
-                RequestFrame frame{build_fn, &build, RequestT::notecard_request,
-                                   request_ids_enabled_ ? next_request_id_++ : 0};
-
-                if constexpr (std::is_void_v<Rsp>) {
-                    JsonSink null_sink;
-                    auto ei = streaming_execute(frame, null_sink, RequestT::safety,
-                                                nullptr, nullptr);
-                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                    if (ei.code != Error{}) return ApiResult<void>(ei);
-                    return ApiResult<void>{};
-                } else {
-                    Rsp rsp{};
-                    auto reset_rsp = [](void* p) { *static_cast<Rsp*>(p) = Rsp{}; };
-                    alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
-                    auto ei = streaming_execute_typed<typename Rsp::Sink>(
-                        frame, rsp, RequestT::safety, reset_rsp, &rsp,
-                        [&](StringPool& pool) -> BodyHandler {
-                            if constexpr (detail::has_body_factory<RequestT>::value) {
-                                if (req.body_handler_factory_) {
-                                    return req.body_handler_factory_(req.body_ptr_, pool, body_storage);
-                                }
-                            }
-                            return {};
-                        });
-                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                    if (ei.code != Error{}) return ApiResult<Rsp>(ei);
-                    // Capture the Allocator value on the Response so its
-                    // destructor can release interned strings when the caller
-                    // drops the result. Only fires on Responses that carry
-                    // string fields (codegen-gated).
-                    detail::attach_allocator(rsp, *alloc_);
-                    return ApiResult<Rsp>(std::move(rsp));
-                }
+                auto result = execute_streaming(req);
+                debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+                return result;
             }
         }
 
@@ -337,7 +330,7 @@ public:
         if (backend_) {
             const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
             auto attempt = [&]() -> ApiResult<Rsp> {
-                return execute_buffered(req, req_id);
+                return execute_tree(req, req_id);
             };
             auto reset = [&]() { transport_->reset(); };
 
@@ -1130,31 +1123,154 @@ private:
         return err.empty();
     }
 
-    /// Buffered execute: build JSON via backend, transact, parse response.
-    /// Separated from execute() so LTO can eliminate it when backend_ is null.
+    /// Streaming execute: SAX-stream the response directly into the
+    /// typed `Rsp::Sink`. No tree, no intermediate buffer — the
+    /// response struct is filled as bytes arrive on the wire.
+    ///
+    /// Sibling of `execute_tree`; the two embody the two response
+    /// presentations (streaming vs tree). The caller (`execute`)
+    /// picks based on whether the response type defines a Sink and
+    /// whether an allocator is configured.
+    ///
+    /// Preconditions: alloc_.has_value() and (std::is_void_v<Rsp> ||
+    /// detail::has_sink<Rsp>::value). Both are checked at the call
+    /// site in `execute`.
     template<typename RequestT>
-    ApiResult<typename RequestT::Response> execute_buffered(const RequestT& req, uint32_t req_id = 0) {
+    ApiResult<typename RequestT::Response> execute_streaming(const RequestT& req) {
         using Rsp = typename RequestT::Response;
 
-        Result<string_view> rsp = make_error(Error::NotReady, "");
-        {
-            debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
-            auto& builder = backend_->get_builder();
-            add_flash(builder, flash(detail::common_keys::req), RequestT::notecard_request);
-            if (req_id) add_flash(builder, flash(detail::common_keys::id),
-                                  static_cast<json_int_t>(req_id));
-            req.build(builder);
-            auto req_json = builder.to_view();
-            debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
-            debug_wire(debug_, req_json, WireDirection::Send);
-            rsp = transport_->transact(req_json,
-                                       rsp_buf(),
-                                       default_timeout_ms_);
-        }
-        if (!rsp) return Unexpected(rsp.error());
-        debug_wire(debug_, *rsp, WireDirection::Receive);
+        auto build = [&](JsonBuilder& b) { req.build(b); };
+        BuildFn build_fn = [](JsonBuilder& b, void* p) {
+            (*static_cast<decltype(build)*>(p))(b);
+        };
+        RequestFrame frame{build_fn, &build, RequestT::notecard_request,
+                           request_ids_enabled_ ? next_request_id_++ : 0};
 
-        auto& reader = backend_->get_reader(*rsp);
+        if constexpr (std::is_void_v<Rsp>) {
+            JsonSink null_sink;
+            auto ei = streaming_execute(frame, null_sink, RequestT::safety,
+                                        nullptr, nullptr);
+            if (ei.code != Error{}) return ApiResult<void>(ei);
+            return ApiResult<void>{};
+        } else {
+            Rsp rsp{};
+            auto reset_rsp = [](void* p) { *static_cast<Rsp*>(p) = Rsp{}; };
+            alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+            BodyHandlerFactory body_factory = nullptr;
+            void* body_ptr = nullptr;
+            if constexpr (detail::has_body_factory<RequestT>::value) {
+                body_factory = req.body_handler_factory_;
+                body_ptr = req.body_ptr_;
+            }
+            auto ei = streaming_execute_typed<typename Rsp::Sink>(
+                frame, rsp, RequestT::safety, reset_rsp, &rsp,
+                body_factory, body_ptr, body_storage);
+            if (ei.code != Error{}) return ApiResult<Rsp>(ei);
+            // Capture the Allocator value on the Response so its
+            // destructor can release interned strings when the caller
+            // drops the result. Only fires on Responses that carry
+            // string fields (codegen-gated).
+            detail::attach_allocator(rsp, *alloc_);
+            return ApiResult<Rsp>(std::move(rsp));
+        }
+    }
+
+    /// Tree-mode execute: SAX-stream the response into the backend's
+    /// tree-builder sink, then walk the assembled JsonReader.
+    ///
+    /// Separated from execute() so LTO can eliminate it when backend_
+    /// is null. Renamed from execute_buffered — "tree" matches the
+    /// docs' presentation vocabulary (streaming vs tree) and is more
+    /// accurate after the SAX-events-in cutover: wire bytes no longer
+    /// sit in a buffer between transport and decode; they stream
+    /// directly into the backend's sink, which assembles the tree
+    /// without an intermediate text materialisation (cJSON, nlohmann)
+    /// or via SaxToTextSink → jsmn parse (StaticJsonBackend).
+    ///
+    /// This is what makes JSONB+tree compose: the transport hands SAX
+    /// events to the backend regardless of wire format.
+    template<typename RequestT>
+    ApiResult<typename RequestT::Response> execute_tree(const RequestT& req, uint32_t req_id = 0) {
+        using Rsp = typename RequestT::Response;
+
+        // Build the request through the same RequestSource shape the
+        // streaming path uses. The transport (JsonRequestTransport /
+        // JsonbRequestTransport) picks the wire encoder; the backend's
+        // outgoing text builder is no longer on the critical path.
+        debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
+        auto build = [&](JsonBuilder& b) { req.build(b); };
+        BuildFn build_fn = [](JsonBuilder& b, void* p) {
+            (*static_cast<decltype(build)*>(p))(b);
+        };
+        RequestFrame frame{build_fn, &build, RequestT::notecard_request, req_id};
+        BuildFnRequestSource src(framed_build, &frame);
+        debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
+
+        // Debug-send: materialise the request bytes for the on_wire
+        // hook. Same pattern as `streaming_attempt` — build the
+        // request a second time into a scratch buffer so the user
+        // sees the actual JSON. Only fires when debug.on_wire is set.
+        if (debug_.on_wire) {
+            char dbg_buf[NOTE_DBG_WIRE_BUF_SIZE];
+            JsonBufferWriter dbg_w(dbg_buf, sizeof(dbg_buf));
+            src.emit(dbg_w);
+            dbg_w.write('}');
+            debug_wire(debug_, dbg_w.view(), WireDirection::Send);
+        }
+
+        // Optional body-factory wiring. If the request has .into(T&),
+        // the body handler intercepts top-level "body" events as they
+        // arrive — same real-time approach the streaming path uses,
+        // no post-hoc walk over the response.
+        JsonSink& tree_sink = backend_->start_response(rsp_buf());
+
+        // The body sink + pool + handler storage need to outlive the
+        // transact() call below. optional<> rather than default-constructed
+        // BodyDispatchSink so the sink only exists when a real handler does;
+        // its on_*() paths can then assume `handler` is always set, which
+        // collapses defensive `if (handler)` branches that are otherwise
+        // unhittable (and inflate the coverage denominator).
+        StringPool body_pool(alloc_value());
+        alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+        std::optional<detail::BodyDispatchSink> body_sink;
+        if constexpr (detail::has_body_factory<RequestT>::value) {
+            if (req.body_handler_factory_) {
+                auto bh = req.body_handler_factory_(req.body_ptr_, body_pool, body_storage);
+                if (bh) body_sink.emplace(bh);
+            }
+        }
+
+        // Debug-receive capture. When debug.on_wire is set, route SAX
+        // events through a SaxToTextSink so we can log the response
+        // text after the transact returns. Works uniformly for all
+        // backends (direct-tree backends like cJSON don't preserve
+        // text, so the dedicated capture is the only way to surface
+        // the response wire bytes).
+        detail::SaxToTextSink debug_recv;
+        char debug_recv_buf[NOTE_DBG_WIRE_BUF_SIZE];
+        const bool debug_active = (debug_.on_wire != nullptr);
+        if (debug_active) {
+            debug_recv.rearm(span<char>(debug_recv_buf, sizeof(debug_recv_buf)));
+        }
+
+        // Branch into the non-template dispatch helper. Keeping the
+        // sink-chain selection out of the template body collapses lcov
+        // branch counts from per-RequestT × per-combination back down
+        // to one — and shrinks code size by an equivalent factor on
+        // hosts that instantiate execute_tree across many RequestTs.
+        Result<void> rv = transact_tree_(
+            src.as_source(),
+            tree_sink,
+            body_sink    ? &*body_sink : nullptr,
+            debug_active ? &debug_recv : nullptr,
+            default_timeout_ms_);
+        if (!rv) return Unexpected(rv.error());
+
+        if (debug_active) {
+            debug_wire(debug_, debug_recv.view(), WireDirection::Receive);
+        }
+
+        auto& reader = backend_->finish_response();
         if (reader.has_error()) {
             return make_error(Error::Json, "JSON parse error");
         }
@@ -1165,7 +1281,12 @@ private:
                 ErrorInfo ei{Error::Notecard, Cause::Unspecified, pool.intern(err)};
                 return ApiResult<Rsp>(std::move(ei));
             }
-            auto owned = backend_->parse_response(*rsp);
+            // No allocator — transfer the response tree into an owning
+            // reader that travels with the ApiResult. Keeps the err
+            // string alive across subsequent transactions on this
+            // Notecard (which would otherwise reset the backend's
+            // in-flight reader).
+            auto owned = backend_->release_response();
             ErrorInfo ei{Error::Notecard, Cause::Unspecified, owned->get_error()};
             return ApiResult<Rsp>(std::move(ei), std::move(owned));
         }
@@ -1181,23 +1302,6 @@ private:
                     // have been interned via *alloc_, the Response owns the
                     // cleanup until it's destroyed.
                     detail::attach_allocator(static_cast<Rsp&>(result), *alloc_);
-                }
-            }
-
-            // Transport-agnostic .into(): if the request has a body handler
-            // factory attached, SAX-walk the response to dispatch body events
-            // into the user's struct. Streaming does this inline via Rsp::Sink;
-            // here we run a separate body-only SAX pass over the same buffer
-            // so the high-level API behaves identically on both transports.
-            if constexpr (detail::has_body_factory<RequestT>::value) {
-                if (req.body_handler_factory_) {
-                    StringPool pool(alloc_value());
-                    alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
-                    auto bh = req.body_handler_factory_(req.body_ptr_, pool, body_storage);
-                    if (bh) {
-                        detail::BodyDispatchSink body_sink{bh};
-                        sax_parse(*rsp, body_sink);
-                    }
                 }
             }
             return result;
@@ -1223,6 +1327,30 @@ private:
         if (f.req_id) add_flash(b, flash(detail::common_keys::id),
                                 static_cast<json_int_t>(f.req_id));
         f.inner(b, f.inner_ctx);
+    }
+
+    // ── Tree execute helpers (non-template) ─────────────────────────────
+
+    /// Drive a tree-mode transact with optional body-handler and debug-receive
+    /// fan-out sinks. Non-template so the four-way TeeSink chain compiles once,
+    /// regardless of how many RequestT instantiations call execute_tree.
+    Result<void> transact_tree_(RequestSource src, JsonSink& tree_sink,
+                                JsonSink* body_sink, JsonSink* debug_recv,
+                                uint32_t timeout_ms) {
+        if (body_sink && debug_recv) {
+            TeeSink t1{tree_sink, *body_sink};
+            TeeSink t2{t1, *debug_recv};
+            return transport_->transact(src, t2, timeout_ms);
+        }
+        if (body_sink) {
+            TeeSink t{tree_sink, *body_sink};
+            return transport_->transact(src, t, timeout_ms);
+        }
+        if (debug_recv) {
+            TeeSink t{tree_sink, *debug_recv};
+            return transport_->transact(src, t, timeout_ms);
+        }
+        return transport_->transact(src, tree_sink, timeout_ms);
     }
 
     // ── Streaming execute (non-template) ────────────────────────────────
@@ -1286,29 +1414,25 @@ private:
     }
 
     /// Typed streaming execute — thin template that constructs the
-    /// per-type Sink and delegates to the non-template streaming_execute.
+    /// per-type Sink, wires the (optional) body handler, and delegates to
+    /// the non-template streaming_execute.
+    ///
+    /// body_factory is taken by value (function-pointer typedef) rather
+    /// than as a template parameter so the branch shape doesn't multiply
+    /// across per-RequestT lambda types (see `coverage` handoff).
     template<typename SinkT, typename RspT>
     ErrorInfo streaming_execute_typed(RequestFrame& frame, RspT& rsp,
                                       Safety safety,
-                                      void (*reset_fn)(void*), void* reset_ctx) {
-        StringPool pool(*alloc_);
-        SinkT response_sink(rsp, pool);
-        JsonSinkAdapter<SinkT> virtual_sink(response_sink);
-        return streaming_execute(frame, virtual_sink, safety, reset_fn, reset_ctx);
-    }
-
-    /// Typed streaming execute with body handler factory.
-    /// The factory is called with the StringPool so StructSink can intern strings.
-    template<typename SinkT, typename RspT, typename BodyFactoryFn>
-    ErrorInfo streaming_execute_typed(RequestFrame& frame, RspT& rsp,
-                                      Safety safety,
                                       void (*reset_fn)(void*), void* reset_ctx,
-                                      BodyFactoryFn&& body_factory) {
+                                      BodyHandlerFactory body_factory,
+                                      void* body_ptr, void* body_storage) {
         StringPool pool(*alloc_);
         SinkT response_sink(rsp, pool);
         if constexpr (detail::has_set_body_handler<SinkT>::value) {
-            auto bh = body_factory(pool);
-            if (bh) response_sink.set_body_handler(bh);
+            if (body_factory) {
+                BodyHandler bh = body_factory(body_ptr, pool, body_storage);
+                if (bh) response_sink.set_body_handler(bh);
+            }
         }
         JsonSinkAdapter<SinkT> virtual_sink(response_sink);
         return streaming_execute(frame, virtual_sink, safety, reset_fn, reset_ctx);
@@ -1380,11 +1504,8 @@ private:
     /// binary transfer. Acceptable on hosts/MCUs (Notecards are rarely
     /// instantiated more than once); not used on AVR-class targets.
     char binary_ctrl_buf_[256]{};
-#ifndef NOTE_RSP_BUF_SIZE
-#define NOTE_RSP_BUF_SIZE 1024
-#endif
     /// Default response staging buffer. Used by `request()` /
-    /// `execute_buffered()` / `transact(json) -> OwnedBuffer` to copy the
+    /// `execute_tree()` / `transact(json) -> OwnedBuffer` to copy the
     /// transport's response in before the JsonReader (or OwnedBuffer)
     /// walks it. Caller-supplied buffer (set via
     /// `set_response_buffer(span<char>)`) overrides this default.

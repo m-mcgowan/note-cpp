@@ -1081,6 +1081,7 @@ namespace note::api {
 #else
 {{ indent }}template<typename, typename> friend class ::note::Api;
 #endif
+{{ indent }}friend struct ::note::test::JsonbWireProbe;
 {{ indent }}public:
 {% endmacro %}
 

@@ -698,28 +698,57 @@ const ArrayElemVTable& SaxCaptureArray::array_elem_vtable_for() {
 
 // BodyEvent and BodyHandler are defined in body_handler.hpp.
 
+namespace detail {
+
+/// Non-template switch that drives a StructSinkCore via its ChildVTable.
+/// Per-T instantiations of make_body_handler all funnel through this one
+/// function, so the switch's branches are counted once (not per RequestT).
+NOTE_SINK_NOINLINE inline void dispatch_struct_body_event(
+    void* core, const ChildVTable& vt,
+    void (*reset_fn)(void*), void* reset_ctx,
+    const BodyEvent& ev) {
+    switch (ev.tag) {
+    case BodyEvent::Bool:        vt.on_bool(core, ev.key, ev.b); break;
+    case BodyEvent::Int:         vt.on_int(core, ev.key, ev.i); break;
+    case BodyEvent::Float:       vt.on_float(core, ev.key, ev.f); break;
+    case BodyEvent::String:      vt.on_string(core, ev.key, {ev.sv.data, ev.sv.len}); break;
+    case BodyEvent::Number:      vt.on_number(core, ev.key, {ev.sv.data, ev.sv.len}); break;
+    case BodyEvent::ObjectBegin: vt.on_object_begin(core, ev.key); break;
+    case BodyEvent::ObjectEnd:   vt.on_object_end(core, ev.key); break;
+    case BodyEvent::ArrayBegin:  vt.on_array_begin(core, ev.key); break;
+    case BodyEvent::ArrayEnd:    vt.on_array_end(core, ev.key); break;
+    case BodyEvent::Reset:       reset_fn(reset_ctx); break;
+    default: NOTE_UNREACHABLE();
+    }
+}
+
+/// Per-T thunks — branchless. The compiler emits one tiny function per T
+/// but the only branches are in the shared dispatch helper above.
+template<typename T>
+void struct_sink_reset_thunk(void* c) {
+    static_cast<StructSink<T>*>(c)->reset();
+}
+
+template<typename T>
+void struct_sink_body_dispatch_thunk(void* c, const BodyEvent& ev) {
+    auto* sink = static_cast<StructSink<T>*>(c);
+    dispatch_struct_body_event(
+        static_cast<StructSinkCore<T>*>(sink),
+        child_vtable_for<T>(),
+        &struct_sink_reset_thunk<T>, c,
+        ev);
+}
+
+} // namespace detail
+
 /// Create a BodyHandler that forwards events to a StructSink<T>.
-/// Single dispatch function — no per-event-type thunk bloat.
+/// Dispatch is type-erased through `dispatch_struct_body_event` so the
+/// 10-way switch is counted once for coverage, not per RequestT.
 template<typename T>
 BodyHandler make_body_handler(StructSink<T>& sink) {
     return {
         &sink,
-        [](void* c, const BodyEvent& ev) {
-            auto& s = *static_cast<StructSink<T>*>(c);
-            switch (ev.tag) {
-            case BodyEvent::Bool:        s.on_bool(ev.key, ev.b); break;
-            case BodyEvent::Int:         s.on_int(ev.key, ev.i); break;
-            case BodyEvent::Float:       s.on_float(ev.key, ev.f); break;
-            case BodyEvent::String:      s.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
-            case BodyEvent::Number:      s.on_number(ev.key, {ev.sv.data, ev.sv.len}); break;
-            case BodyEvent::ObjectBegin: s.on_object_begin(ev.key); break;
-            case BodyEvent::ObjectEnd:   s.on_object_end(ev.key); break;
-            case BodyEvent::ArrayBegin:  s.on_array_begin(ev.key); break;
-            case BodyEvent::ArrayEnd:    s.on_array_end(ev.key); break;
-            case BodyEvent::Reset:       s.reset(); break;
-            default: NOTE_UNREACHABLE();
-            }
-        },
+        &detail::struct_sink_body_dispatch_thunk<T>,
     };
 }
 

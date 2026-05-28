@@ -259,6 +259,109 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+// CjsonTreeSink: JsonSink that builds a cJSON tree directly from SAX
+// events. Used by CjsonBackend::start_response to skip the SAX→text→
+// cJSON_Parse round-trip — when the response arrives as SAX events
+// (from the JSON lexer or JSONB parser), the bytes go straight into
+// cJSON nodes.
+//
+// The sink owns the tree until rearm() or destruction. Callers obtain
+// a non-owning view via root().
+// ---------------------------------------------------------------------------
+class CjsonTreeSink : public note::JsonSink {
+public:
+    ~CjsonTreeSink() override { if (root_) cJSON_Delete(root_); }
+
+    /// Begin a new response. Frees any previous tree.
+    void rearm() {
+        if (root_) { cJSON_Delete(root_); root_ = nullptr; }
+        stack_.clear();
+        opened_root_ = false;
+    }
+
+    /// Non-owning pointer to the assembled tree. Valid until rearm().
+    cJSON* root() const { return root_; }
+
+    /// Transfer ownership of the tree to the caller. After this call
+    /// the sink's root is null; the caller is responsible for
+    /// cJSON_Delete on the returned pointer (or wrapping in a
+    /// CjsonReader that does the cleanup).
+    cJSON* release_root() {
+        cJSON* r = root_;
+        root_ = nullptr;
+        stack_.clear();
+        opened_root_ = false;
+        return r;
+    }
+
+    void reset() override { rearm(); }
+
+    void on_null   (note::string_view k) override                          { attach(k, cJSON_CreateNull()); }
+    void on_bool   (note::string_view k, bool v) override                  { attach(k, cJSON_CreateBool(v)); }
+    void on_int    (note::string_view k, note::json_int_t v) override      { attach(k, cJSON_CreateNumber(static_cast<double>(v))); }
+    void on_float  (note::string_view k, double v) override                { attach(k, cJSON_CreateNumber(v)); }
+    void on_string (note::string_view k, note::string_view v) override     { attach(k, cJSON_CreateString(zstr(v))); }
+
+    void on_object_begin(note::string_view k) override {
+        if (!opened_root_) {
+            root_ = cJSON_CreateObject();
+            stack_.push_back(root_);
+            opened_root_ = true;
+            return;
+        }
+        auto* obj = cJSON_CreateObject();
+        attach_node(k, obj);
+        stack_.push_back(obj);
+    }
+    void on_object_end(note::string_view) override {
+        if (stack_.size() > 1) stack_.pop_back();
+    }
+    void on_array_begin(note::string_view k) override {
+        auto* arr = cJSON_CreateArray();
+        attach_node(k, arr);
+        stack_.push_back(arr);
+    }
+    void on_array_end(note::string_view) override {
+        if (stack_.size() > 1) stack_.pop_back();
+    }
+
+private:
+    cJSON* root_ = nullptr;
+    std::vector<cJSON*> stack_;
+    bool opened_root_ = false;
+
+    void attach(note::string_view key, cJSON* node) { attach_node(key, node); }
+
+    void attach_node(note::string_view key, cJSON* node) {
+        if (!node || stack_.empty()) return;
+        cJSON* current = stack_.back();
+        if (cJSON_IsArray(current)) {
+            cJSON_AddItemToArray(current, node);
+        } else {
+            cJSON_AddItemToObject(current, zkey(key), node);
+        }
+    }
+
+    // cJSON needs null-terminated strings; copy through scratch buffers.
+    // Same NOTE_THREAD_LOCAL strategy as CjsonBuilder.
+    NOTE_THREAD_LOCAL static inline char key_buf_[256];
+    NOTE_THREAD_LOCAL static inline char str_buf_[4096];
+
+    static const char* zkey(note::string_view sv) {
+        auto n = sv.size() < sizeof(key_buf_) ? sv.size() : sizeof(key_buf_) - 1;
+        sv.copy(key_buf_, n);
+        key_buf_[n] = '\0';
+        return key_buf_;
+    }
+    static const char* zstr(note::string_view sv) {
+        auto n = sv.size() < sizeof(str_buf_) ? sv.size() : sizeof(str_buf_) - 1;
+        sv.copy(str_buf_, n);
+        str_buf_[n] = '\0';
+        return str_buf_;
+    }
+};
+
+// ---------------------------------------------------------------------------
 // CjsonBackend: ties builder and reader together.
 // ---------------------------------------------------------------------------
 class CjsonBackend : public JsonBackend {
@@ -275,8 +378,31 @@ public:
         builder_.reset();
         return builder_;
     }
+
+    // Direct-tree SAX path — skips the JSON text round-trip the
+    // JsonBackend default impl would use.
+    JsonSink& start_response(span<char> /*work_buf*/) override {
+        sink_.rearm();
+        return sink_;
+    }
+    JsonReader& finish_response() override {
+        // Non-owning reader: sink owns the tree, reader borrows.
+        // Lifetime: valid until the next start_response().
+        rsp_reader_ = std::make_unique<CjsonReader>(sink_.root(), /*non_owning=*/false);
+        return *rsp_reader_;
+    }
+    std::unique_ptr<JsonReader> release_response() override {
+        // Transfer the cJSON tree to a fresh owning reader; sink loses
+        // its handle so the next start_response() builds a new tree.
+        cJSON* tree = sink_.release_root();
+        rsp_reader_.reset();
+        return std::make_unique<CjsonReader>(tree);
+    }
+
 private:
     CjsonBuilder builder_;
+    CjsonTreeSink sink_;
+    std::unique_ptr<CjsonReader> rsp_reader_;
 };
 
 // ---------------------------------------------------------------------------
@@ -353,9 +479,11 @@ public:
     }
 
     ~CjsonArenaBackend() {
-        // Destroy cJSON tree BEFORE clearing arena hooks — cJSON_Delete calls
+        // Destroy cJSON trees BEFORE clearing arena hooks — cJSON_Delete calls
         // the current free hook, which must still be arena_cjson_free (no-op)
         // for arena-allocated nodes. Standard free() on arena pointers crashes.
+        rsp_reader_.reset();  // non-owning, but reset before sink to be safe.
+        sink_.rearm();        // drops any tree assembled via SAX events.
         builder_.destroy();
         cJSON_InitHooks(nullptr);  // restore default malloc/free
         detail::g_active_arena = nullptr;
@@ -382,9 +510,22 @@ public:
         return std::make_unique<CjsonReader>(root, false);
     }
 
+    // Direct-tree SAX path. cJSON allocations go through the arena
+    // via the hooks installed at construction.
+    JsonSink& start_response(span<char> /*work_buf*/) override {
+        sink_.rearm();
+        return sink_;
+    }
+    JsonReader& finish_response() override {
+        rsp_reader_ = std::make_unique<CjsonReader>(sink_.root(), /*non_owning=*/false);
+        return *rsp_reader_;
+    }
+
 private:
     MonotonicArena& arena_;
     CjsonBuilder builder_;
+    CjsonTreeSink sink_;
+    std::unique_ptr<CjsonReader> rsp_reader_;
 
     void install_hooks() {
         detail::g_active_arena = &arena_;

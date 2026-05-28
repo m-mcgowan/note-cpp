@@ -707,6 +707,18 @@ def main() -> None:
     streaming_path.write_text(streaming_content)
     print(f"Generated streaming endpoint tests in {streaming_path}")
 
+    # Generate per-endpoint JSONB wire-format tests. Compiled in every
+    # host build (the JSONB encoder is always present, regardless of the
+    # transport's wire-format choice). HIL envs cover the framed
+    # end-to-end path.
+    jsonb_template = env.get_template("test_endpoint_jsonb.cpp.j2")
+    jsonb_content = jsonb_template.render(
+        endpoints=endpoints,
+    )
+    jsonb_path = test_dir / "test_endpoint_jsonb.cpp"
+    jsonb_path.write_text(jsonb_content)
+    print(f"Generated JSONB endpoint wire tests in {jsonb_path}")
+
     # Generate API reference documentation (Markdown)
     api_ref_template = env.get_template("api_reference.md.j2")
     api_ref_content = api_ref_template.render(
@@ -778,6 +790,7 @@ def main() -> None:
         "test_api_context.cpp",
         "test_endpoint_coverage.cpp",
         "test_endpoint_streaming.cpp",
+        "test_endpoint_jsonb.cpp",
         "test_sizeof_report.cpp",
     ])
     lines = [

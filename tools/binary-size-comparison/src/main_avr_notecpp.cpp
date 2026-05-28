@@ -322,11 +322,13 @@ void loop() {
         };
         BodySink sink; sink.out = &note_body;
         note::detail::NcErrorCapture err;
+        note::BuildFn build_fn = [](note::JsonBuilder& b, void*) {
+            b.add("req", "note.get");
+            b.add("file", "config.qi");
+        };
+        note::BuildFnRequestSource src(build_fn, nullptr);
         nc.stack().transport.transact_dispatch(
-            [](note::JsonBuilder& b, void*) {
-                b.add("req", "note.get");
-                b.add("file", "config.qi");
-            }, nullptr,
+            src.as_source(),
             note::make_sax_dispatch(sink), 10000, err);
     }
 #else   // API_STYLE == 4

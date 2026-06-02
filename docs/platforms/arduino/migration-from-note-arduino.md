@@ -839,11 +839,11 @@ nc.env.setDefault("interval", "60")
 
 ## Polymorphic APIs
 
-Some Notecard endpoints behave differently depending on which fields you
+Some Notecard requests behave differently depending on which fields you
 send. In note-c, you use the same function and hope you set the right
 combination. In note-cpp, each behavior is a distinct method.
 
-The Notecard documentation describes these endpoints with their standard
+The Notecard documentation describes these requests with their standard
 request names — those names still apply. note-cpp just makes the different
 behaviors explicit:
 
@@ -889,7 +889,7 @@ auto r = nc.note.pop("data.qi")
 Both produce `note.get` on the wire. The difference: `read()` can't
 accidentally include `delete:true`, and `pop()` always includes it.
 Each variant only exposes the fields that apply.
-See [Focused operations](../../using-the-api.md#focused-operations-on-multi-purpose-endpoints) for the full list.
+See [Focused operations](../../using-the-api.md#focused-operations-on-multi-purpose-requests) for the full list.
 
 ### card.temp — read vs configure
 
@@ -926,9 +926,9 @@ nc.card.temp().configure()
 </td></tr>
 </table>
 
-### Non-polymorphic endpoints
+### Single-behavior requests
 
-Most endpoints have a single behavior — these work exactly as the
+Most requests have a single behavior — these work exactly as the
 Notecard documentation describes. The request name maps directly to a
 method:
 
@@ -1075,9 +1075,9 @@ nc.hub.set().mode(mode::periodic).execute();    // constant — autocomplete-fri
 On C++20, string literals are validated at compile time — a typo like
 `"perioidc"` is a compile error regardless of which form you use.
 
-## Nested endpoints
+## Multi-segment request names
 
-Multi-segment endpoint names map to nested accessors:
+Multi-segment request names map to nested accessors:
 
 ```cpp
 nc.card.binary.status();         // card.binary (status)
@@ -1353,7 +1353,7 @@ note-c has no awareness of which Notecard firmware version you're targeting or w
 note-cpp catches both at compile time:
 
 - **Firmware version gating** — define `NOTE_API_VERSION` to your minimum supported firmware; fields newer than that produce `[[deprecated]]` warnings (or compile errors with `NOTE_API_STRICT`).
-- **Hardware targeting (C++20)** — constrain your `Api` to a hardware variant (`Hardware::WiFi`, `Hardware::Cell`, …); incompatible endpoints warn or compile-error.
+- **Hardware targeting (C++20)** — constrain your `Api` to a hardware variant (`Hardware::WiFi`, `Hardware::Cell`, …); incompatible requests warn or compile-error.
 
 Build-flag snippets and the C++20 `target<>` / `min_firmware<>` surface: [feature-flags.md § API version gating](../../feature-flags.md#api-version-gating-and-strict-mode) and [§ Target filtering](../../feature-flags.md#target-filtering-c20). Neither has a note-c equivalent — incompatible requests compile silently and fail at runtime on the device.
 

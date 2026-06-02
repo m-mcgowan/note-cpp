@@ -51,7 +51,7 @@ The typed API is the primary interface and the one most developers should use ex
 
 #### Guided requests
 
-Many Notecard endpoints do different things depending on which fields you send. The typed API splits these into named **operations** so that each call only exposes the fields that apply to that behavior:
+Many Notecard requests do different things depending on which fields you send. The typed API splits these into named **operations** so that each call only exposes the fields that apply to that behavior:
 
 ```cpp
 // Arm ATTN for file changes with 2-minute timeout
@@ -71,7 +71,7 @@ if (r) Serial.println(r.value);
 
 Setting a field that doesn't belong is a compile error rather than a runtime surprise. Each operation also carries a retry-safety classification (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) that the library uses automatically.
 
-This is the pattern the consolidated guide returns to throughout — see [§ Focused operations](#focused-operations-on-multi-purpose-endpoints) for the full design.
+This is the pattern the consolidated guide returns to throughout — see [§ Focused operations](#focused-operations-on-multi-purpose-requests) for the full design.
 
 #### Unguided requests
 
@@ -204,7 +204,7 @@ This is the thinnest possible wrapper — JSON envelope validation, retry, and t
 |-------|-----------|----------|----------|---------------------|
 | **Typed API** (guided) | Methods and fields | Normal development | Nothing — this is the default | baseline (~24.7 KB) |
 | **Typed API** (unguided) | Structs and fields | New request fields and values, cross-operation fields | Focused field surface | −210 B |
-| **Lambda Request Builder** | Lambdas and strings | Unknown endpoints, migration from note-c | Most type safety | similar to typed |
+| **Lambda Request Builder** | Lambdas and strings | Unknown requests, migration from note-c | Most type safety | similar to typed |
 | **Raw JSON + SAX sink** | Raw strings + custom `JsonSink` | Need streaming response parse (low response RAM) | Typed response fields | **−4.2 KB** |
 | **Raw JSON + `JsonView` scan** | Raw strings + substring lookup | Known response shapes; flash is the bottleneck | Robust JSON parsing | **−13.8 KB** |
 
@@ -226,7 +226,7 @@ C++20 also adds `consteval` validation for enum fields like `mode` — passing a
 
 ### Fluent builder
 
-Every endpoint is a builder with typed setters that chain:
+Every request is a builder with typed setters that chain:
 
 ```cpp
 auto result = nc.hub.set()
@@ -379,7 +379,7 @@ if (rsp) {
 The API is designed for autocomplete-driven discovery:
 
 1. **Type `nc.`** — groups appear: `card`, `hub`, `note`, `env`, `file`, etc.
-2. **Type `nc.card.`** — endpoints appear: `version()`, `temp()`, `binary`, etc.
+2. **Type `nc.card.`** — requests appear: `version()`, `temp()`, `binary`, etc.
 3. **Type `nc.card.temp().`** — operations appear: `read()`, `configure()`, `stop()`
 4. **After an operation, type `.`** — fields and `execute()` appear
 
@@ -393,11 +393,11 @@ remove() → NoteDelete
 
 The `Args` struct definition is visible in the tooltip, showing which fields are available for designated init.
 
-## Focused operations on multi-purpose endpoints
+## Focused operations on multi-purpose requests
 
 Some Notecard requests do very different things depending on which fields you send. `note.get` reads a Note when you only pass `file`; add `"delete":true` and it pops the Note off a queue instead. `card.location.mode` can query the current mode, configure periodic GPS, set a fixed location, or remove the mode — all via the same wire request.
 
-On the wire, these are one endpoint each, and it's up to you to remember which fields go together. In `note-cpp` they're split into named **operations** — one method per behavior, each exposing only the fields that apply.
+On the wire, each is one request, and it's up to you to remember which fields go together. In `note-cpp` they're split into named **operations** — one method per behavior, each exposing only the fields that apply.
 
 ### A minimal example
 
@@ -411,7 +411,7 @@ auto r = nc.note.read("data.qi").noteId("my-note").execute();
 auto r = nc.note.pop("requests.qi").execute();
 ```
 
-Same Notecard endpoint (`note.get`), two different operations, two different C++ methods. Autocomplete shows you the operations available on `nc.note.*`, and each operation only exposes fields that make sense for that behavior.
+Same Notecard request (`note.get`), two different operations, two different C++ methods. Autocomplete shows you the operations available on `nc.note.*`, and each operation only exposes fields that make sense for that behavior.
 
 ### Why this matters
 
@@ -461,7 +461,7 @@ Each operation has its own response struct. `fixed()` returns a confirmation; `g
 Some operation groups are reached as a property (`.`) and some as a method call (`()`). The shape depends on whether the group has further nested groups:
 
 ```cpp
-// Factory method — simple endpoints where you pick an operation
+// Factory method — simple requests where you pick an operation
 nc.card.attn().arm("location,motion").execute();
 nc.note.read("data.qi").execute();
 
@@ -485,7 +485,7 @@ The IDE autocomplete will disambiguate: if you get a `CardAttnFactory` member in
 | `fixed()`, `periodic()`, `continuous()` | Mode-specific configuration (e.g. GPS) |
 | `arm()`, `sleep()`, `disarm()`, `retrieve()`, `query()` | Lifecycle (e.g. `card.attn`) |
 
-A few examples across endpoints:
+A few examples across requests:
 
 ```cpp
 // card.location.mode — configure GPS
@@ -528,8 +528,8 @@ The typed API covers everything in the official Blues Notecard [API schema](http
 | Need | Use | Where it's covered |
 |------|-----|---|
 | Standard operations | Focused API call (`nc.card.attn().arm()`) | [§ Typed API](#typed-api) |
-| Existing endpoint, unusual field combo | Raw string on the base `Request` type | [§ Unguided requests](#unguided-requests) |
-| New / unknown endpoint or field | `nc.request()` with builder lambda | [§ Lambda request builder](#lambda-request-builder) |
+| Existing request, unusual field combo | Raw string on the base `Request` type | [§ Unguided requests](#unguided-requests) |
+| New / unknown request or field | `nc.request()` with builder lambda | [§ Lambda request builder](#lambda-request-builder) |
 | Fire-and-forget (no response) | `nc.command()` with builder lambda | as `request()` but sends `"cmd"` |
 
 Validation at each level — earlier is cheaper to catch:
@@ -544,4 +544,4 @@ Validation at each level — earlier is cheaper to catch:
 
 The Notecard firmware always validates and returns an error if a field or mode is invalid. The typed API catches the same mistakes earlier — at compile time, on your machine, not in the field.
 
-For the full endpoint catalogue — every operation, every field, every response — see [api-reference.md](api-reference.md). It's autogenerated on every codegen run, so it stays in lockstep with the typed API.
+For the full request catalogue — every operation, every field, every response — see [api-reference.md](api-reference.md). It's autogenerated on every codegen run, so it stays in lockstep with the typed API.

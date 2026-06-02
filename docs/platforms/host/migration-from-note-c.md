@@ -215,7 +215,7 @@ auto r2 = api.note.pop("data.qi").execute();
 </td></tr>
 </table>
 
-Both produce `note.get` on the wire. `read()` can't accidentally include `delete:true`; `pop()` always does. Each variant only exposes the fields that apply. See [Focused operations](../../using-the-api.md#focused-operations-on-multi-purpose-endpoints).
+Both produce `note.get` on the wire. `read()` can't accidentally include `delete:true`; `pop()` always does. Each variant only exposes the fields that apply. See [Focused operations](../../using-the-api.md#focused-operations-on-multi-purpose-requests).
 
 ### card.attn — arm for interrupts
 

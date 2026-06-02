@@ -4,7 +4,7 @@
 
 This document describes the two-layer API design for `note-cpp` and how it relates to the Notecard wire protocol and other SDKs like `note-python`.
 
-> **Terminology bridge.** This document uses **Layer 1** for the wire-mapped request builders (what user-facing docs call **unguided requests** in [`docs/using-the-api.md`](../using-the-api.md#unguided-requests)) and **Layer 2** for the focused-operation aliases on top (what user-facing docs call **focused operations**, [§ Focused operations on multi-purpose endpoints](../using-the-api.md#focused-operations-on-multi-purpose-endpoints)). The internal layered framing is preserved here for clarity in the design discussion below.
+> **Terminology bridge.** This document uses **Layer 1** for the wire-mapped request builders (what user-facing docs call **unguided requests** in [`docs/using-the-api.md`](../using-the-api.md#unguided-requests)) and **Layer 2** for the focused-operation aliases on top (what user-facing docs call **focused operations**, [§ Focused operations on multi-purpose endpoints](../using-the-api.md#focused-operations-on-multi-purpose-requests)). The internal layered framing is preserved here for clarity in the design discussion below.
 
 ## Background
 

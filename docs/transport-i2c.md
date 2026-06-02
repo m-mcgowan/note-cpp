@@ -1,7 +1,6 @@
 # I2C Transport
 
 **Header:** `note/link/i2c.hpp`
-**Ported from:** note-c `n_i2c.c`
 
 ## Implement `I2cHal`
 

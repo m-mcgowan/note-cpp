@@ -1,6 +1,6 @@
 # Response lifetimes
 
-`execute()` returns a response with typed fields. Some of those fields are **values** — numbers, booleans — and some are **views** — `string_view` fields like `r.version` or `r.device` that point at memory the library owns.
+`execute()` returns a response with typed fields. Some of those fields are **values** — numbers, booleans — and some are **views** — `string_view` fields like `r.version` or `r.device` that point at memory the library gets from an allocator.
 
 **The rule:**
 

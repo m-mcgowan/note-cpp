@@ -1,10 +1,10 @@
 # Quality assurance
 
-`note-cpp` tests exercise every code path on the platforms users deploy to, with coverage tracked on both host and embedded targets. The documentation is verified at push time so examples in the docs can't drift from working code.
+`note-cpp` tests exercise every code path, with coverage tracked on both host and embedded targets. The documentation is verified at push time so examples in the docs can't drift from working code.
 
 ## Library code
 
-The portable test suite is one set of `.cpp` files compiled into multiple binaries — host doctest binaries that run in CI under five compilers, and an ESP32-S3 firmware that flashes onto a real Notecard. The same `TEST_CASE` — same assertions, same fixtures — runs on both. Backend-specific paths (cJSON, nlohmann/json, the `StaticJsonBackend` SAX backend) are exercised on both targets so behaviour stays in lock-step.
+The portable test suite is one set of `.cpp` files compiled into multiple binaries — host doctest binaries that run in CI under five compilers, and an ESP32-S3 firmware that flashes onto a real Notecard. The same `TEST_CASE` — same assertions, same fixtures — runs on both embedded and native builds. Backend-specific paths (cJSON, nlohmann/json, the `StaticJsonBackend` SAX backend) are exercised on both targets so behaviour stays aligned.
 
 | Level | What | Count |
 |-------|------|-------|

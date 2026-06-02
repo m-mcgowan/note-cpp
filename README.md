@@ -102,19 +102,20 @@ TODO - let's mention that it can work with zero heap.
 - **[Typed API](docs/using-the-api.md)** — typed requests and responses for all 74 Notecard APIs; fluent or direct-assignment styles; on C++20 the compiler validates string constants for fields like `mode` at compile time. (TODO - link to the docs that show field validation.)
 - **[Focused operations](docs/using-the-api.md#focused-operations-on-multi-purpose-endpoints)** — distinct types per intent for multi-purpose requests (`note.get` vs `note.pop`, `card.location.mode.fixed()` vs `.get()`); setting a non-applicable field is a compile error.
 - **[Body values and Note templates](docs/body-values.md)** — one struct for send, receive, and template registration; plain aggregates work directly on C++20+, with `NOTE_FIELDS(...)` available on C++17 or for non-aggregates.
-- **[Duration units](docs/duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with safe implicit conversion to smaller units; wrong direction is a compile error.
 - **[Error handling](docs/error-handling.md)** — truthy responses on success, structured `ErrorInfo` on failure; per-request safety classification (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) informs retry.
 - **[Target filtering](docs/feature-flags.md#target-filtering-c20) (C++20)** — constrain the available APIs by hardware variant (WiFi/Cell/Skylo/LoRa) and/or minimum firmware version; unsupported endpoints become compiler warnings, or errors in strict mode.
-- **[Streaming and tree modes](docs/streaming-and-tree.md)** — two JSON-parsing strategies; tree mode keeps a walkable `JsonReader` on the response, while streaming mode reads the wire directly into your typed struct with no tree in memory.
-- **[Memory control](docs/memory.md)** — you choose where response strings live: a static `MonotonicArena` (zero heap, bounded RAM, predictable on every target), a `HeapResetPool` (malloc-backed with arena lifecycle), default `malloc`/`free`, `std::pmr`, or a custom function-pointer `Allocator`. The same surface across all five — swap the allocator, the typed API does not change.
+- **[Choice of streaming and tree modes](docs/streaming-and-tree.md)** — two JSON-parsing strategies; tree mode keeps a walkable `JsonReader` on the response, while streaming mode reads the wire directly into your typed struct with no tree in memory.
+- **[Memory control](docs/memory.md)** — you choose when and how memory is allocated, including fully heap-free allocation, such as where response strings live (primitive types like numbers and booleans appear directly in the responses): options include a static `MonotonicArena` (zero heap, bounded RAM, predictable on every target), a `HeapResetPool` (malloc-backed with arena lifecycle), default `malloc`/`free`, `std::pmr`, or a custom function-pointer `Allocator`. The same surface is used by all of them, so you can swap the allocator, the typed API does not change.
 - **[JSONB wire format](docs/jsonb.md)** — optional `NOTE_JSONB` swaps JSON text for compact binary opcodes; reduces flash on constrained targets. (Enabled automatically on constrained targets.)
-- **Wire protocols** — Implements the expected wire protocol for Notecard. header-only [serial (`SerialFramer`)](docs/transport-serial.md) and [I2C (`I2cFramer`)](docs/transport-i2c.md) with CRC auto-detection, segmented TX/RX, retry, auto-reset. Binary transfer (`card.binary.put`/`get`) uses COBS framing internally.
+- **Wire protocols** — Implements the expected wire protocol for Notecard. header-only [serial (`SerialFramer`)](docs/transport-serial.md) and [I2C (`I2cFramer`)](docs/transport-i2c.md) with CRC auto-detection, segmented TX/RX, retry, auto-reset and RTS/CTS transactions. Binary transfer requests (`card.binary.put`/`get`) uses COBS framing internally.
+- **[Duration units](docs/duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with safe implicit conversion to smaller units; wrong direction is a compile error.
+
 
 [C++ version compatibility matrix](./docs/cpp-version-compatibility.md) — what's available on C++17, what unlocks on C++20/23.
 
 ## How it scales
 
-The library is built to scale from resources-constrained MCUs to desktop-class hardware. The same API surface can be used from ATmega328P (32 KB flash / 2 KB RAM) up to ESP32, Cortex-M, and desktop hosts. For additional optimization, you dial resource use by choosing how much of the stack to pull in.
+The library is built to scale from resource-constrained MCUs to desktop-class hardware. The same API surface can be used from ATmega328P (32 KB flash / 2 KB RAM) up to ESP32, Cortex-M, and desktop hosts. For additional optimization, you dial resource use by choosing how much of the stack to pull in.
 
 ### Target tiers
 
@@ -155,11 +156,11 @@ Per-row code patterns: [Arduino guide § Binary size comparison](docs/platforms/
 - [Migrating from note-arduino](docs/platforms/arduino/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)
 - [Full documentation index](docs/README.md) — all guides, from getting started to internals
-- API reference (Doxygen) — generate locally with `./ci.sh --docs`
+- API reference (Doxygen) — generate locally with `./ci.sh --docs` or use an IDE such as VS Code for inline docs and auto-completion of the API.
 
 ## Quality assurance
 
-Host coverage **97.5% lines / 99.0% functions / 96.2% branches**; on-device coverage (ESP32-S3) **81.6% lines / 82.7% functions**. The same `TEST_CASE`s run on the host doctest binaries (under 5 compilers) and on real Notecard hardware over serial/I2C, plus a Wokwi-simulated AVR runtime to catch Uno-specific init/stack issues that static build verification can't. Docs are verified pre-push: every internal link resolves, every code snippet comes from a compiled source file, and the migration tables stay column-aligned by tooling.
+Host coverage **97.5% lines / 99.0% functions / 96.2% branches**; on-device coverage (ESP32-S3) **81.6% lines / 82.7% functions**. The same `TEST_CASE`s run on the host doctest binaries (under 5 compilers) and on real Notecard hardware over serial/I2C, plus a Wokwi-simulated AVR runtime to catch Uno-specific init/stack issues. Docs are verified pre-push: every internal link resolves, every code snippet comes from a compiled source file, and the migration tables stay column-aligned by tooling.
 
 Full breakdown: [docs/quality-assurance.md](docs/quality-assurance.md).
 

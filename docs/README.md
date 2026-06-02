@@ -57,6 +57,7 @@ Understanding-oriented — read when you want to know *why* the library is shape
 ## Platforms
 
 - **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples, binary-size patterns
+- **[AVR guide](platforms/arduino/avr-guide.md)** — fitting on 32 KB flash / 2 KB SRAM: NOTE_MINIMAL, arena sizing, common pitfalls
 - **[ATTN pin guide](platforms/arduino/card-attn-guide.md)** — interrupt-driven wake patterns
 
 ## Contributing

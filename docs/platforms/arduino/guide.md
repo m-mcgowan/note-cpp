@@ -35,9 +35,7 @@ nc.begin(Serial1, 9600, backend);       // tree mode, serial (response.body() wo
 nc.begin(Wire, backend);                // tree mode, I2C
 ```
 
-The tree-mode `begin()` overloads do not take a separate response-buffer argument. `Notecard` owns a default response staging buffer of `NOTE_RSP_BUF_SIZE` bytes (1024 by default). If your largest expected response exceeds that, call `nc.set_response_buffer(span)` after `begin()` with a buffer of your own.
-
-// TODO - why does tree mode use a fixed buffer, shouldn't this also be passed in by the caller?
+The tree-mode `begin()` overloads do not take a separate response-buffer argument. `Notecard` owns a default response staging buffer of `NOTE_RSP_BUF_SIZE` bytes (1024 by default) so the common case is a single line of setup; override with `nc.set_response_buffer(span)` after `begin()` when your largest expected response is bigger (or smaller) than the default. The streaming-mode constructor takes no buffer at all — SAX events flow straight from the wire into your typed `Response`.
 
 For convenience, `note.hpp` imports by default `Notecard`, duration literals (`15_mins`, `5_s`), and
 other common names into the global namespace. See
@@ -76,7 +74,7 @@ auto r = nc.card.version().execute();
 Serial.println(printable(r));  // prints response or error
 ```
 
-// TODO - don't we have an option to enable printable by default on all items?
+On Arduino, `NOTE_PRINTABLE` defaults to **1** (every typed item gets `printTo` member functions, so `Serial.print(req)` and `Serial.print(r)` "just work"). Under `NOTE_MINIMAL` the flag flips to **0** — the `printable()` wrapper above is then the only way to print non-string types, because the per-type `Printable` overloads have been stripped to save flash. See [`feature-flags.md`](../../feature-flags.md) for the size accounting.
 
 ## String fields
 
@@ -87,8 +85,6 @@ use since `Serial.print()` handles it directly.
 When you need an Arduino `String` (e.g. to store or pass to other
 libraries), convert explicitly:
 
-// TODO - use a snippet
-// TODO - is r.version.size() really needed since the string is null terminated?
 ```cpp
 auto r = nc.card.version().execute();
 if (r) {
@@ -96,9 +92,12 @@ if (r) {
 }
 ```
 
-> Response string fields are null-terminated (via `StringPool::intern()`),
-> so `Serial.printf("%s", r.version.c_str())` is safe. `Serial.print(r.version)`
-> is preferred for typed output; use `printf` for format strings, or
+> The `data()` + `size()` form is preferred over `String(r.version.c_str())`
+> because it skips a `strlen` walk over the bytes — the `size()` is already
+> known. Response string fields are null-terminated (via
+> `StringPool::intern()`), so the `c_str()` form is also safe; the choice is
+> performance, not correctness. `Serial.print(r.version)` is the typed
+> output path that doesn't need either; use `printf` for format strings, or
 > `.c_str()` / `.data()` when a `const char*` is needed.
 
 ## Error handling
@@ -143,13 +142,11 @@ Available: `_s` / `_seconds`, `_mins` / `_minutes`, `_hours`, `_days`.
 
 ## ATTN pin
 
-// todo - use a snippet
-// todo - add comments what the API does and each line does (apart from execute)
 ```cpp
-nc.card.attn().arm()    // arm ATTN pin
-    .connected()        // trigger when connected
-    .files()            // trigger on files (TODO - surely the files need specifying?)
-    .seconds(300)       // todo - is this right?
+nc.card.attn().arm()    // arm the ATTN pin's wake-on-event behaviour
+    .connected()        // wake when the Notecard establishes connectivity
+    .files()            // wake when any queued inbound file has new notes
+    .seconds(300_s)     // also wake after this timeout, regardless of triggers
     .execute();
 
 // Query what triggered ATTN
@@ -182,7 +179,6 @@ This strips tree-mode JSON, polymorphic dispatch, and optional features.
 Use `StaticNotecard` for zero-vtable, zero-heap operation:
 
 
-// TODO - use a snippet. Also check this is minimal
 ```cpp
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
@@ -198,60 +194,48 @@ note::Api api(nc);
 api.hub.set().product("com.example").execute();
 ```
 
+The 64-byte arena above is the smallest realistic figure for a hub.set
+shape; a typical 8-request app needs ~256 B. The full Uno reference build
+is at [`tools/binary-size-comparison/src/main_avr_notecpp.cpp`](../../../tools/binary-size-comparison/src/main_avr_notecpp.cpp).
+
 ### Binary size comparison
 
-A realistic 8-endpoint app (hub.set, note.template, card.temp, note.add,
+A realistic 8-request app (hub.set, note.template, card.temp, note.add,
 card.status, card.voltage, note.get with body parse, env.get) measured
-on ATmega328P (Arduino Uno, 32 KB flash, 2 KB RAM):
-
-Each row below peels off one layer of abstraction — showing how
-much flash (and RAM) you get back by dropping to a lower-level API.
-Rows are ordered from "best developer experience" down to "smallest
-possible footprint":
-
-// TODO - update the note-c figures to include the heap, as I did in the README.md
-// TODO - add links to the corresponding example code 
-| # | Style (typical call site) | Flash | Δ flash vs typed | RAM | Δ RAM vs typed |
-|---|---|---|---|---|---|
-| — | **note-c** (`Notecard::requestAndResponse(...)`) | 25,076 B | +346 B | 729 B | −107 B* |
-| 1 | **typed api groups** — `api.hub.set().product(...).execute()` | 24,730 B | baseline | 836 B | baseline |
-| 2 | **typed direct** — `nc.execute(HubSet{...})` | 24,520 B | **−210 B** | 804 B | −32 B |
-| 3 | **raw + SAX sink** — `JsonBuf` + `transact_dispatch` + `JsonSink` | 20,528 B | **−4,202 B** | 848 B | +12 B |
-| 4 | **raw + `JsonView` scan** (RAM keys) | 10,914 B | **−13,816 B** | 696 B | −140 B |
-| 5 | **raw + `JsonView` scan** (`F()` flash keys) | **10,882 B** | **−13,848 B** | **680 B** | **−156 B** |
-
-*note-c's RAM number excludes its ~371 B heap peak; all note-cpp
-variants use zero heap.
+on ATmega328P (Arduino Uno, 32 KB flash, 2 KB RAM) shows the full
+five-row progression from typed API down to raw `JsonView` scan in the
+[**README's "The full progression" table**](../../../README.md#the-full-progression-arduino-uno-8-request-app)
+— flash drops from ~25 KB to ~11 KB across the styles, RAM stays under
+850 B, all variants zero-heap. The reference builds live in
+[`tools/binary-size-comparison/src/main_avr_notecpp.cpp`](../../../tools/binary-size-comparison/src/main_avr_notecpp.cpp)
+(switching `API_STYLE=1..4` between calls; the platformio.ini
+`avr-notecpp-*` envs each lock one style).
 
 Choosing a style:
 
-1. **Typed api groups** — best DX. Use when ~25 KB flash + 800–900 B
-   RAM fits your target.
-2. **Typed direct** — identical API surface but constructs request
-   objects manually. Tiny win over (1), used when you want explicit
-   control of the request struct.
-3. **Raw + SAX sink** — drops the request/response API shapes
-   but keeps the SAX parser for robust decoding. The streaming sink
-   means no response buffer in RAM — pick this when RAM is the
+1. **Typed api groups** (`api.hub.set().product(...).execute()`) — best
+   DX. Use when ~25 KB flash + 800–900 B RAM fits your target.
+2. **Typed direct** (`nc.execute(HubSet{...})`) — identical API surface
+   but constructs request objects manually. Tiny win over (1), used when
+   you want explicit control of the request struct.
+3. **Raw + SAX sink** ([`JsonBuf`](../../json-builder.md) +
+   `transact_dispatch` + `JsonSink`) — drops the request/response API
+   shapes but keeps the SAX parser for robust decoding. The streaming
+   sink means no response buffer in RAM — pick this when RAM is the
    bottleneck **and** the response may be too large to buffer.
-4. **Raw + `JsonView` scan** — buffers the response and extracts
-   known fields via substring search. **Biggest single step-down**:
-   skips the SAX machinery entirely (≈8 KB flash). Pick this when
-   flash is the bottleneck and response shapes are known ahead of
-   time.
-5. **Flash keys** — same as (4) but with scan keys in PROGMEM. A
-   small additional RAM win on AVR; essentially free on other cores.
-
-
-TODO - since this table above is given in the README, does it need duplicating here? Also I feel this is more like reference material once you've used the typed API. I think this is quite low-level detail so should be in a separate document with a short pointer paragraph here.
-
+4. **Raw + `JsonView` scan** (RAM keys) — buffers the response and
+   extracts known fields via substring search. **Biggest single
+   step-down**: skips the SAX machinery entirely (≈8 KB flash). Pick
+   this when flash is the bottleneck and response shapes are known
+   ahead of time.
+5. **Flash keys** — same as (4) but with scan keys in PROGMEM. A small
+   additional RAM win on AVR; essentially free on other cores.
 
 See the "Parsing responses" sections below for the code patterns
 that correspond to rows 3, 4, and 5.
 
 Build a request either way with `JsonBuf`:
 
-// TODO - use snippets.
 ```cpp
 #include <note/static_notecard.hpp>
 #include <note/arduino/begin.hpp>

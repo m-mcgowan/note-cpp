@@ -212,8 +212,9 @@ See [feature-flags.md](../../feature-flags.md) for the complete list.
 - [Feature flags](../../feature-flags.md) — full opt-out reference
 - [`docs/internal/avr-flash-strings.md`](../../internal/avr-flash-strings.md) — how `FlashString` and the PROGMEM scan path work internally
 
-```
-TODO(mat): cross-link from main docs/README.md once the structure settles.
-TODO(mat): JsonBuf sizing rubric — small body / single request / req+body /
-  request with body — once the auto-size proposal is decided.
-```
+<!--
+Pending: a `JsonBuf` sizing rubric (small body / single request / req+body /
+request with body). Blocked on the auto-size proposal; once that lands the
+rubric becomes "use this number for X" rather than a manual decision tree.
+-->
+

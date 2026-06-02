@@ -16,11 +16,16 @@ The bulk of the typed API is mode-agnostic. Code written against any of these su
 - **Binary transfers.** `card.binary.put()` and `card.binary.get()` use COBS framing rather than JSON and behave identically in either mode.
 - **Error handling.** The `ApiResult` truthy operator, the `r.error()` accessor, and the structured `ErrorInfo` shape are mode-agnostic.
 
-For a quick concrete example, the following snippet compiles and behaves the same way whether the `Notecard` was constructed in streaming mode or tree mode:
+For a quick concrete example, the following snippet compiles and behaves the same way whether the `Notecard` was constructed in streaming mode or tree mode. Pick one of the two constructors at setup time; the call-site code that follows is byte-identical:
 
-
-// TODO - show examples constructing notecard in both modes. Also make it a real snippet.
 ```cpp
+// Streaming — typed responses, no JsonBackend linked.
+note::Notecard nc(transport);
+
+// Tree — JsonBackend assembles a walkable JsonReader (response.body()).
+// note::backends::CjsonBackend backend;
+// note::Notecard nc(backend, transport);
+
 auto r = nc.card.version().execute();
 if (r) {
     log(r.version);
@@ -37,12 +42,20 @@ Tree mode keeps the parsed response in memory after the call returns. That prope
 ```cpp
 auto r = nc.note.get("data.qi").execute();
 
-// TODO - is there a way to do this without the -> operator? Isn't this possible with a JsonSink?
 // Tree mode — query the parsed JsonReader by key after the call:
 if (r && r.body()) {
     double temp = r.body()->get_double("temperature");
     int    hum  = r.body()->get_int("humidity");
 }
+```
+
+The `->` is C++ pointer-deref syntax — `body()` returns `JsonReader*` (nullable when the response had no body), so the dereference is unavoidable in this shape. If the body shape *is* known at compile time and you'd rather skip the by-key walk altogether, both modes support `.into(struct&)`, which streams or copies the body fields straight into a typed struct (no reader, no `->`):
+
+```cpp
+struct Reading { double temperature; int humidity; NOTE_FIELDS(temperature, humidity) };
+Reading r{};
+nc.note.get("data.qi").into(r).execute();
+// r.temperature, r.humidity now populated
 ```
 
 In streaming mode the response bytes are gone once the SAX parser has run, so `r.body()` returns null. Because a null return is also the legitimate "response carried no body field" result in tree mode, the two cases look identical to the caller — for mixed builds where the same code path may run in either mode, prefer `r.body_or_error()`, which returns an explicit `Error::NotReady` when the Notecard was in streaming mode:
@@ -136,7 +149,7 @@ This table summarizes the surfaces touched by the mode choice. Every other surfa
 | Requires `JsonBackend` | yes | no |
 | Zero-heap capable | depends on backend | yes |
 
-Defining `NOTE_NO_JSON_TREE` removes tree mode entirely (a saving of roughly 2 to 4 KB of flash). `NOTE_MINIMAL` sets this automatically. The legacy name `NOTE_NO_BUFFERED` is honoured as an alias for backward compatibility; new code should use `NOTE_NO_JSON_TREE`. (TODO - ensure that NOTE_NO_BUFFERED is not present in the codebase and remove this line.)
+Defining `NOTE_NO_JSON_TREE` removes tree mode entirely (a saving of roughly 2 to 4 KB of flash). `NOTE_MINIMAL` sets this automatically. The legacy name `NOTE_NO_BUFFERED` is honoured as an alias for backward compatibility; new code should use `NOTE_NO_JSON_TREE`.
 
 `NOTE_NO_JSON_TREE` also drops two `std::unique_ptr<JsonReader>` fields and a discriminator bool from every `Response` struct — measured at **24 bytes per response** on 64-bit hosts (and ~12 bytes on 32-bit embedded targets) even for code that never calls `body()`. The header-only `body()` / `body_or_error()` / `parse(reader)` methods themselves are DCE'd by the linker when unreferenced, so the flash cost of leaving the flag off is near zero — the per-response RAM is the real penalty. Streaming-only projects on memory-constrained MCUs should set `NOTE_NO_JSON_TREE=1` for the RAM win even if their code already happens to be streaming-clean.
 

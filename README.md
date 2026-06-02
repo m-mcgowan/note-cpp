@@ -76,7 +76,7 @@ nc.note.add()
    .execute();
 ```
 
-Custom structs can also be used for environment variables. (TODO link to the example.)
+The same struct shape works for environment variables — see [`examples/stdcpp/env-vars.cpp`](examples/stdcpp/env-vars.cpp) for a worked example that reads `env.get` results into a typed `DeviceConfig`.
 
 Responses carry typed fields and a truthy operator:
 
@@ -91,19 +91,16 @@ if (rsp) {
 }
 ```
 
-TODO - shouldn't the full walkthrough be a document rather than a pointer to code?
-Full walkthrough: [examples/stdcpp/getting-started.cpp](examples/stdcpp/getting-started.cpp). If you are migrating from note-arduino / note-c, the [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side examples.
+Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md), with the same code as [`examples/stdcpp/getting-started.cpp`](examples/stdcpp/getting-started.cpp). If you're migrating from note-arduino / note-c, the [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side examples.
 
 ## What's in the library
 
-TODO - do not use the word endpoint - it's not a term that Blues use so will be unfamiliar to readers. (I am sure this is noted in memory.)
-TODO - let's mention that it can work with zero heap.
-
-- **[Typed API](docs/using-the-api.md)** — typed requests and responses for all 74 Notecard APIs; fluent or direct-assignment styles; on C++20 the compiler validates string constants for fields like `mode` at compile time. (TODO - link to the docs that show field validation.)
-- **[Focused operations](docs/using-the-api.md#focused-operations-on-multi-purpose-endpoints)** — distinct types per intent for multi-purpose requests (`note.get` vs `note.pop`, `card.location.mode.fixed()` vs `.get()`); setting a non-applicable field is a compile error.
+- **[Typed API](docs/using-the-api.md)** — typed requests and responses for all 74 Notecard APIs; fluent or direct-assignment styles; on C++20 GCC the compiler [validates string constants](docs/using-the-api.md#fluent-builder) for fields like `mode` or `triggers` at compile time, rejecting typos before the binary runs.
+- **[Focused operations](docs/using-the-api.md#focused-operations-on-multi-purpose-requests)** — distinct types per intent for multi-purpose requests (`note.get` vs `note.pop`, `card.location.mode.fixed()` vs `.get()`); setting a non-applicable field is a compile error.
+- **Zero-heap operation** — pair the library with a `MonotonicArena` (or `HeapResetPool`) and the entire send/receive cycle stays out of `malloc`. The same typed API works on an Arduino Uno with no heap at all, the [arena lifecycle](docs/memory.md#arena-allocator) reclaims memory by `reset()` rather than per-allocation.
 - **[Body values and Note templates](docs/body-values.md)** — one struct for send, receive, and template registration; plain aggregates work directly on C++20+, with `NOTE_FIELDS(...)` available on C++17 or for non-aggregates.
 - **[Error handling](docs/error-handling.md)** — truthy responses on success, structured `ErrorInfo` on failure; per-request safety classification (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) informs retry.
-- **[Target filtering](docs/feature-flags.md#target-filtering-c20) (C++20)** — constrain the available APIs by hardware variant (WiFi/Cell/Skylo/LoRa) and/or minimum firmware version; unsupported endpoints become compiler warnings, or errors in strict mode.
+- **[Target filtering](docs/feature-flags.md#target-filtering-c20) (C++20)** — constrain the available APIs by hardware variant (WiFi/Cell/Skylo/LoRa) and/or minimum firmware version; unsupported requests become compiler warnings, or errors in strict mode.
 - **[Choice of streaming and tree modes](docs/streaming-and-tree.md)** — two JSON-parsing strategies; tree mode keeps a walkable `JsonReader` on the response, while streaming mode reads the wire directly into your typed struct with no tree in memory.
 - **[Memory control](docs/memory.md)** — you choose when and how memory is allocated, including fully heap-free allocation, such as where response strings live (primitive types like numbers and booleans appear directly in the responses): options include a static `MonotonicArena` (zero heap, bounded RAM, predictable on every target), a `HeapResetPool` (malloc-backed with arena lifecycle), default `malloc`/`free`, `std::pmr`, or a custom function-pointer `Allocator`. The same surface is used by all of them, so you can swap the allocator, the typed API does not change.
 - **[JSONB wire format](docs/jsonb.md)** — optional `NOTE_JSONB` swaps JSON text for compact binary opcodes; reduces flash on constrained targets. (Enabled automatically on constrained targets.)
@@ -148,7 +145,7 @@ in the default `note::Allocator{}` (malloc/free) and you'll get a
 heap; the typed API doesn't care which, but only arenas keep the
 build genuinely heap-free.
 
-### The full progression (Arduino Uno, 8-endpoint app)
+### The full progression (Arduino Uno, 8-request app)
 
 Each row peels off one more layer; the typed API (rows 1–2) is what most users want, rows 3–5 trade some convenience for reduced flash use. All five styles share the same transport and can be mixed in one image — the compiler drops what you don't call.
 

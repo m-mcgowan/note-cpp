@@ -106,9 +106,8 @@ int main() {
         if (result) {
             auto version = (*result)->get_string("version");
             auto device  = (*result)->get_string("device");
-            // todo - print the version, or add some conditional logic.
-            (void)version; (void)device;
-            std::puts("  (version and device read from response)");
+            std::printf("  version: %.*s\n", int(version.size()), version.data());
+            std::printf("  device : %.*s\n", int(device.size()),  device.data());
         }
     }
 

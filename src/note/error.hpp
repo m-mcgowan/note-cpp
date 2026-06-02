@@ -45,6 +45,11 @@ enum class Error : uint8_t {
     Overflow,
     /// Bad caller input.
     InvalidArg,
+    /// Clean end of the current response frame. Distinct from `ResponseLost`,
+    /// which signals transport corruption. Returned by `ITransport::read()`
+    /// when the response frame boundary has been consumed and no further
+    /// bytes are available for this transaction.
+    EndOfFrame,
 };
 
 /// Diagnostic detail — why the error happened. Callers that only need
@@ -208,6 +213,7 @@ inline FlashString to_string(Error e) {
     static const char s_not_ready[]       NOTE_FLASH_ATTR = "not_ready";
     static const char s_overflow[]        NOTE_FLASH_ATTR = "overflow";
     static const char s_invalid_arg[]     NOTE_FLASH_ATTR = "invalid_argument";
+    static const char s_end_of_frame[]    NOTE_FLASH_ATTR = "end_of_frame";
     switch (e) {
     case Error::NoError:      return {s_no_error,      sizeof(s_no_error)      - 1};
     case Error::SendFailed:   return {s_send_failed,   sizeof(s_send_failed)   - 1};
@@ -217,6 +223,7 @@ inline FlashString to_string(Error e) {
     case Error::NotReady:     return {s_not_ready,     sizeof(s_not_ready)     - 1};
     case Error::Overflow:     return {s_overflow,      sizeof(s_overflow)      - 1};
     case Error::InvalidArg:   return {s_invalid_arg,   sizeof(s_invalid_arg)   - 1};
+    case Error::EndOfFrame:   return {s_end_of_frame,  sizeof(s_end_of_frame)  - 1};
     }
     NOTE_UNREACHABLE();
 }

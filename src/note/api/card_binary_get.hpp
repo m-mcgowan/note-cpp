@@ -315,6 +315,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
 #else
     template<typename, typename> friend class ::note::Api;
 #endif
+    friend struct ::note::test::JsonbWireProbe;
     public:
 
     /// Attach destination buffer for binary transfer.

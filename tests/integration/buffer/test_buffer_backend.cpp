@@ -188,3 +188,65 @@ TEST_CASE("buffer/builder/array") {
     auto json = builder.to_view();
     CHECK(json.find("\"tags\":[]") != std::string::npos);
 }
+
+// Verifies the StaticJsonBackend SAX-events-in path. The buffer backend
+// doesn't override start_response — it uses the JsonBackend default
+// (SaxToTextSink → text → jsmn parse). This validates the default impl
+// end-to-end and confirms parity with the direct text-parse path.
+TEST_CASE("buffer/start_response/parity_with_parse_response") {
+    StaticJsonBackend<512, 128> backend;
+    char buf[512];  // SaxToTextSink writes the re-serialized text here.
+
+    SUBCASE("flat object — scalars only") {
+        const char* text = R"({"req":"card.status","id":42,"ok":true,"temp":22.5})";
+
+        auto& sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink.on_object_begin("");
+        sink.on_string("req",  "card.status");
+        sink.on_int   ("id",   42);
+        sink.on_bool  ("ok",   true);
+        sink.on_float ("temp", 22.5);
+        sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+
+        auto text_reader = backend.parse_response(text);
+
+        CHECK(sax_reader.get_string("req")  == text_reader->get_string("req"));
+        CHECK(sax_reader.get_int("id")      == text_reader->get_int("id"));
+        CHECK(sax_reader.get_bool("ok")     == text_reader->get_bool("ok"));
+        CHECK(sax_reader.get_double("temp") == text_reader->get_double("temp"));
+        CHECK_FALSE(sax_reader.has_error());
+    }
+
+    SUBCASE("nested object") {
+        const char* text = R"({"req":"note.add","body":{"temp":22.5,"hum":60}})";
+
+        auto& sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink.on_object_begin("");
+        sink.on_string("req", "note.add");
+        sink.on_object_begin("body");
+        sink.on_float("temp", 22.5);
+        sink.on_int  ("hum",  60);
+        sink.on_object_end("body");
+        sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+
+        auto text_reader = backend.parse_response(text);
+
+        auto sax_body  = sax_reader.get_object("body");
+        auto text_body = text_reader->get_object("body");
+        REQUIRE(sax_body);
+        REQUIRE(text_body);
+        CHECK(sax_body->get_double("temp") == text_body->get_double("temp"));
+        CHECK(sax_body->get_int   ("hum")  == text_body->get_int   ("hum"));
+    }
+
+    SUBCASE("err field is surfaced through both paths") {
+        auto& sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink.on_object_begin("");
+        sink.on_string("err", "{io}");
+        sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+        CHECK(sax_reader.get_error() == "{io}");
+    }
+}

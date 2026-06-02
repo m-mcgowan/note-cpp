@@ -471,6 +471,7 @@ struct CardDfu {
 #else
     template<typename, typename> friend class ::note::Api;
 #endif
+    friend struct ::note::test::JsonbWireProbe;
     public:
 
 };

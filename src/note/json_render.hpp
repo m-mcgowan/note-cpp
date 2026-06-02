@@ -78,7 +78,7 @@ public:
     JsonRender& add(std::string_view k, double value) {
         key(k);
         char tmp[32]{};
-        size_t len = detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = detail::dtoa_shortest(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }

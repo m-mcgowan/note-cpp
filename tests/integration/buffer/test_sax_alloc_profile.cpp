@@ -206,6 +206,12 @@ TEST_CASE("buffer/sax_alloc_profile/sax_via_api") {
     CHECK(scope.count() == 0);
 }
 
+// The two-arg `nc.execute(req, alloc)` overload is gated out under
+// NOTE_SINGLETON (see notecard.hpp:377 — the per-call allocator
+// override conflicts with the singleton-global allocator slot and the
+// RAII cleanup path). Skip this test case on singleton builds so the
+// firmware compiles cleanly.
+#if !NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
 TEST_CASE("buffer/sax_alloc_profile/sax_explicit_allocator") {
     // Per-call allocator overload (no stored allocator on Notecard)
     note::backends::StaticJsonBackend<512, 64> backend;
@@ -229,3 +235,4 @@ TEST_CASE("buffer/sax_alloc_profile/sax_explicit_allocator") {
     CHECK(r.device == "dev:001");
     CHECK(scope.count() == 0);
 }
+#endif // !NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII

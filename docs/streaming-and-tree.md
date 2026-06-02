@@ -150,9 +150,23 @@ Defining `NOTE_NO_JSON_TREE` removes tree mode entirely (a saving of roughly 2 t
 
 So the safety story is: **(1)** macro flag for whole-program compile-time removal; **(2)** `body_or_error()` + `was_streaming_parse()` for runtime detection in mixed builds; **(3)** `[[nodiscard]]` on `body()` so the compiler nags about unused returns. Per-instance compile-time gating isn't planned.
 
+## Independent of wire format
+
+The streaming-vs-tree choice is independent of the JSON-vs-JSONB wire-format choice. Both modes work under both wire formats — the response presentation is decided by the backend, the wire format by the transport, and the two layers talk through a uniform SAX event stream:
+
+```
+wire bytes ──► JSON parser  ─┐
+wire bytes ──► JSONB parser ─┴── SAX events ──┬── streaming: typed Response struct
+                                              └── tree: JsonBackend assembles JsonReader
+```
+
+`r.body()` works the same way in `JSON × tree` and `JSONB × tree`; the backend builds the reader from SAX events regardless of where they came from. See [composition.md](composition.md) for the full 2×2 matrix and [examples/stdcpp/wire-format-and-presentation.cpp](../examples/stdcpp/wire-format-and-presentation.cpp) for a runnable demo of all four cells.
+
 ## See also
 
+- [composition.md](composition.md) — the three orthogonal axes (wire format × presentation × binary payload) and how they compose.
 - [json-backend.md](json-backend.md) — backend selection in depth, including memory sizing and customization.
+- [jsonb.md](jsonb.md) — the JSONB wire-format axis.
 - [transport-serial.md](transport-serial.md) and [transport-i2c.md](transport-i2c.md) — the wire transports underneath the JSON layer.
 - [memory.md](memory.md) — overall memory model, arena sizing, and the streaming vs tree trade-off at the allocation level.
 - [working-with-responses.md](working-with-responses.md) — patterns for reading response data in both modes.

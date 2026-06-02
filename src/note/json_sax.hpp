@@ -130,6 +130,35 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// TeeSink — forwards each SAX event to a pair of inner sinks.
+//
+// Pair-shape so the composition is explicit; chain three or more sinks by
+// nesting TeeSinks (TeeSink t1{a, b}; TeeSink t2{t1, c};). Used by tree
+// presentation to fan SAX events out to the backend's tree assembler +
+// optional body handler + optional debug-receive capture.
+// ---------------------------------------------------------------------------
+class TeeSink : public JsonSink {
+public:
+    TeeSink(JsonSink& a, JsonSink& b) : a_(a), b_(b) {}
+
+    void on_null  (string_view k) override                { a_.on_null(k);          b_.on_null(k); }
+    void on_bool  (string_view k, bool v) override        { a_.on_bool(k, v);       b_.on_bool(k, v); }
+    void on_int   (string_view k, json_int_t v) override  { a_.on_int(k, v);        b_.on_int(k, v); }
+    void on_float (string_view k, double v) override      { a_.on_float(k, v);      b_.on_float(k, v); }
+    void on_number(string_view k, string_view r) override { a_.on_number(k, r);     b_.on_number(k, r); }
+    void on_string(string_view k, string_view v) override { a_.on_string(k, v);     b_.on_string(k, v); }
+    void on_object_begin(string_view k) override          { a_.on_object_begin(k);  b_.on_object_begin(k); }
+    void on_object_end  (string_view k) override          { a_.on_object_end(k);    b_.on_object_end(k); }
+    void on_array_begin (string_view k) override          { a_.on_array_begin(k);   b_.on_array_begin(k); }
+    void on_array_end   (string_view k) override          { a_.on_array_end(k);     b_.on_array_end(k); }
+    void reset() override                                 { a_.reset();             b_.reset(); }
+
+private:
+    JsonSink& a_;
+    JsonSink& b_;
+};
+
+// ---------------------------------------------------------------------------
 // Template filter/capture sinks — zero vtable overhead.
 // Used by the static (non-virtual) execute path.
 // ---------------------------------------------------------------------------

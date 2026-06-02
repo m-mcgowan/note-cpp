@@ -71,21 +71,21 @@ inline Allocator arena_allocator(MonotonicArena& a) {
 // Free is a no-op (pool reclaims on reset). Use when you want the arena
 // lifecycle (allocate fast, free all at once) but don't want to size a
 // buffer up front.
-inline Allocator heap_reset_allocator(HeapResetPool& p) {
+inline Allocator heap_reset_allocator(HeapResetPool& pool) {
     return {
         [](size_t n, void* ctx) -> void* {
             return static_cast<HeapResetPool*>(ctx)->allocate(n);
         },
         [](void*, size_t, void*) {},  // pool free is a no-op; reset drains
-        [](void* p, size_t old_n, size_t new_n, void* ctx) -> void* {
+        [](void* old_p, size_t old_n, size_t new_n, void* ctx) -> void* {
             // Can't extend in place — allocate new, copy, old is reclaimed
             // on pool reset.
-            auto* pool = static_cast<HeapResetPool*>(ctx);
-            void* np = pool->allocate(new_n);
-            if (np && p) std::memcpy(np, p, old_n < new_n ? old_n : new_n);
+            auto* p = static_cast<HeapResetPool*>(ctx);
+            void* np = p->allocate(new_n);
+            if (np && old_p) std::memcpy(np, old_p, old_n < new_n ? old_n : new_n);
             return np;
         },
-        &p
+        &pool
     };
 }
 #endif // NOTE_NO_STD_STRING == 0

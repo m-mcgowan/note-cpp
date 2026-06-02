@@ -183,6 +183,63 @@ TEST_CASE("cjson/reader/wrong_type_returns_default") {
     }
 }
 
+TEST_CASE("cjson/reader/missing_key_paths") {
+    CjsonBackend backend;
+    auto reader = backend.parse_response(R"({"a":[1,2,3],"o":{"k":1}})");
+    REQUIRE_FALSE(reader->has_error());
+
+    SUBCASE("get_string_array on missing key returns 0") {
+        note::string_view out[4];
+        CHECK(reader->get_string_array("nope", out, 4) == 0);
+    }
+    SUBCASE("get_object_array on missing key returns 0") {
+        std::unique_ptr<note::JsonReader> out[4];
+        CHECK(reader->get_object_array("nope", out, 4) == 0);
+    }
+    SUBCASE("get_object on missing key returns nullptr") {
+        CHECK(reader->get_object("nope") == nullptr);
+    }
+    SUBCASE("has on missing key returns false") {
+        CHECK_FALSE(reader->has("nope"));
+    }
+    SUBCASE("has on present key returns true") {
+        CHECK(reader->has("a"));
+        CHECK(reader->has("o"));
+    }
+}
+
+// Mixed-typed array exercises the per-element type check inside
+// get_string_array / get_object_array (skipping non-matching elements).
+TEST_CASE("cjson/reader/mixed_array_skips_wrong_type_elements") {
+    CjsonBackend backend;
+    auto reader = backend.parse_response(
+        R"({"sa":["a",1,"b",true,"c"],"oa":[{"k":1},2,{"k":3},"x"]})");
+    REQUIRE_FALSE(reader->has_error());
+
+    SUBCASE("get_string_array picks only string elements") {
+        note::string_view out[8];
+        size_t n = reader->get_string_array("sa", out, 8);
+        REQUIRE(n == 3);
+        CHECK(out[0] == "a");
+        CHECK(out[1] == "b");
+        CHECK(out[2] == "c");
+    }
+    SUBCASE("get_object_array picks only object elements") {
+        std::unique_ptr<note::JsonReader> out[8];
+        size_t n = reader->get_object_array("oa", out, 8);
+        REQUIRE(n == 2);
+        CHECK(out[0]->get_int("k", -1) == 1);
+        CHECK(out[1]->get_int("k", -1) == 3);
+    }
+    SUBCASE("get_string_array honours max cap") {
+        note::string_view out[2];
+        size_t n = reader->get_string_array("sa", out, 2);
+        CHECK(n == 2);  // hits the n < max loop guard
+        CHECK(out[0] == "a");
+        CHECK(out[1] == "b");
+    }
+}
+
 TEST_CASE("cjson/reader/error_message_paths") {
     CjsonBackend backend;
 
@@ -217,4 +274,115 @@ TEST_CASE("cjson/builder/reset_after_use_rebuilds_tree") {
     auto reader = backend.parse_response(json);
     CHECK(reader->get_string("first", "MISSING") == "MISSING");
     CHECK(reader->get_string("second") == "b");
+}
+
+// Verifies CjsonBackend::start_response / finish_response — the SAX
+// events-in surface that drives the buffered/tree response path on
+// JSONB or on any non-text-buffered transport. Each subcase builds the
+// SAME response shape twice (text via parse_response, SAX events via
+// start/finish_response) and asserts both readers yield identical
+// fields. This is the cJSON half of the Tree×JSONB parity test.
+TEST_CASE("cjson/start_response/parity_with_parse_response") {
+    CjsonBackend backend;
+    char buf[512];  // unused for cjson — sink builds the tree directly.
+
+    SUBCASE("flat object — scalars only") {
+        const char* text = R"({"req":"card.status","id":42,"ok":true,"aux":null,"temp":22.5})";
+
+        auto& sax_sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sax_sink.on_object_begin("");
+        sax_sink.on_string("req",  "card.status");
+        sax_sink.on_int   ("id",   42);
+        sax_sink.on_bool  ("ok",   true);
+        sax_sink.on_null  ("aux");
+        sax_sink.on_float ("temp", 22.5);
+        sax_sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+
+        auto text_reader = backend.parse_response(text);
+
+        CHECK(sax_reader.get_string("req")  == text_reader->get_string("req"));
+        CHECK(sax_reader.get_int("id")      == text_reader->get_int("id"));
+        CHECK(sax_reader.get_bool("ok")     == text_reader->get_bool("ok"));
+        CHECK(sax_reader.has("aux")         == text_reader->has("aux"));
+        CHECK(sax_reader.get_double("temp") == text_reader->get_double("temp"));
+        CHECK_FALSE(sax_reader.has_error());
+    }
+
+    SUBCASE("nested object") {
+        const char* text = R"({"req":"note.add","body":{"temp":22.5,"hum":60}})";
+
+        auto& sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink.on_object_begin("");
+        sink.on_string("req", "note.add");
+        sink.on_object_begin("body");
+        sink.on_float("temp", 22.5);
+        sink.on_int  ("hum",  60);
+        sink.on_object_end("body");
+        sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+
+        auto text_reader = backend.parse_response(text);
+
+        CHECK(sax_reader.get_string("req") == text_reader->get_string("req"));
+        auto sax_body  = sax_reader.get_object("body");
+        auto text_body = text_reader->get_object("body");
+        REQUIRE(sax_body);
+        REQUIRE(text_body);
+        CHECK(sax_body->get_double("temp") == text_body->get_double("temp"));
+        CHECK(sax_body->get_int   ("hum")  == text_body->get_int   ("hum"));
+    }
+
+    SUBCASE("string array") {
+        const char* text = R"({"files":["a","b","c"]})";
+
+        auto& sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink.on_object_begin("");
+        sink.on_array_begin("files");
+        sink.on_string("files", "a");
+        sink.on_string("files", "b");
+        sink.on_string("files", "c");
+        sink.on_array_end("files");
+        sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+
+        auto text_reader = backend.parse_response(text);
+
+        note::string_view sax_arr[8], text_arr[8];
+        auto sax_n  = sax_reader.get_string_array("files",  sax_arr,  8);
+        auto text_n = text_reader->get_string_array("files", text_arr, 8);
+        CHECK(sax_n == text_n);
+        REQUIRE(sax_n == 3);
+        for (size_t i = 0; i < sax_n; ++i) {
+            CHECK(sax_arr[i] == text_arr[i]);
+        }
+    }
+
+    SUBCASE("err field is surfaced through both paths") {
+        auto& sink = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink.on_object_begin("");
+        sink.on_string("err", "{io}");
+        sink.on_object_end("");
+        auto& sax_reader = backend.finish_response();
+        CHECK(sax_reader.get_error() == "{io}");
+    }
+
+    SUBCASE("rearm between transactions disposes prior tree") {
+        // First response.
+        auto& sink1 = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink1.on_object_begin("");
+        sink1.on_int("x", 1);
+        sink1.on_object_end("");
+        auto& r1 = backend.finish_response();
+        CHECK(r1.get_int("x") == 1);
+
+        // Second response — must not leak the first.
+        auto& sink2 = backend.start_response(note::span<char>(buf, sizeof(buf)));
+        sink2.on_object_begin("");
+        sink2.on_int("y", 2);
+        sink2.on_object_end("");
+        auto& r2 = backend.finish_response();
+        CHECK(r2.get_int("y") == 2);
+        CHECK(r2.has("x") == false);
+    }
 }

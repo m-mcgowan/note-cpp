@@ -298,6 +298,7 @@ struct CardBinaryPut : note::BinarySendMixin {
 #else
     template<typename, typename> friend class ::note::Api;
 #endif
+    friend struct ::note::test::JsonbWireProbe;
     public:
 
     /// Attach source data for binary transfer.

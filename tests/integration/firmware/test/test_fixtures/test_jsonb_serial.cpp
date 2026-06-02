@@ -1,5 +1,10 @@
-/// @file test_jsonb_serial_spike.cpp
-/// JSONB integration tests over serial UART — both raw spike and library-based.
+/// @file test_jsonb_serial.cpp
+/// JSONB integration tests over serial UART — both raw-encoder and library-based.
+///
+/// Raw-encoder: sends JSONB using note-c-zero's C library — the reference
+/// implementation, used as a baseline for what the Notecard accepts on the
+/// wire. Library tests: sends JSONB using note-cpp's StreamingJsonbBuilder
+/// + CobsStreamWriter and parses responses with jsonb_parse_streaming.
 
 #include "../include/hal_serial.hpp"
 #ifdef NOTECARD_TEST_SERIAL
@@ -34,7 +39,7 @@ static size_t serial_recv(HardwareSerial& uart, uint8_t* buf, size_t buf_size, u
     return len;
 }
 
-TEST_CASE("JSONB serial spike: card.version") {
+TEST_CASE("JSONB: card.version over serial") {
     auto& uart = notecardUart();
     uart.begin(9600, SERIAL_8N1, RX1, TX1);
     delay(500);
@@ -59,7 +64,7 @@ TEST_CASE("JSONB serial spike: card.version") {
     delay(500);
     while (uart.available()) uart.read();
 
-    SUBCASE("spike: JSONB card.version (C library)") {
+    SUBCASE("raw: JSONB card.version (note-c-zero)") {
         uint8_t buf[256] = {};
         jsonbContext ctx;
 

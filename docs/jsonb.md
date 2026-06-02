@@ -32,7 +32,29 @@ To opt out of JSONB on a MINIMAL build:
 build_flags = -DNOTE_MINIMAL -DNOTE_JSONB=0
 ```
 
-When `NOTE_JSONB=1`, `Protocol` automatically encodes requests in JSONB and decodes JSONB responses. The typed API (`nc.card.version()`, `nc.hub.set()`, etc.) works identically -- the wire format is transparent to application code.
+When `NOTE_JSONB=1`, the transport automatically encodes requests in JSONB and decodes JSONB responses. The typed API (`nc.card.version()`, `nc.hub.set()`, etc.) works identically -- the wire format is transparent to application code.
+
+## Composes with both response presentations
+
+JSONB is independent of the streaming-vs-tree response choice. The same `nc.card.status().execute()` call works in any of these four combinations:
+
+```cpp
+// 1. JSON × streaming (default ctor, no backend)
+Notecard nc(transport);
+
+// 2. JSON × tree
+CjsonBackend backend;
+Notecard nc(backend, transport);
+
+// 3. JSONB × streaming — build with -DNOTE_JSONB=1
+Notecard nc(transport);
+
+// 4. JSONB × tree — build with -DNOTE_JSONB=1
+CjsonBackend backend;
+Notecard nc(backend, transport);
+```
+
+In tree mode under JSONB, the backend assembles the response tree directly from the SAX events the JSONB parser emits — there is no JSON-text round-trip in between. See [`composition.md`](composition.md) for the full matrix and [`examples/stdcpp/wire-format-and-presentation.cpp`](../examples/stdcpp/wire-format-and-presentation.cpp) for a working walk through all four cells.
 
 ## Wire framing
 
@@ -79,4 +101,6 @@ The JSONB implementation adds three components to `note-cpp`:
 | `jsonb_parse_streaming()` | `note/jsonb.hpp` | SAX parser for JSONB opcode streams |
 | `CobsStreamWriter` | `note/jsonb.hpp` | Streaming COBS encoder as a `JsonWriter` |
 
-These slot into the existing `Protocol` pipeline without changing the transport, notecard, or generated API code. The `JsonBuilder` and `JsonSink` interfaces are the abstraction boundaries.
+These slot into the existing transport pipeline without changing the notecard or generated API code. The `JsonBuilder` and `JsonSink` interfaces are the abstraction boundaries: the request builder writes opcodes through `JsonWriter` and the response parser fires the same `JsonSink` events the JSON lexer emits, so the rest of the library never sees the wire format.
+
+Tree-mode response decode under JSONB goes through the backend's `start_response()` / `finish_response()` SAX-events-in interface; the same path JSON-text responses take. There is no separate "JSONB → text → tree" round-trip — the backend assembles the tree directly from the JSONB SAX events.

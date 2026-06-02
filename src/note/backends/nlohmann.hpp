@@ -190,6 +190,78 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+// NlohmannTreeSink: JsonSink that builds a nlohmann::json tree directly
+// from SAX events. Used by NlohmannBackend::start_response to skip the
+// SAX→text→nlohmann::json::parse round-trip.
+// ---------------------------------------------------------------------------
+class NlohmannTreeSink : public note::JsonSink {
+public:
+    /// Begin a new response. Drops any prior tree.
+    void rearm() {
+        root_ = nlohmann::json::object();
+        stack_.clear();
+        opened_root_ = false;
+    }
+
+    /// Move-out accessor. After this call the sink's tree is empty.
+    nlohmann::json take_root() { return std::move(root_); }
+
+    void reset() override { rearm(); }
+
+    void on_null   (note::string_view k) override                      { attach(k, nlohmann::json()); }
+    void on_bool   (note::string_view k, bool v) override              { attach(k, nlohmann::json(v)); }
+    void on_int    (note::string_view k, note::json_int_t v) override  { attach(k, nlohmann::json(v)); }
+    void on_float  (note::string_view k, double v) override            { attach(k, nlohmann::json(v)); }
+    void on_string (note::string_view k, note::string_view v) override { attach(k, nlohmann::json(std::string(v))); }
+
+    void on_object_begin(note::string_view k) override {
+        if (!opened_root_) {
+            stack_.push_back(&root_);
+            opened_root_ = true;
+            return;
+        }
+        nlohmann::json& slot = make_slot(k, nlohmann::json::object());
+        stack_.push_back(&slot);
+    }
+    void on_object_end(note::string_view) override {
+        if (stack_.size() > 1) stack_.pop_back();
+    }
+    void on_array_begin(note::string_view k) override {
+        nlohmann::json& slot = make_slot(k, nlohmann::json::array());
+        stack_.push_back(&slot);
+    }
+    void on_array_end(note::string_view) override {
+        if (stack_.size() > 1) stack_.pop_back();
+    }
+
+private:
+    nlohmann::json root_ = nlohmann::json::object();
+    std::vector<nlohmann::json*> stack_;
+    bool opened_root_ = false;
+
+    nlohmann::json& make_slot(note::string_view key, nlohmann::json initial) {
+        nlohmann::json* current = stack_.back();
+        if (current->is_array()) {
+            current->push_back(std::move(initial));
+            return current->back();
+        }
+        auto kstr = std::string(key);
+        (*current)[kstr] = std::move(initial);
+        return (*current)[kstr];
+    }
+
+    void attach(note::string_view key, nlohmann::json value) {
+        if (stack_.empty()) return;
+        nlohmann::json* current = stack_.back();
+        if (current->is_array()) {
+            current->push_back(std::move(value));
+        } else {
+            (*current)[std::string(key)] = std::move(value);
+        }
+    }
+};
+
+// ---------------------------------------------------------------------------
 // NlohmannBackend: ties builder and reader together.
 // ---------------------------------------------------------------------------
 class NlohmannBackend : public JsonBackend {
@@ -205,8 +277,28 @@ public:
         builder_.reset();
         return builder_;
     }
+
+    // Direct-tree SAX path.
+    JsonSink& start_response(span<char> /*work_buf*/) override {
+        sink_.rearm();
+        return sink_;
+    }
+    JsonReader& finish_response() override {
+        rsp_reader_ = std::make_unique<NlohmannReader>(sink_.take_root());
+        return *rsp_reader_;
+    }
+    std::unique_ptr<JsonReader> release_response() override {
+        // Move the current reader out. The next finish_response()
+        // will build a new tree from the sink (which is empty after
+        // take_root drained it).
+        std::unique_ptr<JsonReader> out = std::move(rsp_reader_);
+        return out;
+    }
+
 private:
     NlohmannBuilder builder_;
+    NlohmannTreeSink sink_;
+    std::unique_ptr<NlohmannReader> rsp_reader_;
 };
 
 } // namespace note::backends

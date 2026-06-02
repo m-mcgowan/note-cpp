@@ -1,24 +1,24 @@
 {
   "envs": {
     "avr-notecpp": {
-      "flash": 25198,
-      "ram": 773,
-      "comment": "Style 1: typed API groups via Api<UnstructuredCtx, StaticNotecard<SerialStack>>. The most common StaticNotecard usage."
+      "flash": 27886,
+      "ram": 782,
+      "comment": "Style 1: typed API groups via Api<UnstructuredCtx, StaticNotecard<SerialStack>>. The most common StaticNotecard usage. Grew from 25,198 during the spike/transport-byte-channel refactor (IByteTransport + ITransact split, JSONB+tree orthogonality)."
     },
     "avr-notecpp-direct": {
-      "flash": 24788,
-      "ram": 753,
-      "comment": "Style 2: nc.execute(req) bypassing the Api groups. Drops a layer of group thunks."
+      "flash": 27028,
+      "ram": 762,
+      "comment": "Style 2: nc.execute(req) bypassing the Api groups. Drops a layer of group thunks. Grew from 24,788 during the transport refactor."
     },
     "avr-notecpp-raw": {
-      "flash": 21172,
+      "flash": 21754,
       "ram": 781,
-      "comment": "Style 3: transact_dispatch(BuildFn, ...) raw entry \u2014 bypasses StaticNotecard entirely."
+      "comment": "Style 3: transact_dispatch(RequestSource, ...) raw entry \u2014 bypasses StaticNotecard entirely. Grew from 21,172 during the transport refactor (BuildFn \u2192 RequestSource API change)."
     },
     "avr-notecpp-multistack": {
-      "flash": 30482,
-      "ram": 1148,
-      "comment": "Two distinct StaticNotecard<...> types in one TU (HardwareSerial stack + mock stack). Validates that thunk/closure dedup compounds: doubling the Notecard count adds ~5.4 KB / ~370 B, not 2x single-stack. Gate floor catches lost sharing."
+      "flash": 25216,
+      "ram": 788,
+      "comment": "Stack-type comparison build: NOTECPP_MULTISTACK_USE picks one stack (A=HardwareSerial default, B=mock); only the selected stack's Notecard, arena, and Api instances are linked. Reflects what a real single-Notecard app pays for each stack configuration. AB instantiates both for host-side codegen-sharing measurements and overflows AVR flash."
     }
   },
   "limits": {

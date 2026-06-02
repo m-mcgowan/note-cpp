@@ -103,6 +103,7 @@ set(NOTE_CPP_TEST_SOURCES_COMMON
     test_json_fmt.cpp
     test_json_sax.cpp
     test_json_sax_streaming.cpp
+    test_sax_to_text.cpp
     test_json_scan.cpp
     test_error_message.cpp
     test_json_lexer.cpp
@@ -153,8 +154,52 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_transport_serial.cpp
     test_transport_streaming.cpp
     test_transport_timing.cpp
+    test_layered_transport.cpp
     test_txn_handshake.cpp
     test_wire_format.cpp
+    test_wire_format_jsonb.cpp
+)
+
+# Tests that exercise JSON wire-text shape (`last_request == "<JSON>"`,
+# `body.find("\"key\":...")`). Under NOTE_JSONB the wire carries binary
+# opcodes — these assertions fail by design. Equivalent JSONB-wire-shape
+# coverage lives in tests/test_jsonb.cpp + the firmware HIL JSONB envs;
+# a port of these specific assertions to the JSONB wire format is the
+# follow-up project. See HANDOFF-tree-jsonb-orthogonality.md.
+set(NOTE_CPP_TEST_SOURCES_JSON_WIRE
+    test_allocator_lifetime.cpp
+    test_attention.cpp
+    test_binary_execute.cpp
+    test_buffered_bridge.cpp
+    test_intent_flags.cpp
+    test_layered_transport.cpp
+    test_migration_support.cpp
+    test_note_c_bridge.cpp
+    test_notecard.cpp
+    test_notecard_streaming.cpp
+    test_property_functor.cpp
+    test_samples.cpp
+    test_setup.cpp
+    test_static_notecard.cpp
+    test_streaming_builder.cpp
+    test_streaming_errors.cpp
+    test_struct_field_symmetry.cpp
+    test_sync.cpp
+    test_templates.cpp
+    test_transport_agnostic_api.cpp
+    test_transport_i2c.cpp
+    test_transport_serial.cpp
+    test_transport_streaming.cpp
+    test_txn_handshake.cpp
+    test_wire_format.cpp
+)
+
+# Generated tests with JSON wire-text shape. Codegen produces these via
+# tools/codegen/templates/test_endpoint_{coverage,streaming}.cpp.j2.
+# Same JSONB exclusion applies.
+set(NOTE_CPP_GENERATED_TEST_SOURCES_JSON_WIRE
+    test_endpoint_coverage.cpp
+    test_endpoint_streaming.cpp
 )
 
 set(NOTE_CPP_TEST_SOURCES

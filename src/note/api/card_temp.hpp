@@ -365,6 +365,7 @@ struct CardTemp {
 #else
         template<typename, typename> friend class ::note::Api;
 #endif
+        friend struct ::note::test::JsonbWireProbe;
         public:
 
     };
@@ -701,6 +702,7 @@ struct CardTemp {
 #else
         template<typename, typename> friend class ::note::Api;
 #endif
+        friend struct ::note::test::JsonbWireProbe;
         public:
 
     };
@@ -1017,6 +1019,7 @@ struct CardTemp {
 #else
         template<typename, typename> friend class ::note::Api;
 #endif
+        friend struct ::note::test::JsonbWireProbe;
         public:
 
     };

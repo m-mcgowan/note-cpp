@@ -2,6 +2,7 @@
 
 #include "detail/number_format.hpp"
 #include "json_sax.hpp"
+#include "span.hpp"
 #include "types.hpp"
 
 #include <type_traits>
@@ -159,6 +160,157 @@ public:
     virtual string_view get_error() const = 0;
 };
 
+// ---------------------------------------------------------------------------
+// SaxToTextSink — JsonSink that re-serializes SAX events into JSON text.
+//
+// Bridges the SAX-events-in surface (start_response / finish_response on
+// JsonBackend) into the text-shaped legacy parse path. Backends that want
+// the default JsonBackend impl get tree-from-text indirectly via this
+// sink — the response bytes never sit in the caller's buffer as wire
+// bytes, they're assembled here as canonical JSON text from the
+// transport-layer SAX events.
+//
+// Used by:
+//   - JsonBackend's default start_response / finish_response (below).
+//   - Any backend that prefers JSON-text-in over a direct tree-builder
+//     sink (StaticJsonBackend, in particular — jsmn wants contiguous text).
+//
+// The buffer is supplied via rearm() — typically Notecard's rsp_buf().
+// ---------------------------------------------------------------------------
+
+namespace detail {
+
+class SaxToTextSink : public JsonSink {
+public:
+    /// Begin a new response. `work_buf` is the destination for the
+    /// serialized JSON text; it must outlive `view()` calls.
+    void rearm(span<char> work_buf) {
+        writer_ = JsonBufferWriter(work_buf.data(), work_buf.size());
+        depth_ = 0;
+        need_comma_ = false;
+        opened_root_ = false;
+    }
+
+    /// JsonSink-level reset (SaxEvent::Reset). Clears the buffer but
+    /// keeps the underlying span — callers reusing the sink across
+    /// transactions should prefer rearm() with a fresh buffer.
+    void reset() override {
+        writer_.reset();
+        depth_ = 0;
+        need_comma_ = false;
+        opened_root_ = false;
+    }
+
+    string_view view() const { return writer_.view(); }
+    bool overflow() const { return writer_.overflow(); }
+
+    void on_null(string_view k) override { emit_kv_prefix(k); writer_.write(string_view("null")); }
+    void on_bool(string_view k, bool v) override {
+        emit_kv_prefix(k);
+        writer_.write(v ? string_view("true") : string_view("false"));
+    }
+    void on_int(string_view k, json_int_t v) override {
+        emit_kv_prefix(k);
+        char buf[24];
+        size_t n = detail::itoa(buf, sizeof(buf), v);
+        writer_.write(buf, n);
+    }
+    void on_float(string_view k, double v) override {
+        emit_kv_prefix(k);
+        char buf[32];
+        size_t n = detail::dtoa_shortest(buf, sizeof(buf), v);
+        writer_.write(buf, n);
+    }
+    void on_number(string_view k, string_view raw) override {
+        // Lossless path used by some lexers when neither on_int nor
+        // on_float is called. Pass through verbatim.
+        emit_kv_prefix(k);
+        writer_.write(raw);
+    }
+    void on_string(string_view k, string_view v) override {
+        emit_kv_prefix(k);
+        quoted(v);
+    }
+    void on_object_begin(string_view k) override {
+        if (!opened_root_) {
+            opened_root_ = true;
+            writer_.write('{');
+            push_frame(/*array=*/false);
+            return;
+        }
+        emit_kv_prefix(k);
+        writer_.write('{');
+        push_frame(false);
+    }
+    void on_object_end(string_view) override {
+        writer_.write('}');
+        pop_frame();
+    }
+    void on_array_begin(string_view k) override {
+        emit_kv_prefix(k);
+        writer_.write('[');
+        push_frame(/*array=*/true);
+    }
+    void on_array_end(string_view) override {
+        writer_.write(']');
+        pop_frame();
+    }
+
+private:
+    JsonBufferWriter writer_{nullptr, 0};
+
+    // Tracks "inside an array?" for each open container so emit_kv_prefix
+    // knows whether to suppress the key prefix (array elements have no
+    // keys, just values).
+    static constexpr size_t kMaxDepth = 8;
+    bool in_array_[kMaxDepth] = {};
+    size_t depth_ = 0;
+    bool need_comma_ = false;
+    bool opened_root_ = false;
+
+    bool in_array() const {
+        return depth_ > 0 && in_array_[depth_ - 1];
+    }
+
+    void emit_kv_prefix(string_view key) {
+        if (need_comma_) writer_.write(',');
+        need_comma_ = true;
+        if (!in_array()) {
+            quoted(key);
+            writer_.write(':');
+        }
+    }
+
+    void push_frame(bool array) {
+        if (depth_ < kMaxDepth) in_array_[depth_] = array;
+        ++depth_;
+        need_comma_ = false;
+    }
+
+    void pop_frame() {
+        if (depth_ > 0) --depth_;
+        need_comma_ = true;
+    }
+
+    void quoted(string_view s) {
+        writer_.write('"');
+        for (size_t i = 0; i < s.size(); ++i) {
+            char c = s[i];
+            switch (c) {
+            case '"':  writer_.write('\\'); writer_.write('"'); break;
+            case '\\': writer_.write('\\'); writer_.write('\\'); break;
+            case '\n': writer_.write('\\'); writer_.write('n'); break;
+            case '\r': writer_.write('\\'); writer_.write('r'); break;
+            case '\t': writer_.write('\\'); writer_.write('t'); break;
+            default:   writer_.write(c); break;
+            }
+        }
+        writer_.write('"');
+    }
+};
+
+} // namespace detail
+
 class JsonBackend {
 public:
     virtual ~JsonBackend() = default;
@@ -192,9 +344,48 @@ public:
         return sax_parse(json, sink);
     }
 
+    // ── SAX-events-in surface ──────────────────────────────────────────
+    //
+    // start_response() returns a sink that consumes all SAX events for
+    // one transaction. finish_response() finalizes and returns the
+    // reader over the assembled tree. The reader is valid until the
+    // next start_response() call.
+    //
+    // The two methods bracket one response. work_buf is scratch space
+    // for backends that re-serialize SAX events to JSON text (default
+    // impl + StaticJsonBackend). Tree-direct backends (cJSON, nlohmann)
+    // ignore it.
+    //
+    // Default impl: route through SaxToTextSink, then call get_reader()
+    // on the assembled JSON text. Backends that want a direct tree path
+    // override both methods to skip the text round-trip.
+
+    virtual JsonSink& start_response(span<char> work_buf) {
+        rt_sink_.rearm(work_buf);
+        return rt_sink_;
+    }
+
+    virtual JsonReader& finish_response() {
+        return get_reader(rt_sink_.view());
+    }
+
+    /// Take ownership of the most recently assembled response tree.
+    /// Used by the no-allocator error path: the returned reader keeps
+    /// the err-message storage alive when the caller can't intern it
+    /// into a StringPool. The backend's internal reader is reset; the
+    /// next call to finish_response() will build a new one.
+    ///
+    /// Default impl re-parses the SaxToTextSink's text buffer (so the
+    /// returned tree is independent of the backend's reusable storage).
+    /// Direct-tree backends override to transfer the tree.
+    virtual std::unique_ptr<JsonReader> release_response() {
+        return parse_response(rt_sink_.view());
+    }
+
 private:
     std::unique_ptr<JsonBuilder> owned_builder_;
     std::unique_ptr<JsonReader> owned_reader_;
+    detail::SaxToTextSink rt_sink_;
 };
 
 // ---------------------------------------------------------------------------
@@ -236,7 +427,7 @@ public:
     JsonBuilder& add(string_view key, double value) override {
         kv(key);
         char tmp[32];
-        size_t len = detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = detail::dtoa_shortest(tmp, sizeof(tmp), value);
         writer_.write(tmp, len);
         return *this;
     }
@@ -304,7 +495,7 @@ public:
     JsonBuilder& add_element(double value) override {
         comma();
         char tmp[32];
-        size_t len = detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = detail::dtoa_shortest(tmp, sizeof(tmp), value);
         writer_.write(tmp, len);
         return *this;
     }

@@ -1,31 +1,45 @@
-// Multi-instantiation measurement: two StaticNotecard types in one
-// translation unit, sharing as much codegen as possible.
+// Stack-type comparison sample: a single application picks ONE stack
+// configuration at compile time (HardwareSerial = A, header-only mock
+// = B) and exercises that stack's workload.
 //
-// The single-stack sample (main_avr_notecpp.cpp) doesn't exercise
-// duplicated codegen — there's only one Notecard type. Several wins
-// from the 2026-04-29 size pass were structural (BuildFn dedupe,
-// req_wrap_build extraction, dispatch_sax_event outlining) and
-// deliver near-zero on the single-stack build but should compound
-// when there are two distinct StaticNotecard<...> types in the same
-// program: each instantiation previously got its own copy of
-// Api::generic_thunk_, send_thunk_, and the per-RequestT closures.
+// On AVR this is the realistic shape — a 2 KB-RAM MCU never carries two
+// arenas or two Notecard instances. The selector lets you swap which
+// stack the same application code targets; the resulting flash + RAM
+// numbers show what each stack configuration actually costs.
 //
-// This binary builds two Notecards over different transport stacks
-// — HardwareSerial-backed and a header-only mock — and runs the same
-// 8-endpoint workload on both. The mock stack keeps the second
-// transport's code footprint near zero so the measurement reflects
-// thunk/closure duplication, not a second protocol implementation.
-//
-// Reading the gate: `multistack_flash - single_flash` is the
-// duplication cost. If structural wins compound, this delta stays
-// well below 1× the single-stack size; a regression here flags lost
-// sharing.
+// Setting NOTECPP_MULTISTACK_USE=AB instantiates both stacks for
+// host-side codegen-sharing measurements. AB does not fit AVR.
 
 #ifdef USE_NOTECPP_MULTISTACK
 
 // Serial-only AVR app — see main_avr_notecpp.cpp for the rationale.
 #define NOTE_ARDUINO_NO_WIRE
 #include <note.hpp>
+
+// Workload selector — choose at compile time which stack the workload
+// exercises and which Notecard instances are linked into the build.
+// Each AVR env picks exactly one (A or B). Running both (AB) is for
+// host-side codegen-sharing measurements only — it doubles the arena
+// RAM and overflows AVR flash.
+//
+//   -DNOTECPP_MULTISTACK_USE=A   real HardwareSerial stack
+//   -DNOTECPP_MULTISTACK_USE=B   header-only mock stack
+//   -DNOTECPP_MULTISTACK_USE=AB  both (host-only — doesn't fit AVR)
+#ifndef NOTECPP_MULTISTACK_USE
+#define NOTECPP_MULTISTACK_USE A
+#endif
+
+#define NOTECPP_MS_A 1
+#define NOTECPP_MS_B 2
+#define NOTECPP_MS_AB 3
+#define NOTECPP_MS_CONCAT_(x) NOTECPP_MS_##x
+#define NOTECPP_MS_CONCAT(x) NOTECPP_MS_CONCAT_(x)
+#define NOTECPP_MULTISTACK_USE_INT NOTECPP_MS_CONCAT(NOTECPP_MULTISTACK_USE)
+
+#define NOTECPP_USE_A \
+    (NOTECPP_MULTISTACK_USE_INT == NOTECPP_MS_A || NOTECPP_MULTISTACK_USE_INT == NOTECPP_MS_AB)
+#define NOTECPP_USE_B \
+    (NOTECPP_MULTISTACK_USE_INT == NOTECPP_MS_B || NOTECPP_MULTISTACK_USE_INT == NOTECPP_MS_AB)
 
 struct Readings {
     float temperature;
@@ -45,22 +59,22 @@ using UsedRequests = note::RequestSet<
 >;
 static constexpr size_t kArenaSize = UsedRequests::max_arena_size;
 
-// Two arenas, one per Notecard. Static so they don't compete with stack.
-alignas(4) static char arena_a[kArenaSize];
-alignas(4) static char arena_b[kArenaSize];
-static note::MonotonicArena arena_a_obj(arena_a);
-static note::MonotonicArena arena_b_obj(arena_b);
-
 // ─── Stack A: real HardwareSerial (the production path) ───────────
+#if NOTECPP_USE_A
+alignas(4) static char arena_a[kArenaSize];
+static note::MonotonicArena arena_a_obj(arena_a);
+
 using StackA = note::arduino::SerialTransportStack<HardwareSerial>;
 using NotecardA = note::StaticNotecard<StackA>;
 static NotecardA nc_a(note::arena_allocator(arena_a_obj), Serial, 9600);
 static note::Api<NotecardA> api_a(nc_a);
+#endif
 
 // ─── Stack B: header-only mock serial ─────────────────────────────
 // Distinct type → distinct StaticNotecard<...> → distinct Api<...>
-// instantiation. The mock just discards bytes; the goal is the
-// codegen duplication measurement, not a second wire path.
+// instantiation. The mock just discards bytes; the goal of the AB
+// variant is codegen-sharing measurement, not a second wire path.
+#if NOTECPP_USE_B
 struct MockSerial {
     void begin(unsigned long) {}
     size_t write(const uint8_t*, size_t n) { return n; }
@@ -70,14 +84,19 @@ struct MockSerial {
 };
 static MockSerial mock_serial;
 
+alignas(4) static char arena_b[kArenaSize];
+static note::MonotonicArena arena_b_obj(arena_b);
+
 using StackB = note::arduino::SerialTransportStack<MockSerial>;
 using NotecardB = note::StaticNotecard<StackB>;
 static NotecardB nc_b(note::arena_allocator(arena_b_obj), mock_serial, 9600);
 static note::Api<NotecardB> api_b(nc_b);
+#endif
 
-// ─── Workload — identical across both Notecards. The intent is to
-// force codegen for every endpoint on both Api types so any thunk
-// duplication shows up in the linked binary.
+// ─── Workload — identical body across both stacks. The whole point
+// of the comparison is that the application code is unchanged; only
+// the underlying stack type differs.
+#if NOTECPP_USE_A
 static void workload_a() {
     api_a.hub.set().product("com.example.app").mode("periodic").execute();
     api_a.note.templates().define("sensors.qo")
@@ -94,7 +113,9 @@ static void workload_a() {
     api_a.note.get().read().file("inbound.qi").execute();
     api_a.env.get().name("interval").execute();
 }
+#endif
 
+#if NOTECPP_USE_B
 static void workload_b() {
     api_b.hub.set().product("com.example.app").mode("periodic").execute();
     api_b.note.templates().define("sensors.qo")
@@ -111,10 +132,15 @@ static void workload_b() {
     api_b.note.get().read().file("inbound.qi").execute();
     api_b.env.get().name("interval").execute();
 }
+#endif
 
 void setup() {
+#if NOTECPP_USE_A
     workload_a();
+#endif
+#if NOTECPP_USE_B
     workload_b();
+#endif
 }
 
 void loop() {}

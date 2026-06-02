@@ -6,7 +6,24 @@
 #include <cstddef>
 #include <cstdint>
 
+#if !NOTE_INT32_MATH
+#  include <cstdio>
+#endif
+
 namespace note::detail {
+
+/// @file number_format.hpp
+/// Two double formatters:
+///
+///   `dtoa` — constexpr, fixed-point. Faithful but verbose
+///     (3.3 → "3.2999999999"). Required by `JsonBuf<N>` so JSON can be
+///     built at compile time. Also the only formatter available on AVR,
+///     where `snprintf("%g", …)` pulls in ~1.5 KB of float-printf.
+///
+///   `dtoa_shortest` — runtime, shortest round-trip. 3.3 → "3.3".
+///     Used by wire emitters (StreamingJsonBuilder, StaticJsonBuilder)
+///     where shorter is better and the snprintf cost is acceptable.
+///     Falls back to `dtoa` on AVR (NOTE_INT32_MATH).
 
 // Write an integer to buf, return number of chars written.
 constexpr size_t itoa(char* buf, size_t cap, json_int_t value) {
@@ -38,8 +55,12 @@ constexpr size_t itoa(char* buf, size_t cap, json_int_t value) {
     return pos;
 }
 
-// Write a double to buf. Simple fixed-point: up to 10 decimal digits,
-// trailing zeros stripped.
+// Constexpr fixed-point conversion. Up to 10 decimal digits, trailing
+// zeros stripped. Faithful but not shortest — 3.3 emits "3.2999999999"
+// because the double's true value sits just below 3.3 and the loop
+// never reaches a clean zero. Used by `JsonBuf<N>` (constexpr literal
+// JSON) and by AVR builds (where snprintf-float would add ~1.5 KB).
+// Runtime wire emitters should use `dtoa_shortest` instead.
 constexpr size_t dtoa(char* buf, size_t cap, double value) {
     if (cap == 0) return 0;
     size_t pos = 0;
@@ -95,6 +116,41 @@ constexpr size_t dtoa(char* buf, size_t cap, double value) {
     }
 
     return pos;
+}
+
+// Runtime shortest-round-trip formatter. Walks precisions 1..17 with
+// %.*g and accepts the first that round-trips via strtod. 17 sig digits
+// is enough to uniquely identify any IEEE-754 double, so the loop
+// terminates. Falls back to %.17g if nothing round-tripped (defensive —
+// shouldn't happen for finite values).
+//
+// On AVR (NOTE_INT32_MATH=1), forwards to constexpr `dtoa` — the
+// snprintf/sscanf machinery adds ~1.5 KB of float-printf code that
+// AVR-class targets don't want.
+inline size_t dtoa_shortest(char* buf, size_t cap, double value) {
+#if NOTE_INT32_MATH
+    return dtoa(buf, cap, value);
+#else
+    if (cap == 0) return 0;
+
+    char tmp[32];
+    for (int prec = 1; prec <= 17; ++prec) {
+        int n = std::snprintf(tmp, sizeof(tmp), "%.*g", prec, value);
+        if (n <= 0) break;
+        double parsed = 0.0;
+        if (std::sscanf(tmp, "%lf", &parsed) == 1 && parsed == value) {
+            size_t copy = static_cast<size_t>(n) < cap ? static_cast<size_t>(n) : cap;
+            for (size_t i = 0; i < copy; ++i) buf[i] = tmp[i];
+            return copy;
+        }
+    }
+
+    int n = std::snprintf(tmp, sizeof(tmp), "%.17g", value);
+    if (n <= 0) return 0;
+    size_t copy = static_cast<size_t>(n) < cap ? static_cast<size_t>(n) : cap;
+    for (size_t i = 0; i < copy; ++i) buf[i] = tmp[i];
+    return copy;
+#endif
 }
 
 } // namespace note::detail

@@ -1380,17 +1380,7 @@ Moving from C to C++ brings benefits independent of note-cpp:
 
 ### Binary size
 
-**AVR (ATmega328P, 32 KB flash / 2 KB RAM)** — using `StaticNotecard`
-with streaming transport (see `tools/binary-size-comparison/`):
-
-| | note-c | note-cpp | Delta |
-|---|---|---|---|
-| Flash | 24,646 (76%) | 14,592 (45%) | **-10,054 (-41%)** |
-| RAM | 739 (36%) | 712 (35%) | **-27 (-4%)** |
-
-note-cpp is 41% smaller on flash because the streaming transport and
-SAX parser eliminate the cJSON tree, and `StaticNotecard` has zero
-virtual dispatch overhead.
+**AVR (ATmega328P, 32 KB flash / 2 KB RAM)** — note-cpp matches note-c at the typed API on flash (25,680 B vs 25,076 B, +604 B for the typed surface) and drops to about 11,700 B at the raw `JsonView`-scan style with `F()` flash keys (−13 KB vs note-c, zero heap). RAM is consistently lower because no cJSON tree is in memory. See the [full progression table in the README](../../../README.md#the-full-progression-arduino-uno-8-request-app) for the row-by-row breakdown and the [AVR guide § Worked example](avr-guide.md#worked-example--measured-sizes) for build-flag reproducibility.
 
 **ESP32-S3** — with the same cJSON backend and identical operations
 (hub.set, note.template, card.temp, note.add):

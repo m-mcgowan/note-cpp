@@ -30,17 +30,26 @@ note-cpp exposes the same Notecard requests through several layers, each with a 
 
 ### Worked example — measured sizes
 
-The matrix below comes from [`tools/binary-size-comparison/src/main_avr_notecpp.cpp`](../../../tools/binary-size-comparison/src/main_avr_notecpp.cpp), an 8-endpoint app (configure hub, define template, read sensors, publish, check status, read voltage, read inbound notes, read env vars). Set `-DAPI_STYLE=N` to pick a style; each `pio run -e avr-notecpp-<env>` produces one row.
+The matrix below comes from [`tools/binary-size-comparison/src/main_avr_notecpp.cpp`](../../../tools/binary-size-comparison/src/main_avr_notecpp.cpp), an 8-request app (configure hub, define template, read sensors, publish, check status, read voltage, read inbound notes, read env vars). Set `-DAPI_STYLE=N` to pick a style; each `pio run -e avr-notecpp-<env>` produces one row.
 
 | Style | Env | Flash | % flash | RAM | Notes |
 |---|---|---|---|---|---|
-| 1 — API groups | `avr-notecpp` | 25,198 B | 78.1% | 773 B | Most ergonomic; `api.hub.set().product(...).execute()` |
-| 2 — Direct types | `avr-notecpp-direct` | 24,788 B | 76.8% | 753 B | Same response parser as style 1, no group factory chains |
-| 3 — Raw + SAX sink | `avr-notecpp-raw` | 21,172 B | 65.6% | 781 B | Pulls in SAX parser; no response buffer |
-| 4 — Raw + JsonView | `avr-notecpp-scan` | 11,322 B | 35.1% | 695 B | No SAX parser; you own the response buffer |
+| 1 — API groups | `avr-notecpp` | 25,680 B | 79.6% | 773 B | Most ergonomic; `api.hub.set().product(...).execute()` |
+| 2 — Direct types | `avr-notecpp-direct` | 25,094 B | 77.8% | 753 B | Same response parser as style 1, no group factory chains |
+| 3 — Raw + SAX sink | `avr-notecpp-raw` | 21,754 B | 67.4% | 781 B | Pulls in SAX parser; no response buffer |
+| 4 — Raw + JsonView | `avr-notecpp-scan` | 11,790 B | 36.6% | 695 B | No SAX parser; you own the response buffer |
+| 5 — Raw + JsonView (`F()` keys) | `avr-notecpp-scan-flash` | 11,692 B | 36.2% | 679 B | Same as 4 with scan keys in PROGMEM |
 | (ref) note-c | `avr-notec` | 25,076 B | 77.7% | 729 B + 371 B heap = 1,100 B | Comparison baseline |
 
-Reproduce: `pio run -d tools/binary-size-comparison -e avr-notecpp-direct -e avr-notecpp-raw -e avr-notecpp-scan -e avr-notec`. The build flags to enable each style are `-DAPI_STYLE=1..4`.
+The styles 1–2 rows above build with `-DNOTE_NO_RESPONSE_RAII=1`. The library's [Response RAII](../../memory.md#response-string-lifetimes) destructor that releases interned strings is a no-op when the allocator is an arena — and on AVR you almost always use an arena (heap is verboten on Uno). The opt-out drops ~2.2 KB of unreachable destructor code. If you build without the flag, expect ~27.9 KB for style 1. The `avr_notecpp_common` env in the comparison harness sets it for you; for your own app, mirror the pattern:
+
+```ini
+build_flags =
+    -DNOTE_MINIMAL
+    -DNOTE_NO_RESPONSE_RAII=1
+```
+
+Reproduce: `pio run -d tools/binary-size-comparison -e avr-notecpp -e avr-notecpp-direct -e avr-notecpp-raw -e avr-notecpp-scan -e avr-notecpp-scan-flash -e avr-notec`. The build flags to enable each style are `-DAPI_STYLE=1..4`.
 
 ## Sizing the arena
 

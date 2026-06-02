@@ -1,19 +1,19 @@
 {
   "envs": {
     "avr-notecpp": {
-      "flash": 27886,
-      "ram": 782,
-      "comment": "Style 1: typed API groups via Api<UnstructuredCtx, StaticNotecard<SerialStack>>. The most common StaticNotecard usage. Grew from 25,198 during the spike/transport-byte-channel refactor (IByteTransport + ITransact split, JSONB+tree orthogonality)."
+      "flash": 25680,
+      "ram": 773,
+      "comment": "Style 1: typed API groups via Api<UnstructuredCtx, StaticNotecard<SerialStack>>. The most common StaticNotecard usage. Builds with NOTE_NO_RESPONSE_RAII=1 since AVR uses arena allocation and the per-Response interned-string cleanup is a no-op for arena users; without the flag the build is ~27.9 KB (the Phase 1 RAII destructor code is unreachable but the linker can't prove it on AVR)."
     },
     "avr-notecpp-direct": {
-      "flash": 27028,
-      "ram": 762,
-      "comment": "Style 2: nc.execute(req) bypassing the Api groups. Drops a layer of group thunks. Grew from 24,788 during the transport refactor."
+      "flash": 25094,
+      "ram": 753,
+      "comment": "Style 2: nc.execute(req) bypassing the Api groups. Drops a layer of group thunks. Same NOTE_NO_RESPONSE_RAII=1 carve-out as avr-notecpp."
     },
     "avr-notecpp-raw": {
       "flash": 21754,
       "ram": 781,
-      "comment": "Style 3: transact_dispatch(RequestSource, ...) raw entry \u2014 bypasses StaticNotecard entirely. Grew from 21,172 during the transport refactor (BuildFn \u2192 RequestSource API change)."
+      "comment": "Style 3: transact_dispatch(RequestSource, ...) raw entry — bypasses StaticNotecard entirely, doesn't materialise Response objects, so NOTE_NO_RESPONSE_RAII makes no difference. Grew from 21,172 during the transport refactor (BuildFn → RequestSource API change)."
     },
     "avr-notecpp-multistack": {
       "flash": 25216,

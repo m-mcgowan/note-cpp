@@ -151,12 +151,14 @@ Each row peels off one more layer; the typed API (rows 1–2) is what most users
 
 | # | Style | Flash | Δ flash vs typed | RAM |
 |---|---|---|---|---|
-| — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | +2 B | 729 B + 371 B heap |
-| 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 25,470 B | +396 B | 804 B + 0 B heap |
-| 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 25,074 B | baseline | 768 B + 0 B heap |
-| 3 | **[Raw JSON + SAX sink](docs/using-the-api.md#raw-json)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 21,192 B | −3,882 B | 792 B + 0 B heap |
-| 4 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (RAM keys) | 11,110 B | **−13,964 B** | 696 B + 0 B heap |
-| 5 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (`F()` flash keys) | **11,078 B** | **−13,996 B** | **680 B** + 0 bytes heap |
+| — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | −18 B | 729 B + 371 B heap |
+| 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 25,680 B | +586 B | 773 B + 0 B heap |
+| 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 25,094 B | baseline | 753 B + 0 B heap |
+| 3 | **[Raw JSON + SAX sink](docs/using-the-api.md#raw-json)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 21,754 B | −3,340 B | 781 B + 0 B heap |
+| 4 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (RAM keys) | 11,790 B | **−13,304 B** | 695 B + 0 B heap |
+| 5 | **[Raw + `JsonView` scan](docs/using-the-api.md#raw-json)** (`F()` flash keys) | **11,692 B** | **−13,402 B** | **679 B** + 0 bytes heap |
+
+Rows 1–2 build with `-DNOTE_NO_RESPONSE_RAII=1` (arena allocators don't need per-`Response` cleanup — see the [AVR guide § Worked example](docs/platforms/arduino/avr-guide.md#worked-example--measured-sizes)). Without that flag rows 1–2 grow by ~2.2 KB.
 
 Per-row code patterns: [Arduino guide § Binary size comparison](docs/platforms/arduino/guide.md#binary-size-comparison). Compile-time switches: [docs/feature-flags.md](docs/feature-flags.md). Benchmark harness: [tools/binary-size-comparison/](tools/binary-size-comparison/).
 

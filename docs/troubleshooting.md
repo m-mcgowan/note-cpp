@@ -140,6 +140,6 @@ Fix: enable wire tracing (`NOTE_DEBUG_ENABLED=1` plus a listener that dumps both
 
 ## See also
 
-- [`known-issues.md`](known-issues.md) — confirmed library bugs with workarounds (Apple Clang `consteval`, JSONB raw bodies)
+- [`known-issues.md`](known-issues.md) — confirmed library bugs with workarounds (Apple Clang `consteval`)
 - [`debugging.md`](debugging.md) — wire tracing, transport diagnostics, debug categories
 - [`getting-started.md`](getting-started.md) — top-down walkthrough from a clean project to your first request

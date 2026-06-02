@@ -311,16 +311,139 @@ TEST_CASE("jsonb builder: open builder (streaming transport path)") {
     CHECK(bytes.front() == jsonb::kBeginObject);
 }
 
-TEST_CASE("jsonb builder: add_raw is a no-op") {
-    auto bytes = jsonb_build([](JsonBuilder& b) {
-        b.add_raw("body", R"({"nested":true})");
-    });
+// add_raw is only implemented when raw bodies are wanted under JSONB — see
+// the gate in jsonb.hpp. Under NOTE_MINIMAL the body is a no-op and these
+// assertions would fail, so the suite skips them on that build.
+#if !NOTE_MINIMAL
+TEST_CASE("jsonb builder: add_raw re-encodes a JSON fragment as opcodes") {
+    SUBCASE("flat object with one bool field") {
+        auto bytes = jsonb_build([](JsonBuilder& b) {
+            b.add_raw("body", R"({"nested":true})");
+        });
+        // Expected wire:
+        //   kBeginObject                              (root opened by ctor)
+        //   kItem "body\0" kBeginObject               (outer key + fragment root)
+        //   kItem "nested\0" kTrue                    (one field)
+        //   kEndObject                                (close fragment)
+        //   kEndObject                                (close root, via to_view())
+        std::vector<uint8_t> expected = {
+            jsonb::kBeginObject,
+            jsonb::kItem, 'b','o','d','y','\0',
+            jsonb::kBeginObject,
+            jsonb::kItem, 'n','e','s','t','e','d','\0',
+            jsonb::kTrue,
+            jsonb::kEndObject,
+            jsonb::kEndObject,
+        };
+        REQUIRE(bytes == expected);
+    }
 
-    // Only kBeginObject + kEndObject — raw fragment is silently dropped
-    REQUIRE(bytes.size() == 2);
-    CHECK(bytes[0] == jsonb::kBeginObject);
-    CHECK(bytes[1] == jsonb::kEndObject);
+    SUBCASE("mixed primitive fields") {
+        auto bytes = jsonb_build([](JsonBuilder& b) {
+            b.add_raw("body", R"({"i":42,"f":3.5,"s":"hi","z":null})");
+        });
+        // Walk the expected opcode shape rather than every byte: exactly one
+        // kBeginObject after the outer-key "body\0", then the four field
+        // opcodes in declaration order.
+        size_t pos = 0;
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);                    // root
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"body"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);                    // fragment root
+        // Field 1: i = 42 → kInt32 + LE32 payload
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"i"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kInt32);
+        pos += 4;
+        // Field 2: f = 3.5 → kDouble + 8 bytes
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"f"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kDouble);
+        pos += 8;
+        // Field 3: s = "hi" → kString + bytes + null
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"s"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kString);
+        for (char c : std::string_view{"hi"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        // Field 4: z = null → kNull
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"z"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kNull);
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);                       // close fragment
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);                       // close root
+        REQUIRE(pos == bytes.size());
+    }
+
+    SUBCASE("nested object") {
+        auto bytes = jsonb_build([](JsonBuilder& b) {
+            b.add_raw("body", R"({"location":{"lat":37}})");
+        });
+        // root, kItem body, begin frag, kItem location, begin nested,
+        // kItem lat, int, end nested, end frag, end root
+        size_t pos = 0;
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"body"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"location"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"lat"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kInt32);
+        pos += 4;
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);
+        REQUIRE(pos == bytes.size());
+    }
+
+    SUBCASE("primitive array") {
+        auto bytes = jsonb_build([](JsonBuilder& b) {
+            b.add_raw("body", R"({"vals":[1,2,3]})");
+        });
+        // root, kItem body, begin frag, kItem vals, kBeginArray,
+        // (kInt32 + LE32) × 3, kEndArray, end frag, end root
+        size_t pos = 0;
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"body"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kBeginObject);
+        REQUIRE(bytes[pos++] == jsonb::kItem);
+        for (char c : std::string_view{"vals"}) REQUIRE(bytes[pos++] == static_cast<uint8_t>(c));
+        REQUIRE(bytes[pos++] == '\0');
+        REQUIRE(bytes[pos++] == jsonb::kBeginArray);
+        for (int n = 0; n < 3; ++n) {
+            REQUIRE(bytes[pos++] == jsonb::kInt32);
+            pos += 4;
+        }
+        REQUIRE(bytes[pos++] == jsonb::kEndArray);
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);
+        REQUIRE(bytes[pos++] == jsonb::kEndObject);
+        REQUIRE(pos == bytes.size());
+    }
+
+    SUBCASE("empty fragment is silently dropped") {
+        auto bytes = jsonb_build([](JsonBuilder& b) {
+            b.add_raw("body", "");
+        });
+        // Only the root open/close — empty fragment short-circuits.
+        REQUIRE(bytes.size() == 2);
+        CHECK(bytes[0] == jsonb::kBeginObject);
+        CHECK(bytes[1] == jsonb::kEndObject);
+    }
 }
+#endif // !NOTE_MINIMAL
 
 TEST_CASE("jsonb builder: reset re-emits kBeginObject") {
     ByteCapture cap;

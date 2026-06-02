@@ -50,9 +50,12 @@ public:
 
     constexpr BodyValue() = default;
 
-#if NOTE_JSONB
-    // Raw JSON string bodies are not supported with JSONB wire format.
-    // Use body() with a lambda or typed struct instead.
+#if NOTE_JSONB && NOTE_MINIMAL
+    // Raw JSON string bodies are unavailable under the JSONB + MINIMAL
+    // combination: the SAX-replay add_raw impl (jsonb.hpp) would pull
+    // ~6 KB of full-text parser + float printf into the AVR build, which
+    // doesn't fit. Use body() with a lambda or typed struct instead —
+    // those shapes never go through add_raw. See docs/known-issues.md.
 #elif __cplusplus >= 202002L && !defined(__clang__) && __GNUC__ >= 14
     // String literal: validated at compile time as well-formed JSON object.
     //
@@ -62,6 +65,11 @@ public:
     // expression" on GCC 13.x — including 13.4, even though the direct call
     // form (`constexpr BodyValue v = "..."`) compiles cleanly. Stay on the
     // GCC 14+ gate until the inherited-ctor case works empirically.
+    //
+    // Wire format: in JSON the fragment is embedded verbatim via
+    // `add_raw`; in JSONB it's SAX-parsed and re-encoded as opcodes by
+    // `StreamingJsonbBuilder::add_raw`. Either way the user-facing
+    // surface is the same.
     template<std::size_t N>
     consteval BodyValue(const char (&s)[N])
         : str_(string_view(s, N - 1)), write_fn_(&write_string) {

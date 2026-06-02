@@ -28,10 +28,12 @@ Each file is self-contained and compiled exactly once:
 - `field_types.cpp` — instantiates every generated field type to
   catch `ResponseField` template instantiation errors that might
   otherwise only appear per-consumer.
-- `jsonb_body_alternatives.cpp` — under `NOTE_JSONB=1`, raw string
-  bodies are a compile error (intentional). This file compiles the
-  *supported* body-setter shapes (`body(...)` lambdas, typed
-  structs) to ensure they still work.
+- `jsonb_body_alternatives.cpp` — under `NOTE_JSONB=1`, compiles the
+  `body(...)` lambda and typed-struct shapes, which never go through
+  `add_raw` and so avoid pulling the SAX lexer into the build.
+- `jsonb_raw_body.cpp` — under `NOTE_JSONB=1`, raw string body
+  literals (`req.body = R"(...)"`) compile and produce JSONB opcodes
+  via `add_raw`'s SAX-replay path (skipped under `NOTE_MINIMAL`).
 - `minimal_mode.cpp` — `-DNOTE_MINIMAL=1` full build-check. Most AVR
   targets use this flag combination; this guards against a compile-
   time regression.

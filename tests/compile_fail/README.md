@@ -58,8 +58,6 @@ Some backend modes forbid certain input shapes:
 - `buffered_requires_string.cpp`, `debug_requires_string.cpp` —
   callbacks that take `string_view` can't accept `const char*` on
   certain configurations.
-- `jsonb_raw_body.cpp` — raw JSON string body literals are forbidden
-  when `NOTE_JSONB=1`.
 
 ### Generic API guards
 

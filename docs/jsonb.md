@@ -87,7 +87,7 @@ JSONB does not use CRC. The `"crc":"XXXX:YYYYYYYY"` field is a JSON-specific mec
 
 ## Limitations
 
-- **No raw JSON embedding:** `add_raw()` is a no-op in JSONB mode. Raw JSON fragments (e.g., body lambdas that emit pre-formatted JSON) cannot be embedded in JSONB without conversion.
+- **Raw JSON embedding pulls the SAX lexer in:** `add_raw()` works under JSONB — it SAX-parses the fragment and re-emits opcodes — but the lexer must be linked in (~6 KB of full-text parser + float printf). Under `NOTE_MINIMAL` the impl is gated off and the `BodyValue` raw-string constructor is disabled, so raw bodies are a compile error on the AVR profile. Use `body(lambda)` or `body(struct)` instead; those shapes never go through `add_raw`. See [known-issues.md](known-issues.md) for the carve-out.
 - **Compile-time only:** The wire format is selected at compile time via `NOTE_JSONB`. Runtime switching is not supported.
 - **Firmware requirement:** Requires Notecard firmware 11.x or later. Earlier firmware does not support JSONB.
 

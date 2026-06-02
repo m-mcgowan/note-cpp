@@ -11,6 +11,7 @@
 /// transport path).
 
 #include "json.hpp"
+#include "json_sax.hpp"
 #include "json_sax_streaming.hpp"
 #include "lexer/sax_adapter.hpp"
 #include "link/cobs.hpp"
@@ -105,10 +106,27 @@ public:
         return *this;
     }
 
-    JsonBuilder& add_raw(string_view, string_view) override {
-        // No-op — raw JSON fragments cannot be embedded in JSONB.
-        // BodyValue's raw-string constructor is disabled when NOTE_JSONB=1
-        // so this path is unreachable in normal use.
+    JsonBuilder& add_raw(string_view key, string_view json_fragment) override {
+#if !NOTE_MINIMAL
+        // Re-encode the raw JSON fragment as JSONB opcodes by SAX-parsing
+        // it through ReplaySink (defined below). The fragment must be a
+        // JSON object — sax_parse rejects other shapes — so a body like
+        // `R"({"temp":22.5})"` lands as `kItem(key) + kBeginObject + ...
+        // + kEndObject` in the wire stream.
+        //
+        // Gated off under NOTE_MINIMAL so the AVR/JSONB build doesn't
+        // pull the full-text SAX parser (sax_parse, parse_double,
+        // snprintf-%g) into the binary — that combination is ~6 KB of
+        // flash that the 32 KB Uno target can't absorb. The BodyValue
+        // raw-string constructor is correspondingly disabled in body.hpp
+        // under the same combination, so callers can't reach this code
+        // path with a no-op underneath.
+        if (json_fragment.empty()) return *this;
+        ReplaySink sink(*this, key);
+        (void)sax_parse(json_fragment, sink);
+#else
+        (void)key; (void)json_fragment;
+#endif
         return *this;
     }
 
@@ -181,6 +199,89 @@ public:
 private:
     JsonWriter& writer_;
     bool closed_ = false;
+
+    // SAX → JSONB-opcode replay. Used by add_raw to translate a raw JSON
+    // fragment (e.g. a body literal) into JSONB opcodes one event at a
+    // time. Nested so it can reach the private emit_* helpers directly.
+    //
+    // Context tracking: a single uint32_t stack records "are we in an
+    // array?" per nesting level (1 bit per level, LSB = current). 32
+    // levels is far beyond the depth of any Notecard body in practice.
+    struct ReplaySink : JsonSink {
+        StreamingJsonbBuilder& b;
+        string_view outer_key;
+        uint32_t array_stack = 0;
+        int depth = 0;
+
+        ReplaySink(StreamingJsonbBuilder& bb, string_view k) : b(bb), outer_key(k) {}
+
+        void push(bool is_arr) { array_stack = (array_stack << 1) | (is_arr ? 1u : 0u); }
+        void pop()             { array_stack >>= 1; }
+        bool in_array() const  { return (array_stack & 1u) != 0; }
+
+        // Emit kItem(k) when the current value is a field of an object.
+        // Skipped for array elements (no kItem) and for the root (the
+        // outer_key was emitted by the caller via on_object_begin /
+        // on_array_begin at depth 0).
+        void emit_key(string_view k) {
+            if (depth > 0 && !in_array()) b.emit_item(k);
+        }
+
+        void on_object_begin(string_view k) override {
+            if (depth == 0)         b.emit_item(outer_key);
+            else if (!in_array())   b.emit_item(k);
+            b.emit(jsonb::kBeginObject);
+            push(false);
+            depth++;
+        }
+        void on_object_end(string_view) override {
+            b.emit(jsonb::kEndObject);
+            depth--;
+            pop();
+        }
+        void on_array_begin(string_view k) override {
+            if (depth == 0)         b.emit_item(outer_key);
+            else if (!in_array())   b.emit_item(k);
+            b.emit(jsonb::kBeginArray);
+            push(true);
+            depth++;
+        }
+        void on_array_end(string_view) override {
+            b.emit(jsonb::kEndArray);
+            depth--;
+            pop();
+        }
+        void on_null(string_view k) override {
+            emit_key(k);
+            b.emit(jsonb::kNull);
+        }
+        void on_bool(string_view k, bool v) override {
+            emit_key(k);
+            b.emit(v ? jsonb::kTrue : jsonb::kFalse);
+        }
+        void on_string(string_view k, string_view v) override {
+            emit_key(k);
+            b.emit(jsonb::kString);
+            b.writer_.write(v.data(), v.size());
+            b.emit('\0');
+        }
+        void on_number(string_view k, string_view raw) override {
+            emit_key(k);
+            bool is_float = false;
+            for (char c : raw) {
+                if (c == '.' || c == 'e' || c == 'E') { is_float = true; break; }
+            }
+            if (is_float) {
+                double d = note::parse_double(raw);
+                b.emit(jsonb::kDouble);
+                b.emit_bytes(&d, 8);
+            } else {
+                json_int_t i = note::parse_int(raw);
+                b.emit(jsonb::kInt32);
+                b.emit_le32(static_cast<int32_t>(i));
+            }
+        }
+    };
 
     void emit(uint8_t opcode) {
         writer_.write(reinterpret_cast<const char*>(&opcode), 1);

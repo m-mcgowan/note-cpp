@@ -11,10 +11,11 @@
 //   4. Conditional    → .time(t) returns results only if changed since t.
 //
 // String lifetime: DeviceConfig.region / .locale are declared as
-// note::string_view, so they point into the transport buffer and stay
-// valid only until the next execute() call. For longer-lived values
-// declare them as std::string, which copies into the struct — see
-// docs/response-lifetimes.md for the full story.
+// note::string_view, so they follow the Notecard's allocator rule —
+// heap-interned by default (valid for the lifetime of the response),
+// or arena-interned if you set an arena. For values you want to copy
+// into struct-owned storage instead, declare them as std::string —
+// see docs/response-lifetimes.md for the full story.
 //
 // Build & run (mock, no hardware):
 //   c++ -std=c++20 -I include examples/stdcpp/env-vars.cpp && ./a.out
@@ -46,9 +47,10 @@ using namespace note;
 // float type works — StructSink narrows from the wire integer to
 // whatever your field is.
 //
-// string_view fields are cheap but tied to the transport buffer;
-// std::string fields copy into self-owned storage and survive the next
-// execute() call. Pick per field.
+// string_view fields are cheap; their lifetime tracks the allocator
+// (the Response's heap-interned storage by default, or your arena if
+// you set one). std::string fields copy into the struct itself and
+// outlive the Response unconditionally. Pick per field.
 struct DeviceConfig {
     note::string_view region;
     note::string_view locale;

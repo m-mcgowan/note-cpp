@@ -2,29 +2,47 @@
 
 `execute()` returns a response with typed fields. Some of those fields are **values** — numbers, booleans — and some are **views** — `string_view` fields like `r.version` or `r.device` that point at memory the library owns.
 
-**The rule:**
+**The rule** depends on which allocator the `Notecard` is using:
 
 - **Value fields** (`bool`, `int32_t`, `double`, etc.): copied into the response struct. Yours forever. Safe.
-- **`string_view` fields**: valid **until the next `execute()` call on the same `Notecard`** — unless you set an arena allocator, in which case they're valid until the arena is reset.
+- **`string_view` fields with the default heap allocator** (the common case — `Notecard nc(transport);`): the library interns each string into heap-backed storage that the `Response` owns. Views stay valid as long as the `Response` is alive; the destructor frees the strings.
+- **`string_view` fields with no allocator** (`Notecard nc(backend, transport);` — tree mode only): views point into the backend's parsed response and are valid **until the next `execute()` call**, which reuses that storage.
+- **`string_view` fields with an arena allocator**: views point into the arena and are valid until you call `arena.reset()` — independent of how long the `Response` lives.
 
-This doc explains when that matters and how to extend the lifetime if you need to.
+This doc explains when each case matters and how to extend the lifetime if you need to.
 
-## The default case
+## The two short-lived cases
+
+### Tree mode with no allocator
 
 ```cpp
+Notecard nc(backend, transport);   // tree mode, no interning
 auto r = nc.card.version().execute();
-auto ver = r.version;        // string_view — points into the transport buffer
+auto ver = r.version;        // points into the backend's parsed response
 std::printf("%s\n", ver.c_str());
 
-nc.hub.set().execute();      // transport buffer gets reused
+nc.hub.set().execute();      // the backend parses on top of the prior tree
 // ver is now dangling — don't use it
 ```
 
 For most code this is fine: read the response, act on it, move on. If a response field only lives inside one logical step, you don't need an allocator.
 
+### Default heap allocator, but Response goes out of scope
+
+```cpp
+note::string_view cached;
+{
+    auto r = nc.card.version().execute();   // heap-interned strings
+    cached = r.version;                      // view into the Response's storage
+}                                            // ~Response() frees those strings
+std::printf("%s\n", cached.data());          // dangling
+```
+
+Either keep the `Response` alive across the use site, or copy the string into something that owns its bytes (a `std::string`, a `char[N]` buffer, or an arena).
+
 ## Extending lifetime with an arena
 
-If you need response strings to survive the next request, set an **arena allocator** on the `Notecard`. The library will copy each response `string_view` into the arena, and the views you see will point into that arena instead of the transport buffer.
+If you need response strings to survive both the next request *and* the destruction of the `Response`, set an **arena allocator** on the `Notecard`. The library interns each response `string_view` into the arena as it parses, so the views you see point into the arena rather than into the library's per-response storage.
 
 ```cpp
 uint8_t buf[256];
@@ -32,9 +50,9 @@ note::MonotonicArena arena(buf, sizeof(buf));
 nc.set_allocator(note::arena_allocator(arena));
 
 auto r = nc.card.version().execute();
-auto ver = r.version;       // a copy was made into the arena
+auto ver = r.version;       // interned into the arena
 
-nc.hub.set().execute();     // transport buffer reused, but ver is unaffected
+nc.hub.set().execute();     // library response storage is reused, but ver is unaffected
 std::printf("%s\n", ver.c_str());    // still valid
 ```
 
@@ -68,7 +86,7 @@ field type decides ownership:
 
 | Field type            | Behaviour                                                          | Lifetime                               |
 |-----------------------|--------------------------------------------------------------------|----------------------------------------|
-| `note::string_view`   | View over the transport / arena buffer (same as response fields).  | Until next `execute()` or arena reset. |
+| `note::string_view`   | View over the library's response storage / arena buffer (same as response fields). | Tracks the Response, the arena, or until next `execute()` — same rule as response fields. |
 | `std::string`         | Copied into a self-owned heap buffer.                              | As long as the struct is alive.        |
 | `char[N]`             | `memcpy` with explicit null terminator; truncates to `N-1` bytes.  | As long as the struct is alive.        |
 | Arduino `String`      | Copied if the core exposes `String(const char*, size_t)`. Stock AVR Arduino does; others vary. | As long as the struct is alive. |

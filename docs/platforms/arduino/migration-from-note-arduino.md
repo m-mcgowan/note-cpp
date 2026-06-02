@@ -1371,8 +1371,9 @@ Moving from C to C++ brings benefits independent of note-cpp:
   `JGetNumber` returning 0.0 on a misspelled field name.
 - **Namespaces** — no global symbol pollution. Your code and the
   Notecard API don't compete for names.
-- **Zero-copy responses** — response fields are views into the
-  transport buffer, not heap-allocated copies.
+- **Zero-copy responses** — string response fields are views into the
+  library's own response storage (the backend's parsed response or the
+  allocator-backed intern pool), not copies you have to free yourself.
 - **Compile-time validation** (C++20) — enum values, flag combinations,
   and JSON body structure are checked by the compiler before the code
   reaches the device.
@@ -1408,7 +1409,7 @@ duplication.
 | Concern | note-c | note-cpp |
 |---|---|---|
 | **Heap per request** | cJSON `malloc`/`free` per request | `StaticJsonBackend` — stack-allocated, zero heap in steady state |
-| **Response lifetime** | Caller must `deleteResponse` | RAII — automatic cleanup, `string_view` into transport buffer |
+| **Response lifetime** | Caller must `deleteResponse` | RAII — `Response` owns its interned strings (default heap) or views the backend's parsed response (`Notecard(backend, transport)` with no allocator); arena-bound when an arena is configured |
 | **Transport buffers** | `malloc`'d, freed per call | Reused `std::string` member — no allocation after warmup |
 | **Error strings** | `ERRSTR(long, short)` macro | `string_view` literals — linker deduplicates |
 

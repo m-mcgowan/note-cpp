@@ -326,7 +326,7 @@ if (r) {
 
 ## Response lifetimes
 
-Response `string_view` fields point into the transport buffer and are valid until the next `execute()` call. Non-string fields are copied. To make views outlive the next call, attach an arena — see [response-lifetimes.md](response-lifetimes.md) for sizing, the arena lifecycle, and the full set of patterns.
+Response `string_view` fields point into memory the library owns — by default into heap-backed storage that the `Response` itself owns (freed when the `Response` is destroyed), or, if the `Notecard` was constructed with `Notecard(backend, transport)` and no allocator, into the backend's parsed response (replaced on the next `execute()`). Non-string fields are always copied. To make views outlive the `Response` *and* survive subsequent calls, attach an arena — see [response-lifetimes.md](response-lifetimes.md) for sizing, the arena lifecycle, and the full set of patterns.
 
 ## Raw access
 

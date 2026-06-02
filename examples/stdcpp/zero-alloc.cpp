@@ -6,9 +6,9 @@
 // cycles, suitable for hard real-time or memory-constrained embedded systems.
 //
 // Pattern 1: StaticJsonBackend — truly zero heap allocation.
-//   All JSON building and parsing uses fixed member buffers. Transport returns
-//   string_view into its member buffer. Response string_views point into the
-//   transport buffer (valid until next execute() call).
+//   All JSON building and parsing uses fixed member buffers. Response
+//   string_views point into the backend's parsed-response buffer
+//   (valid until the next execute() call reuses it).
 //
 // Pattern 2: StringPool — arena-backed response strings that survive reuse.
 //   set_allocator() copies response string_views into a MonotonicArena so they
@@ -82,10 +82,9 @@ static void demo_buffer_backend() {
     note::Api api(nc);
 
     // Execute a request — ZERO heap allocations in steady state.
-    // The request is built into backend's member buffer.
-    // The transport returns string_view into its member buffer.
-    // The response is parsed using backend's member jsmn tokens.
-    // Response string_views point into the transport buffer.
+    // The request is built into the backend's member buffer.
+    // The response is parsed using the backend's member jsmn tokens.
+    // Response string_views point into the backend's parsed response.
     auto r = api.card.version().execute();
     if (r.has_value()) {
         std::printf("  version: %s\n", r.version.c_str());
@@ -104,7 +103,7 @@ static void demo_buffer_backend() {
     if (r2.has_value()) {
         std::puts("  hub.set: OK");
     }
-    // Note: r.version is now invalid (transport buffer was reused)
+    // Note: r.version is now invalid (the backend's parsed response was reused)
 
     std::puts("");
 }
@@ -121,7 +120,7 @@ static void demo_string_pool() {
 
     // Configure a MonotonicArena for string interning.
     // When set, execute() copies response string_views into the arena
-    // so they survive transport buffer reuse.
+    // so they survive the backend's parsed-response storage being reused.
     char arena_buf[1024];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
     nc.set_allocator(note::arena_allocator(arena));
@@ -132,11 +131,11 @@ static void demo_string_pool() {
     transport.response_buf = R"({"version":"notecard-7.2.1","device":"dev:12345"})";
     auto r1 = api.card.version().execute();
 
-    // Second request — transport buffer is overwritten
+    // Second request — the backend's parsed-response storage is overwritten
     transport.response_buf = R"({"version":"notecard-8.0.0","device":"dev:99999"})";
     auto r2 = api.card.version().execute();
 
-    // r1's strings are still valid — they live in the arena, not the transport buffer
+    // r1's strings are still valid — they live in the arena, not the backend's parsed response
     if (r1.has_value()) {
         std::printf("  r1 version: %s\n", r1.version.c_str());
         std::printf("  r1 device:  %s\n", r1.device.c_str());

@@ -24,13 +24,14 @@ If you're in the first row, stop reading. If you're anywhere else, continue.
 
 ## Picking an allocator
 
-Every `Notecard` carries one `Allocator` (set at construction or via `set_allocator()`). The allocator is where response string interning happens — the SAX parser copies wire strings into allocator-backed storage so the views in your typed `Response` outlive the transport buffer.
+Most `Notecard` constructors carry an `Allocator` (set at construction or via `set_allocator()`); the SAX parser copies wire strings into that allocator-backed storage as it parses, so the views in your typed `Response` outlive the per-call parse storage. The exception is the tree-mode constructor `Notecard(backend, transport)`, which intentionally has no allocator — its responses live in the backend's parsed tree and are replaced on the next call (see the mode-by-mode table below).
 
 Each `Response` captures its allocator (by value) and releases its interned strings in its destructor — that's the **Phase 1 RAII contract** the library guarantees regardless of which allocator you picked. The difference between allocators is where the bytes come from, what `deallocate` does when the Response dtor runs, and what other lifecycle hooks (`reset()`) you have available.
 
 | Allocator | When to use | Lifetime of response strings | What `~Response()` does |
 |---|---|---|---|
-| **Default (heap-backed)** — `Notecard nc(transport);` or `Notecard(backend, transport)` with no `set_allocator` | Desktop, prototyping, short-running scripts. Anywhere `malloc`/`free` is available and you don't need bounded RAM. | Valid until the `Response` goes out of scope; the destructor calls `free` on every interned string. No accumulation across `execute()` calls. | One `free` per interned string field. |
+| **Default (heap-backed)** — `Notecard nc(transport);` (any constructor that takes an `Allocator` parameter; it defaults to malloc/free) | Desktop, prototyping, short-running scripts. Anywhere `malloc`/`free` is available and you don't need bounded RAM. | Valid until the `Response` goes out of scope; the destructor calls `free` on every interned string. No accumulation across `execute()` calls. | One `free` per interned string field. |
+| **No allocator (tree mode)** — `Notecard nc(backend, transport);` with no `set_allocator` | Desktop only when you want zero-allocation reads inside one `execute()`. Strings are not copied — they live in the backend's parsed response. | Valid until the next `execute()` call reuses the backend's storage. | No-op — there's nothing interned to free. |
 | **`MonotonicArena`** — `note::arena_allocator(arena)` | Embedded targets, long-running services, anywhere you want bounded and predictable memory use. The arena can live on the stack, in `.bss`, or in a member buffer. | Valid until `arena.reset()` (you call it). After reset, every view that pointed into the arena is invalid even if the Response is still in scope. | No-op — the arena's `deallocate` does nothing; `arena.reset()` is what reclaims memory. |
 | **`HeapResetPool`** — `note::heap_reset_allocator(pool)` | Desktop / Linux hosts that want arena-style "drain on reset" semantics without sizing a buffer up front. Storage comes from `malloc`; `pool.reset()` (or destruction) frees everything in one pass. | Valid until `pool.reset()` or the pool's destructor runs. | No-op — same shape as MonotonicArena; cleanup batched at `reset()`. |
 | **`std::pmr`** — `note::pmr_allocator(&resource)` (C++17+) | Mixed projects already using `std::pmr::memory_resource`. Lets you reuse a `monotonic_buffer_resource`, a `synchronized_pool_resource`, or your own. | Determined by the resource's lifetime. | Whatever the resource's `deallocate` does — per-block free for pool resources, no-op for monotonic resources. |
@@ -63,8 +64,8 @@ nc.set_allocator(note::arena_allocator(arena));
 
 auto r1 = api.card.version().execute();
 auto r2 = api.hub.status().execute();
-// r1.version is still valid — it was copied into the arena,
-// not left in the transport buffer.
+// r1.version is still valid — it was interned into the arena,
+// not left in the library's per-call parse storage.
 ```
 
 "Arena" is a common term for a bump allocator — you hand it a block of memory, it gives out pieces linearly, and you free everything at once by calling `reset()`. No per-allocation bookkeeping, no fragmentation. When a response has strings to keep alive, `note-cpp` copies them into the arena (this copy is the "intern" step).

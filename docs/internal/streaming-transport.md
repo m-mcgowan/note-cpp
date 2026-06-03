@@ -1,3 +1,31 @@
+- [Streaming Transport](#streaming-transport)
+  - [Transport Interfaces](#transport-interfaces)
+    - [Protocol (primary)](#protocol-primary)
+    - [String-shaped transports](#string-shaped-transports)
+  - [Architecture](#architecture)
+    - [Approximate OSI mapping](#approximate-osi-mapping)
+    - [Headers](#headers)
+  - [Usage](#usage)
+    - [Arduino — streaming just works](#arduino--streaming-just-works)
+    - [Low memory — explicit arena, zero heap](#low-memory--explicit-arena-zero-heap)
+    - [Non-Arduino — streaming path (recommended)](#non-arduino--streaming-path-recommended)
+    - [Non-Arduino — string-shaped transport path (tests/compat)](#non-arduino--string-shaped-transport-path-testscompat)
+  - [Notecard Constructors](#notecard-constructors)
+  - [How execute() Selects the Path](#how-execute-selects-the-path)
+  - [Execution Paths (Internal)](#execution-paths-internal)
+    - [Path 1a: JSON streaming (default, via `ITransact`)](#path-1a-json-streaming-default-via-itransact)
+    - [Path 1b: JSONB streaming (via `ITransact`, `NOTE_JSONB=1`)](#path-1b-jsonb-streaming-via-itransact-note_jsonb1)
+    - [Emitter comparison: `StreamingJsonBuilder` vs `StreamingJsonbBuilder`](#emitter-comparison-streamingjsonbuilder-vs-streamingjsonbbuilder)
+    - [Path 2: String-shaped transport (via `string_view`-shaped `ITransact` subclass)](#path-2-string-shaped-transport-via-string_view-shaped-itransact-subclass)
+    - [Binary path (`write` / `read` + COBS)](#binary-path-write--read--cobs)
+  - [CRC Handling](#crc-handling)
+  - [`NOTE_NO_STD_STRING` Guard](#note_no_std_string-guard)
+  - [Remaining Work](#remaining-work)
+    - [Implicit Arena -\> Allocator conversion](#implicit-arena---allocator-conversion)
+  - [Resync After Errors](#resync-after-errors)
+  - [Body Content Tiers](#body-content-tiers)
+
+
 # Streaming Transport
 
 The transport layer exposes a single session interface — `ITransact` —
@@ -304,6 +332,46 @@ Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md]
 | `CobsStreamWriter` | `JsonWriter` impl — COBS-encodes bytes incrementally (255-byte block) |
 | `JsonbParser` | Reads opcodes, dispatches `SaxEvent`s through `SaxDispatch` |
 | `CobsDecodingReader` | `ReadFn` adapter — COBS-decodes wire bytes, strips `:}` trailer |
+
+### Emitter comparison: `StreamingJsonBuilder` vs `StreamingJsonbBuilder`
+
+Both implement the same `JsonBuilder` virtual interface (`add(...)`,
+`begin_object/array`, `end_object/array`, `add_raw`, `add_element`,
+`to_view`, `reset`). The only thing that varies across the two is
+**what bytes each method writes to the underlying `JsonWriter`** —
+everything around the builder (the `RequestSource` adapter, the
+transport's transact loop, the COBS framer when present, the SAX
+response parse on the read side) is byte-identical between the two
+wire formats.
+
+| Concern | `StreamingJsonBuilder` (JSON) | `StreamingJsonbBuilder` (JSONB) |
+|---|---|---|
+| Output bytes | ASCII text — `{`, `:`, `,`, quoted strings, decimal numerals | Binary opcodes — `kBeginObject` (0x10), `kItem` (0x30), `kString` (0x40), `kInt32` (0x64), etc. + payload |
+| Inter-member state | `need_comma_` flag — drives the leading `,` before each non-first member | None — each opcode self-delimits, no separator |
+| Key delimiter | `"key":` (quoted, colon-terminated) | `kItem` opcode followed by a null-terminated raw key |
+| String values | quoted, with escape pass for `"`, `\`, `\n`, etc. | null-terminated raw bytes after `kString` opcode; no escaping (binary frame, not text) |
+| Integer values | `detail::itoa` → decimal digits | `kInt32` opcode + little-endian 32-bit payload (`emit_le32`); wider variants `kInt8/16/64` and `kUint8/16/32/64` available but `add(json_int_t)` always uses `kInt32` |
+| Float values | `detail::dtoa_shortest` → shortest round-trip decimal | `kDouble` opcode + IEEE 754 raw 8 bytes (`emit_bytes(&v, 8)`); no formatter on the emit side |
+| Booleans | `true` / `false` literal text | `kTrue` (0x21) / `kFalse` (0x22) — single opcode bytes |
+| Null | (no `add_null` in the public API) | `kNull` (0x20) — only reachable via `ReplaySink` in `add_raw` |
+| `add_raw` | copies the fragment verbatim into the writer (the user supplied valid JSON; the wire is JSON; trust the bytes) | SAX-parses the fragment via `sax_parse` and replays the events through `ReplaySink` to emit equivalent opcodes (no other path can re-serialise text to opcodes). Gated `!NOTE_MINIMAL` — the lexer is too large for AVR. |
+| Object delimiters | `{` / `}` | `kBeginObject` / `kEndObject` opcodes |
+| Array delimiters | `[` / `]` | `kBeginArray` / `kEndArray` opcodes |
+| Array elements (no key) | bare value, comma-separated | bare value opcode (no `kItem` prefix) — the `ReplaySink::emit_key` helper short-circuits when `in_array()` |
+| `to_view()` | closes with `}`, returns the accumulated `string_view` (only meaningful when the writer is text-buffer-backed) | closes with `kEndObject`, returns `{}` — JSONB is always streamed, never accumulated |
+| `reset()` | clears `need_comma_`, writes `{` | re-emits `kBeginObject` |
+
+What's identical across the two:
+
+- The `RequestSource::emit()` shape that wraps the builder — `Buffer/BuildFnRequestSource` picks one of the two with `#if NOTE_JSONB` (`request_source.hpp:62`/`93`) and calls `fn(b)`.
+- The `JsonWriter` interface — both builders write through `writer_.write(...)`; the writer below the builder (a `JsonBufferWriter` for tests, the transport's `CobsStreamWriter` for the wire) is wire-format-agnostic.
+- The transport's transact loop, the COBS framer in `link/cobs.hpp` (used as a `JsonWriter` decorator under both modes since the JSONB path needs it for `\n` escaping — JSON path only needs it when COBS is configured), and the SAX response parser path are shared.
+- The codegen-generated request types (`note::api::HubSet::build(b)` etc.) — their method bodies call `b.add(key, value)` against the abstract `JsonBuilder&` reference; the dispatch picks the right concrete builder at call-time.
+
+The asymmetry on `add_raw` is the only place a builder *implementation*
+materially differs in *strategy* rather than just byte choice. JSON
+trusts the user-supplied text; JSONB can't because there's no JSONB
+equivalent of "well-formed text"; the SAX-replay path is the bridge.
 
 ### Path 2: String-shaped transport (via `string_view`-shaped `ITransact` subclass)
 

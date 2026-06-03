@@ -84,6 +84,14 @@ public:
         return *this;
     }
 
+    // Emit `kItem(key)` and hand back the writer so the caller can stream a
+    // pre-rendered JSONB value (the value's own opcodes). See
+    // JsonBuilder::begin_raw_value for the contract.
+    JsonWriter* begin_raw_value(string_view key) override {
+        emit_item(key);
+        return &writer_;
+    }
+
     JsonBuilder& add(string_view key, json_int_t value) override {
         emit_item(key);
         emit(jsonb::kInt32);

@@ -126,6 +126,24 @@ public:
     // Reset builder state for reuse (avoid re-allocating the builder object).
     // Default implementation is a no-op; backends override to clear internal state.
     virtual void reset() {}
+
+    // Wire-format escape hatch for callers that hold a pre-rendered value
+    // (already in this builder's wire format) for the given key. Emits the
+    // key and any required separator through this builder's own state — i.e.
+    // `kItem(key)` for a JSONB stream, or `,"key":` for a JSON-text stream —
+    // then returns the underlying JsonWriter so the caller can stream the
+    // value bytes directly, bypassing per-field virtual dispatch.
+    //
+    // Returns nullptr on builders that don't stream to a byte writer
+    // (tree-mode backends), where this splice isn't possible.
+    //
+    // Used by note::experimental::body_template to splice a compile-time
+    // pre-rendered object/array into the request body. Other callers should
+    // not need this — the normal `add(...)` interface is the wire-format-
+    // agnostic path.
+    //
+    // Default: nullptr. Override only on builders that stream to a writer.
+    virtual JsonWriter* begin_raw_value(string_view key) { (void)key; return nullptr; }
 };
 
 class JsonReader {
@@ -442,6 +460,14 @@ public:
         kv(key);
         writer_.write(json_fragment);
         return *this;
+    }
+
+    // Emit `[,]"key":` and hand back the writer so the caller can stream a
+    // pre-rendered JSON-text value. kv() leaves need_comma_ = true, so the
+    // next field is correctly comma-separated.
+    JsonWriter* begin_raw_value(string_view key) override {
+        kv(key);
+        return &writer_;
     }
 
 

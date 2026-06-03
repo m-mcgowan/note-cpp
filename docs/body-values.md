@@ -127,6 +127,102 @@ api.note.add()
 The string is embedded as a raw JSON object on the wire (not quoted
 as a string value).
 
+### 7. Compile-time body templates (experimental, C++20)
+
+> **Experimental.** These surfaces live in `note::experimental::` and the
+> API may still change. They target flash- and RAM-constrained builds where
+> the per-field cost of the builder lambda (option 5) matters; for most code,
+> the typed struct or builder lambda remains the recommended choice.
+
+The compile-time body surfaces bake a body's *structure* — its keys, nesting,
+and the opcodes or punctuation around each value — into a static byte pool at
+compile time, and substitute only the runtime *values* at the call site. There
+is no SAX lexer and no per-field virtual dispatch on the emit path: rendering a
+body is a memcpy of the baked segments interleaved with a handful of per-value
+byte writes. The surface is wire-format-agnostic — the same code emits JSONB
+opcodes or JSON text depending on the `NOTE_JSONB` build flag (see
+[jsonb.md](jsonb.md)).
+
+Four surfaces are available, all producing the same wire output for the same
+logical body. Pick whichever reads best at the call site.
+
+**Template literal, reusable** — define a shape once, fill it many times. Slot
+markers are positional: `$N` int32, `$Nf` double, `$Nb` bool, `$Ns` string,
+`$No` nested object, `$Na` nested array.
+
+```cpp
+constexpr auto shape =
+    note::experimental::body_template<R"({"name":$1s,"seq":$2,"temp":$3f})">();
+
+api.note.add()
+    .file("sensors.qo")
+    .body(shape.with("station-7", 42, 22.5))
+    .execute();
+```
+
+**Template literal, one call** — the same thing inline (sugar over the above):
+
+```cpp
+api.note.add()
+    .file("sensors.qo")
+    .body(note::experimental::jsonb<R"({"name":$1s,"seq":$2,"temp":$3f})">(
+        "station-7", 42, 22.5))
+    .execute();
+```
+
+**Init-list with UDL keys** — reads most like a JSON literal. The `"key"_k`
+literal comes from `note::body_literals`:
+
+```cpp
+using namespace note::body_literals;
+
+api.note.add()
+    .file("sensors.qo")
+    .body(note::experimental::jsonb_body{
+        "name"_k = "station-7",
+        "seq"_k  = 42,
+        "temp"_k = 22.5,
+    })
+    .execute();
+```
+
+**Fluent builder** — the same mental model as the builder lambda (option 5),
+but with compile-time structure:
+
+```cpp
+using namespace note::body_literals;
+
+api.note.add()
+    .file("sensors.qo")
+    .body(note::experimental::jsonb_builder()
+        .add("name"_k, "station-7")
+        .add("seq"_k,  42)
+        .add("temp"_k, 22.5))
+    .execute();
+```
+
+Objects and arrays nest with `jsonb_body` and `jsonb_array` as field values or
+array elements, to any depth:
+
+```cpp
+using namespace note::body_literals;
+
+note::experimental::jsonb_body{
+    "name"_k = "station-7",
+    "loc"_k  = note::experimental::jsonb_body{ "lat"_k = 1.5, "lon"_k = 2.5 },
+    "tags"_k = note::experimental::jsonb_array{ "outdoor", "calibrated" },
+};
+```
+
+Slot types are checked at compile time — passing a string to a numeric slot, or
+a plain value where `$No`/`$Na` expects a nested body or array, is a compile
+error rather than a runtime surprise.
+
+**Lifetime:** string values are captured as views, so the underlying characters
+must outlive the body — the same contract as the builder lambda. In the usual
+`req.body(...).execute()` one-liner this is automatic, because the temporary
+lives through the full expression.
+
 ## Conditional / schemaless bodies
 
 Not all bodies have a fixed structure. Sensor readings may include optional fields depending on what's available — GPS when locked, battery when low. The Notecard accepts any body shape, no schema needed (though [templates](#template-registration) optimize bandwidth when the shape *is* known).

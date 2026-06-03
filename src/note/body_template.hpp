@@ -82,6 +82,12 @@
 #error "note/body_template.hpp requires C++20"
 #endif
 
+#if NOTE_NO_BODY_TEMPLATE
+#error "note/body_template.hpp included but NOTE_NO_BODY_TEMPLATE is set — \
+the compile-time body surfaces need JsonBuilder::begin_raw_value, which that \
+flag removes. Drop NOTE_NO_BODY_TEMPLATE in builds that use body_template."
+#endif
+
 namespace note::experimental {
 
 namespace detail {

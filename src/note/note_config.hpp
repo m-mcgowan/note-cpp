@@ -173,6 +173,25 @@
 #define NOTE_NO_RESPONSE_RAII 0
 #endif
 
+// NOTE_NO_BODY_TEMPLATE — when 1, drop the body_template integration point:
+// the `JsonBuilder::begin_raw_value` virtual and its streaming-builder
+// overrides. This removes a vtable slot from `JsonBuilder` (paid by every
+// build, body_template or not), reclaiming ~22 B flash + ~2 B RAM on AVR.
+//
+// `note::experimental::body_template` (and the jsonb_body / jsonb_builder /
+// jsonb_array surfaces) need that virtual to splice their compile-time-
+// rendered bytes into a request, so including `note/body_template.hpp` with
+// this flag set is a hard error.
+//
+// Default: 0 (enabled). The compile-time body surfaces are cheaper than the
+// runtime body paths (e.g. `.into()` / the builder lambda), so they earn
+// their keep by default; the flag exists for builds that never use them and
+// want the vtable slot back. ABI-affecting (changes JsonBuilder's vtable) —
+// must be set uniformly across the whole build.
+#ifndef NOTE_NO_BODY_TEMPLATE
+#define NOTE_NO_BODY_TEMPLATE 0
+#endif
+
 // NOTE_RESPONSE_RELEASE_LOOP — when 1, the generated Response destructor
 // frees its interned string fields with a tight loop over a contiguous
 // run of ResponseField<string_view> members. When 0, the destructor

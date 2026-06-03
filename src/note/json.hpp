@@ -143,7 +143,12 @@ public:
     // agnostic path.
     //
     // Default: nullptr. Override only on builders that stream to a writer.
+    //
+    // Gated by NOTE_NO_BODY_TEMPLATE: this is the only consumer of the virtual,
+    // so when body_template is compiled out the slot leaves JsonBuilder's vtable.
+#if !NOTE_NO_BODY_TEMPLATE
     virtual JsonWriter* begin_raw_value(string_view key) { (void)key; return nullptr; }
+#endif
 };
 
 class JsonReader {
@@ -465,10 +470,12 @@ public:
     // Emit `[,]"key":` and hand back the writer so the caller can stream a
     // pre-rendered JSON-text value. kv() leaves need_comma_ = true, so the
     // next field is correctly comma-separated.
+#if !NOTE_NO_BODY_TEMPLATE
     JsonWriter* begin_raw_value(string_view key) override {
         kv(key);
         return &writer_;
     }
+#endif
 
 
     JsonBuilder& begin_object(string_view key) override {

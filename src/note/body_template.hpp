@@ -1,24 +1,23 @@
 #pragma once
 
 /// @file
-/// Compile-time body construction with runtime-substituted slots
-/// (experimental).
+/// Compile-time body construction with runtime-substituted slots.
 ///
 /// Four user-facing surfaces, all layered over one segment-walker:
 ///
 ///   1. `body_template<L>()` + `.with(...)`  — template literal +
 ///      positional values, two artifacts. Best when a shape is reused.
 ///
-///   2. `jsonb<L>(values...)`                — same template literal,
+///   2. `make_body<L>(values...)`            — same template literal,
 ///      one call site. Sugar over (1).
 ///
-///   3. `jsonb_body{ "k"_k = v, ... }`       — init-list with UDL keys.
+///   3. `body_object{ "k"_k = v, ... }`       — init-list with UDL keys.
 ///      Reads most like a JSON literal at the call site.
 ///
-///   4. `jsonb_builder().add("k"_k, v)...`   — fluent builder pattern,
+///   4. `body_builder().add("k"_k, v)...`   — fluent builder pattern,
 ///      familiar to users of `note::body([&]{b.add(...);})`.
 ///
-/// Nested objects (`jsonb_body`) and arrays (`jsonb_array`) compose as
+/// Nested objects (`body_object`) and arrays (`body_array`) compose as
 /// field values and array elements to any depth.
 ///
 /// All four lower to the same emit logic — a static byte pool plus a
@@ -32,8 +31,8 @@
 ///   `$Nf`  — double
 ///   `$Nb`  — bool
 ///   `$Ns`  — string
-///   `$No`  — object  (positional arg is a `jsonb_body`)
-///   `$Na`  — array   (positional arg is a `jsonb_array`)
+///   `$No`  — object  (positional arg is a `body_object`)
+///   `$Na`  — array   (positional arg is a `body_array`)
 ///
 /// Wire format: the user-facing surface is wire-format-agnostic. The
 /// build flag `NOTE_JSONB` selects whether the baked static pool and the
@@ -45,12 +44,13 @@
 /// `begin_raw_value`, which emits the key + any separator in the matching
 /// format.
 ///
-/// The header lives in `note::experimental::` to flag the surface as
-/// not-yet-stable.
+/// Status: 0.x — the surface set and names may still change. Disable the
+/// whole family with `NOTE_NO_BODY_TEMPLATE` to reclaim the
+/// `JsonBuilder::begin_raw_value` vtable slot in builds that don't use it.
 ///
 /// Lifetime: string values are captured as `string_view`s — the
 /// underlying chars must outlive the body object. Numeric and bool
-/// values are captured by value; nested `jsonb_body` / `jsonb_array`
+/// values are captured by value; nested `body_object` / `body_array`
 /// values are captured by value (so they live as long as the enclosing
 /// body). The body behaves like `note::body([&]{...})`: when implicitly
 /// converted to BodyValue in a `req.body(...).execute()` expression, the
@@ -88,7 +88,7 @@ the compile-time body surfaces need JsonBuilder::begin_raw_value, which that \
 flag removes. Drop NOTE_NO_BODY_TEMPLATE in builds that use body_template."
 #endif
 
-namespace note::experimental {
+namespace note {
 
 namespace detail {
 
@@ -139,7 +139,7 @@ struct schema_data {
 };
 
 /// Two-pass parse helper — used by both the template-literal parser and
-/// the jsonb_body/jsonb_builder schema-from-pairs computation.
+/// the body_object/body_builder schema-from-pairs computation.
 struct schema_writer {
     std::uint8_t* static_pool;
     segment*      segments;
@@ -301,7 +301,7 @@ inline void emit_json_string(JsonWriter& w, note::string_view s) {
 // ── Shared emit machinery — one base for all four surfaces ────────────────
 
 /// Walks `Schema`'s segments + slots interleaved, writing to a JsonWriter.
-/// Each surface (body_template, jsonb_body, jsonb_builder) inherits from
+/// Each surface (body_template, body_object, body_builder) inherits from
 /// a concrete `compiled_body<Schema, StoredArgs...>` for its specific
 /// schema + value types. Identical schemas → identical instantiation →
 /// shared code in `.rodata`.
@@ -535,7 +535,7 @@ constexpr void parse_template_into(schema_writer& s) {
             s.close_segment_and_record_slot(slot_type::String);
         } else if (suffix == 'o' || suffix == 'a') {
             // Object ($No) / array ($Na) slot. Both map to Nested — the
-            // positional argument (a jsonb_body / jsonb_array) emits its own
+            // positional argument (a body_object / body_array) emits its own
             // complete byte stream, so the static pool holds only the field
             // key. The o/a suffix documents the author's intent; the actual
             // shape is whatever the argument is.
@@ -631,7 +631,7 @@ struct key_tag {
         };
     }
 
-    // Nested — a `jsonb_body` / `jsonb_array` (or any compiled body) becomes
+    // Nested — a `body_object` / `body_array` (or any compiled body) becomes
     // an object/array-valued field. Stored by value; the nested value emits
     // its own bytes at slot position. Lifetime: nested body lives as long as
     // the enclosing one (it's a tuple member of the outer's storage).
@@ -684,10 +684,10 @@ consteval auto schema_from_pairs() {
     return r;
 }
 
-// ── Value classification + array elements (surface for jsonb_array) ───────
+// ── Value classification + array elements (surface for body_array) ───────
 
 /// Map a raw user value type to its canonical slot_type + storage type.
-/// One place, shared by jsonb_array's element deduction. (key_tag uses the
+/// One place, shared by body_array's element deduction. (key_tag uses the
 /// same logical mapping via its `operator=` overload set; the rules match.)
 template<typename Raw>
 struct value_classify {
@@ -778,7 +778,7 @@ consteval auto schema_from_array_elements() {
 }  // namespace detail
 
 
-// ── Surface 3: jsonb_body — init-list with UDL keys ───────────────────────
+// ── Surface 3: body_object — init-list with UDL keys ───────────────────────
 
 /// A compile-time-structured body built from a list of UDL-keyed field
 /// pairs. Each `"key"_k = value` produces a `field_pair`; the list is
@@ -787,7 +787,7 @@ consteval auto schema_from_array_elements() {
 /// Reads like a JSON literal at the call site:
 /// ```
 ///   using namespace note::body_literals;
-///   api.note.add().body(note::experimental::jsonb_body{
+///   api.note.add().body(body_object{
 ///       "name"_k  = "station-7",
 ///       "seq"_k   = 42,
 ///       "temp"_k  = 22.5,
@@ -795,7 +795,7 @@ consteval auto schema_from_array_elements() {
 ///   }).execute();
 /// ```
 template<typename... Pairs>
-class jsonb_body
+class body_object
     : public detail::compiled_body<
           detail::schema_from_pairs<Pairs...>(),
           typename Pairs::value_type...>
@@ -805,34 +805,34 @@ class jsonb_body
         typename Pairs::value_type...>;
 
 public:
-    constexpr jsonb_body(Pairs... pairs)
+    constexpr body_object(Pairs... pairs)
         : base{std::move(pairs.value)...} {}
 };
 
 // CTAD: deduce Pairs... from the brace-init args.
 template<typename... Pairs>
-jsonb_body(Pairs...) -> jsonb_body<Pairs...>;
+body_object(Pairs...) -> body_object<Pairs...>;
 
 
 /// A compile-time-structured array. Used as a field value inside a
-/// `jsonb_body` / `jsonb_builder`, or nested inside another array. Elements
-/// are heterogeneous and may themselves be `jsonb_body` / `jsonb_array`.
+/// `body_object` / `body_builder`, or nested inside another array. Elements
+/// are heterogeneous and may themselves be `body_object` / `body_array`.
 ///
 /// ```
 ///   using namespace note::body_literals;
-///   api.note.add().body(note::experimental::jsonb_body{
-///       "tags"_k = note::experimental::jsonb_array{"red", "green", "blue"},
-///       "pts"_k  = note::experimental::jsonb_array{
-///           note::experimental::jsonb_body{ "x"_k = 1, "y"_k = 2 },
+///   api.note.add().body(body_object{
+///       "tags"_k = body_array{"red", "green", "blue"},
+///       "pts"_k  = body_array{
+///           body_object{ "x"_k = 1, "y"_k = 2 },
 ///       },
 ///   }).execute();
 /// ```
 ///
-/// Lifetime: same contract as `jsonb_body` — string elements capture
+/// Lifetime: same contract as `body_object` — string elements capture
 /// `string_view`s (the chars must outlive the array); nested bodies/arrays
 /// are stored by value and live as long as the enclosing array.
 template<typename... Elems>
-class jsonb_array
+class body_array
     : public detail::compiled_body<
           detail::schema_from_array_elements<Elems...>(),
           typename Elems::value_type...>
@@ -846,27 +846,27 @@ public:
     /// storage type (int→int32, float→double, char*→string_view, nested
     /// body/array forwarded by value).
     template<typename... Raw>
-    constexpr explicit jsonb_array(Raw&&... raw)
+    constexpr explicit body_array(Raw&&... raw)
         : base{detail::canonical_value(std::forward<Raw>(raw))...} {}
 };
 
 // CTAD: deduce element types from the raw brace-init args.
 template<typename... Raw>
-jsonb_array(Raw&&...) -> jsonb_array<detail::element_value_for_t<Raw>...>;
+body_array(Raw&&...) -> body_array<detail::element_value_for_t<Raw>...>;
 
 
-// ── Surface 4: jsonb_builder — fluent type-state ──────────────────────────
+// ── Surface 4: body_builder — fluent type-state ──────────────────────────
 
 /// Fluent builder. Each `.add(key_tag, value)` returns a new builder
 /// type with the field appended. Inherits the same emit machinery as
-/// `jsonb_body` — the builder *is* the body, no materialisation step.
+/// `body_object` — the builder *is* the body, no materialisation step.
 /// Matches the existing `note::body([&]{b.add(...);})` mental model
 /// but with compile-time structure.
 ///
 /// ```
 ///   using namespace note::body_literals;
 ///   api.note.add().body(
-///       note::experimental::jsonb_builder()
+///       body_builder()
 ///           .add("name"_k,  "station-7")
 ///           .add("seq"_k,   42)
 ///           .add("temp"_k,  22.5)
@@ -874,7 +874,7 @@ jsonb_array(Raw&&...) -> jsonb_array<detail::element_value_for_t<Raw>...>;
 ///   ).execute();
 /// ```
 ///
-/// Lifetime: same contract as `jsonb_body` and `note::body(lambda)` —
+/// Lifetime: same contract as `body_object` and `note::body(lambda)` —
 /// the builder must outlive the `BodyValue` that captures a pointer
 /// to it. Chained `req.body(builder).execute()` is safe (the temporary
 /// lives through the full-expression). Binding to a named variable
@@ -883,7 +883,7 @@ jsonb_array(Raw&&...) -> jsonb_array<detail::element_value_for_t<Raw>...>;
 /// POC scope: top-level fields only. begin_object / begin_array
 /// are deferred to v0.next.
 template<typename... Pairs>
-class jsonb_builder
+class body_builder
     : public detail::compiled_body<
           detail::schema_from_pairs<Pairs...>(),
           typename Pairs::value_type...>
@@ -895,7 +895,7 @@ class jsonb_builder
 public:
     // Single ctor — when Pairs is empty, this acts as the default;
     // otherwise it constructs from the canonical per-pair values.
-    constexpr jsonb_builder(typename Pairs::value_type... vals)
+    constexpr body_builder(typename Pairs::value_type... vals)
         : base{std::move(vals)...} {}
 
     /// Append a field. Returns a new builder type with the field added.
@@ -911,7 +911,7 @@ private:
     template<typename NewPair, std::size_t... Is>
     constexpr auto append_(typename NewPair::value_type new_value,
                            std::index_sequence<Is...>) const {
-        return jsonb_builder<Pairs..., NewPair>(
+        return body_builder<Pairs..., NewPair>(
             std::get<Is>(this->values_)...,
             std::move(new_value)
         );
@@ -919,7 +919,7 @@ private:
 };
 
 // CTAD for the no-args bootstrap.
-jsonb_builder() -> jsonb_builder<>;
+body_builder() -> body_builder<>;
 
 
 // ── Surface 1: body_template — compile-time template literal ──────────────
@@ -945,7 +945,7 @@ public:
     /// Each argument's type must be compatible with its slot's declared
     /// type — int-like for `$N`, floating-point for `$Nf`, exactly
     /// `bool` for `$Nb`, `string_view`-constructible for `$Ns`, and a
-    /// `jsonb_body` / `jsonb_array` for `$No` / `$Na`.
+    /// `body_object` / `body_array` for `$No` / `$Na`.
     ///
     /// The return type is deduced from the arguments: numeric/bool/string
     /// slots store their canonical type, while object/array slots store the
@@ -986,8 +986,8 @@ private:
             return static_cast<bool>(value);
         } else if constexpr (t == detail::slot_type::Nested) {
             static_assert(detail::emittable_body<std::decay_t<Arg>>,
-                "object/array slot ($No / $Na) requires a jsonb_body or "
-                "jsonb_array argument");
+                "object/array slot ($No / $Na) requires a body_object or "
+                "body_array argument");
             return std::decay_t<Arg>{std::forward<Arg>(value)};
         } else {  // String
             static_assert(
@@ -1025,11 +1025,11 @@ constexpr auto body_template() {
 /// `body_template<Tpl>().with(values...)`. Equivalent behaviour, one
 /// expression.
 template<detail::fixed_string Tpl, typename... Args>
-constexpr auto jsonb(Args&&... values) {
+constexpr auto make_body(Args&&... values) {
     return body_template_t<Tpl>{}.with(std::forward<Args>(values)...);
 }
 
-}  // namespace note::experimental
+}  // namespace note
 
 
 // ── UDL: `"name"_k` produces a key_tag carrying the key as NTTP ───────────
@@ -1039,9 +1039,9 @@ namespace note::body_literals {
 /// `"key"_k` returns a `key_tag<"key">{}` — used by surfaces 3 and 4.
 /// Apply `operator=` to pair it with a runtime value: `"k"_k = 42` yields
 /// a `field_pair<"k", slot_type::Int32, int32_t>{42}`.
-template<note::experimental::detail::fixed_string S>
+template<detail::fixed_string S>
 constexpr auto operator""_k() {
-    return note::experimental::detail::key_tag<S>{};
+    return detail::key_tag<S>{};
 }
 
 }  // namespace note::body_literals

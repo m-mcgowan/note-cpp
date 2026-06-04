@@ -4,6 +4,6 @@
 // requires an integral argument").
 #include <note/body_template.hpp>
 void test() {
-    constexpr auto tpl = note::experimental::body_template<R"({"a":$1})">();
+    constexpr auto tpl = note::body_template<R"({"a":$1})">();
     (void)tpl.with(3.14);  // float in int32 slot — should fail
 }

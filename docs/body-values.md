@@ -127,12 +127,14 @@ api.note.add()
 The string is embedded as a raw JSON object on the wire (not quoted
 as a string value).
 
-### 7. Compile-time body templates (experimental, C++20)
+### 7. Compile-time body templates (C++20)
 
-> **Experimental.** These surfaces live in `note::experimental::` and the
-> API may still change. They target flash- and RAM-constrained builds where
-> the per-field cost of the builder lambda (option 5) matters; for most code,
-> the typed struct or builder lambda remains the recommended choice.
+> **0.x surface.** These are newer than the options above and the surface set
+> and names may still change. They're the *cheapest* way to set a fixed-shape
+> body — the structure is baked at compile time, so there's no per-field
+> dispatch — which makes them a good fit for flash- and RAM-constrained builds.
+> Builds that never use them can set `NOTE_NO_BODY_TEMPLATE` to reclaim the
+> small `JsonBuilder` vtable slot the integration adds.
 
 The compile-time body surfaces bake a body's *structure* — its keys, nesting,
 and the opcodes or punctuation around each value — into a static byte pool at
@@ -152,7 +154,7 @@ markers are positional: `$N` int32, `$Nf` double, `$Nb` bool, `$Ns` string,
 
 ```cpp
 constexpr auto shape =
-    note::experimental::body_template<R"({"name":$1s,"seq":$2,"temp":$3f})">();
+    note::body_template<R"({"name":$1s,"seq":$2,"temp":$3f})">();
 
 api.note.add()
     .file("sensors.qo")
@@ -165,7 +167,7 @@ api.note.add()
 ```cpp
 api.note.add()
     .file("sensors.qo")
-    .body(note::experimental::jsonb<R"({"name":$1s,"seq":$2,"temp":$3f})">(
+    .body(note::make_body<R"({"name":$1s,"seq":$2,"temp":$3f})">(
         "station-7", 42, 22.5))
     .execute();
 ```
@@ -178,7 +180,7 @@ using namespace note::body_literals;
 
 api.note.add()
     .file("sensors.qo")
-    .body(note::experimental::jsonb_body{
+    .body(note::body_object{
         "name"_k = "station-7",
         "seq"_k  = 42,
         "temp"_k = 22.5,
@@ -194,23 +196,23 @@ using namespace note::body_literals;
 
 api.note.add()
     .file("sensors.qo")
-    .body(note::experimental::jsonb_builder()
+    .body(note::body_builder()
         .add("name"_k, "station-7")
         .add("seq"_k,  42)
         .add("temp"_k, 22.5))
     .execute();
 ```
 
-Objects and arrays nest with `jsonb_body` and `jsonb_array` as field values or
+Objects and arrays nest with `body_object` and `body_array` as field values or
 array elements, to any depth:
 
 ```cpp
 using namespace note::body_literals;
 
-note::experimental::jsonb_body{
+note::body_object{
     "name"_k = "station-7",
-    "loc"_k  = note::experimental::jsonb_body{ "lat"_k = 1.5, "lon"_k = 2.5 },
-    "tags"_k = note::experimental::jsonb_array{ "outdoor", "calibrated" },
+    "loc"_k  = note::body_object{ "lat"_k = 1.5, "lon"_k = 2.5 },
+    "tags"_k = note::body_array{ "outdoor", "calibrated" },
 };
 ```
 

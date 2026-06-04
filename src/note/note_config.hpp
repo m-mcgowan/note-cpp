@@ -178,10 +178,10 @@
 // overrides. This removes a vtable slot from `JsonBuilder` (paid by every
 // build, body_template or not), reclaiming ~22 B flash + ~2 B RAM on AVR.
 //
-// `note::experimental::body_template` (and the jsonb_body / jsonb_builder /
-// jsonb_array surfaces) need that virtual to splice their compile-time-
-// rendered bytes into a request, so including `note/body_template.hpp` with
-// this flag set is a hard error.
+// `note::body_template` (and the body_object / body_builder / body_array
+// surfaces) need that virtual to splice their compile-time-rendered bytes
+// into a request, so including `note/body_template.hpp` with this flag set
+// is a hard error.
 //
 // Default: 0 (enabled). The compile-time body surfaces are cheaper than the
 // runtime body paths (e.g. `.into()` / the builder lambda), so they earn

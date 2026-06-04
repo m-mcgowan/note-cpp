@@ -137,7 +137,7 @@ public:
     // Returns nullptr on builders that don't stream to a byte writer
     // (tree-mode backends), where this splice isn't possible.
     //
-    // Used by note::experimental::body_template to splice a compile-time
+    // Used by note::body_template to splice a compile-time
     // pre-rendered object/array into the request body. Other callers should
     // not need this — the normal `add(...)` interface is the wire-format-
     // agnostic path.

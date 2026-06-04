@@ -6,6 +6,6 @@
 // patch_one() ("bool slot ($Nb) requires a bool argument").
 #include <note/body_template.hpp>
 void test() {
-    constexpr auto tpl = note::experimental::body_template<R"({"on":$1b})">();
+    constexpr auto tpl = note::body_template<R"({"on":$1b})">();
     (void)tpl.with(1);  // int in bool slot — should fail
 }

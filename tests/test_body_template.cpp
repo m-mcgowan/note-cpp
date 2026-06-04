@@ -1,10 +1,10 @@
-// Tests for compile-time body template (note::experimental::body_template).
+// Tests for compile-time body template (note::body_template).
 //
 // Scope:
 //   - int32 / double / bool / string slots, plus nested object ($No) and
 //     array ($Na) slots
 //   - positional $1/$2/... markers (no slot-name parsing)
-//   - nested jsonb_body / jsonb_array as field values and array elements
+//   - nested body_object / body_array as field values and array elements
 //   - both wire formats: JSONB opcodes (NOTE_JSONB) and JSON text (default)
 //
 // Architecture: the template produces a static byte pool + N+1 segments +
@@ -87,7 +87,7 @@ inline std::vector<uint8_t> body_value_bytes(const BodyValue& bv) {
 }  // anonymous namespace
 
 TEST_CASE("body_template: empty object") {
-    constexpr auto tpl = experimental::body_template<R"({})">();
+    constexpr auto tpl = body_template<R"({})">();
     auto bytes = capture_bytes(tpl.with());
     auto expected = wire_build([](JsonBuilder&) {});
     REQUIRE(bytes.size() == expected.size());
@@ -95,7 +95,7 @@ TEST_CASE("body_template: empty object") {
 }
 
 TEST_CASE("body_template: single int32 slot") {
-    constexpr auto tpl = experimental::body_template<R"({"a":$1})">();
+    constexpr auto tpl = body_template<R"({"a":$1})">();
     auto bytes = capture_bytes(tpl.with(int32_t{42}));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("a", int32_t{42});
@@ -105,7 +105,7 @@ TEST_CASE("body_template: single int32 slot") {
 }
 
 TEST_CASE("body_template: two int32 slots") {
-    constexpr auto tpl = experimental::body_template<R"({"a":$1,"b":$2})">();
+    constexpr auto tpl = body_template<R"({"a":$1,"b":$2})">();
     auto bytes = capture_bytes(tpl.with(int32_t{1}, int32_t{2}));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("a", int32_t{1});
@@ -116,7 +116,7 @@ TEST_CASE("body_template: two int32 slots") {
 }
 
 TEST_CASE("body_template: negative int32 round-trips through LE32 patch") {
-    constexpr auto tpl = experimental::body_template<R"({"v":$1})">();
+    constexpr auto tpl = body_template<R"({"v":$1})">();
     auto bytes = capture_bytes(tpl.with(int32_t{-1}));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("v", int32_t{-1});
@@ -126,7 +126,7 @@ TEST_CASE("body_template: negative int32 round-trips through LE32 patch") {
 }
 
 TEST_CASE("body_template: whitespace inside template literal is ignored") {
-    constexpr auto tpl = experimental::body_template<R"(
+    constexpr auto tpl = body_template<R"(
         {
             "x" : $1 ,
             "y" : $2
@@ -142,7 +142,7 @@ TEST_CASE("body_template: whitespace inside template literal is ignored") {
 }
 
 TEST_CASE("body_template: slot order is positional ($1 first, then $2…)") {
-    constexpr auto tpl = experimental::body_template<R"({"a":$1,"b":$2})">();
+    constexpr auto tpl = body_template<R"({"a":$1,"b":$2})">();
     auto bytes = capture_bytes(tpl.with(int32_t{100}, int32_t{200}));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("a", int32_t{100});
@@ -152,10 +152,10 @@ TEST_CASE("body_template: slot order is positional ($1 first, then $2…)") {
 }
 
 TEST_CASE("body_template: compile-time shape is observable") {
-    constexpr auto tpl = experimental::body_template<R"({"k":$1})">();
+    constexpr auto tpl = body_template<R"({"k":$1})">();
     using T = decltype(tpl);
     static_assert(T::sizes_.slot_count == 1);
-    static_assert(T::data_.slot_types[0] == experimental::detail::slot_type::Int32);
+    static_assert(T::data_.slot_types[0] == detail::slot_type::Int32);
 #if NOTE_JSONB == 1
     // Static pool: kBeginObject(1) + kItem+"k\0"(3) + kInt32(1) + kEndObject(1) = 6
     static_assert(T::sizes_.static_byte_count == 6);
@@ -178,7 +178,7 @@ TEST_CASE("body_template: compile-time shape is observable") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("body_template: single double slot") {
-    constexpr auto tpl = experimental::body_template<R"({"t":$1f})">();
+    constexpr auto tpl = body_template<R"({"t":$1f})">();
     auto bytes = capture_bytes(tpl.with(22.5));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("t", 22.5);
@@ -188,7 +188,7 @@ TEST_CASE("body_template: single double slot") {
 }
 
 TEST_CASE("body_template: double slot accepts float (widens to double)") {
-    constexpr auto tpl = experimental::body_template<R"({"t":$1f})">();
+    constexpr auto tpl = body_template<R"({"t":$1f})">();
     auto bytes = capture_bytes(tpl.with(22.5f));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("t", static_cast<double>(22.5f));
@@ -198,7 +198,7 @@ TEST_CASE("body_template: double slot accepts float (widens to double)") {
 }
 
 TEST_CASE("body_template: int32 + double mixed slots") {
-    constexpr auto tpl = experimental::body_template<R"({"seq":$1,"temp":$2f})">();
+    constexpr auto tpl = body_template<R"({"seq":$1,"temp":$2f})">();
     auto bytes = capture_bytes(tpl.with(int32_t{7}, -3.14));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("seq", int32_t{7});
@@ -213,7 +213,7 @@ TEST_CASE("body_template: int32 + double mixed slots") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("body_template: bool slot true") {
-    constexpr auto tpl = experimental::body_template<R"({"on":$1b})">();
+    constexpr auto tpl = body_template<R"({"on":$1b})">();
     auto bytes = capture_bytes(tpl.with(true));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("on", true);
@@ -223,7 +223,7 @@ TEST_CASE("body_template: bool slot true") {
 }
 
 TEST_CASE("body_template: bool slot false") {
-    constexpr auto tpl = experimental::body_template<R"({"on":$1b})">();
+    constexpr auto tpl = body_template<R"({"on":$1b})">();
     auto bytes = capture_bytes(tpl.with(false));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("on", false);
@@ -233,7 +233,7 @@ TEST_CASE("body_template: bool slot false") {
 }
 
 TEST_CASE("body_template: all three numeric/bool types mixed") {
-    constexpr auto tpl = experimental::body_template<
+    constexpr auto tpl = body_template<
         R"({"seq":$1,"temp":$2f,"alarm":$3b})">();
     auto bytes = capture_bytes(tpl.with(int32_t{42}, 18.0, true));
     auto expected = wire_build([](JsonBuilder& b) {
@@ -250,7 +250,7 @@ TEST_CASE("body_template: all three numeric/bool types mixed") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("body_template: string slot from const char*") {
-    constexpr auto tpl = experimental::body_template<R"({"name":$1s})">();
+    constexpr auto tpl = body_template<R"({"name":$1s})">();
     auto bytes = capture_bytes(tpl.with("station-7"));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("name", string_view("station-7"));
@@ -260,7 +260,7 @@ TEST_CASE("body_template: string slot from const char*") {
 }
 
 TEST_CASE("body_template: string slot from std::string") {
-    constexpr auto tpl = experimental::body_template<R"({"name":$1s})">();
+    constexpr auto tpl = body_template<R"({"name":$1s})">();
     std::string name = "sensor-alpha";
     auto bytes = capture_bytes(tpl.with(name));
     auto expected = wire_build([&](JsonBuilder& b) {
@@ -271,7 +271,7 @@ TEST_CASE("body_template: string slot from std::string") {
 }
 
 TEST_CASE("body_template: empty string slot") {
-    constexpr auto tpl = experimental::body_template<R"({"k":$1s})">();
+    constexpr auto tpl = body_template<R"({"k":$1s})">();
     auto bytes = capture_bytes(tpl.with(""));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("k", string_view(""));
@@ -281,7 +281,7 @@ TEST_CASE("body_template: empty string slot") {
 }
 
 TEST_CASE("body_template: multiple string slots") {
-    constexpr auto tpl = experimental::body_template<R"({"a":$1s,"b":$2s})">();
+    constexpr auto tpl = body_template<R"({"a":$1s,"b":$2s})">();
     auto bytes = capture_bytes(tpl.with("hello", "world"));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("a", string_view("hello"));
@@ -292,7 +292,7 @@ TEST_CASE("body_template: multiple string slots") {
 }
 
 TEST_CASE("body_template: all four slot types mixed") {
-    constexpr auto tpl = experimental::body_template<
+    constexpr auto tpl = body_template<
         R"({"name":$1s,"seq":$2,"temp":$3f,"alarm":$4b})">();
     auto bytes = capture_bytes(tpl.with("device-A", int32_t{42}, 18.0, true));
     auto expected = wire_build([](JsonBuilder& b) {
@@ -309,7 +309,7 @@ TEST_CASE("body_template: string slot lifetime — view holds caller's data") {
     // The body_template_call captures string_view by value; the
     // underlying chars must outlive the call. Here we use a std::string
     // local that outlives the capture_bytes() invocation.
-    constexpr auto tpl = experimental::body_template<R"({"k":$1s})">();
+    constexpr auto tpl = body_template<R"({"k":$1s})">();
     std::string longer = "this is a longer string than the literal in the template";
     auto bytes = capture_bytes(tpl.with(longer));
     auto expected = wire_build([&](JsonBuilder& b) {
@@ -325,7 +325,7 @@ TEST_CASE("body_template: string slot lifetime — view holds caller's data") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("body_template: BodyValue conversion splices a \"body\" field") {
-    constexpr auto tpl = experimental::body_template<R"({"seq":$1,"temp":$2f})">();
+    constexpr auto tpl = body_template<R"({"seq":$1,"temp":$2f})">();
     BodyValue bv = tpl.with(int32_t{42}, 22.5);  // implicit conversion
     auto actual = body_value_bytes(bv);
 
@@ -341,7 +341,7 @@ TEST_CASE("body_template: BodyValue conversion splices a \"body\" field") {
 }
 
 TEST_CASE("body_template: BodyValue conversion produces same bytes as note::body lambda") {
-    constexpr auto tpl = experimental::body_template<R"({"x":$1,"y":$2,"on":$3b})">();
+    constexpr auto tpl = body_template<R"({"x":$1,"y":$2,"on":$3b})">();
 
     auto tpl_bytes = body_value_bytes(tpl.with(int32_t{1}, int32_t{2}, true));
     auto lambda_bytes = body_value_bytes(body([](JsonBuilder& b) {
@@ -356,7 +356,7 @@ TEST_CASE("body_template: BodyValue conversion produces same bytes as note::body
 TEST_CASE("body_template: BodyValue with string slot matches note::body lambda") {
     // The string-slot path through BodyValue is the headline use case —
     // sensor readings with a device name and runtime numeric values.
-    constexpr auto tpl = experimental::body_template<
+    constexpr auto tpl = body_template<
         R"({"name":$1s,"seq":$2,"temp":$3f})">();
 
     auto tpl_bytes = body_value_bytes(tpl.with("station-7", int32_t{17}, 22.5));
@@ -370,37 +370,37 @@ TEST_CASE("body_template: BodyValue with string slot matches note::body lambda")
 }
 
 // ===========================================================================
-// Surface 2: jsonb<L>(args...) — one-call template literal + values.
+// Surface 2: make_body<L>(args...) — one-call template literal + values.
 // Equivalent to body_template<L>().with(args...). Sugar.
 // ===========================================================================
 
-TEST_CASE("jsonb<L>: one-call form is equivalent to body_template+with") {
-    auto from_jsonb = capture_bytes(
-        experimental::jsonb<R"({"name":$1s,"seq":$2,"temp":$3f})">(
+TEST_CASE("make_body<L>: one-call form is equivalent to body_template+with") {
+    auto from_make_body = capture_bytes(
+        make_body<R"({"name":$1s,"seq":$2,"temp":$3f})">(
             "station-7", int32_t{42}, 22.5));
 
-    constexpr auto tpl = experimental::body_template<
+    constexpr auto tpl = body_template<
         R"({"name":$1s,"seq":$2,"temp":$3f})">();
     auto from_two_step = capture_bytes(tpl.with("station-7", int32_t{42}, 22.5));
 
-    CHECK(from_jsonb == from_two_step);
+    CHECK(from_make_body == from_two_step);
 }
 
-TEST_CASE("jsonb<L>: empty object inline") {
-    auto bytes = capture_bytes(experimental::jsonb<R"({})">());
+TEST_CASE("make_body<L>: empty object inline") {
+    auto bytes = capture_bytes(make_body<R"({})">());
     auto expected = wire_build([](JsonBuilder&) {});
     CHECK(bytes == expected);
 }
 
 // ===========================================================================
-// Surface 3: jsonb_body{ "k"_k = v, ... } — init-list with UDL keys.
+// Surface 3: body_object{ "k"_k = v, ... } — init-list with UDL keys.
 // Each `_k` UDL produces a key_tag; `operator=` pairs it with a value;
-// CTAD on jsonb_body{...} aggregates the field_pairs into a body.
+// CTAD on body_object{...} aggregates the field_pairs into a body.
 // ===========================================================================
 
-TEST_CASE("jsonb_body: single int32 field via UDL") {
+TEST_CASE("body_object: single int32 field via UDL") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{ "a"_k = 42 };
+    auto body = body_object{ "a"_k = 42 };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("a", int32_t{42});
@@ -408,9 +408,9 @@ TEST_CASE("jsonb_body: single int32 field via UDL") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: int + double + bool + string mixed") {
+TEST_CASE("body_object: int + double + bool + string mixed") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
+    auto body = body_object{
         "name"_k  = "station-7",
         "seq"_k   = 42,
         "temp"_k  = 22.5,
@@ -426,11 +426,11 @@ TEST_CASE("jsonb_body: int + double + bool + string mixed") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: int slot inferred from non-int32 integral type") {
+TEST_CASE("body_object: int slot inferred from non-int32 integral type") {
     using namespace note::body_literals;
     // short, char, etc. should all canonicalise to int32_t through key_tag::operator=
     short small = 7;
-    auto body = experimental::jsonb_body{ "v"_k = small };
+    auto body = body_object{ "v"_k = small };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("v", int32_t{7});
@@ -438,9 +438,9 @@ TEST_CASE("jsonb_body: int slot inferred from non-int32 integral type") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: float widens to double") {
+TEST_CASE("body_object: float widens to double") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{ "t"_k = 22.5f };
+    auto body = body_object{ "t"_k = 22.5f };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("t", static_cast<double>(22.5f));
@@ -448,10 +448,10 @@ TEST_CASE("jsonb_body: float widens to double") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: bool strictly requires bool (no int implicit)") {
+TEST_CASE("body_object: bool strictly requires bool (no int implicit)") {
     using namespace note::body_literals;
     // This compiles — bool is bool.
-    auto body = experimental::jsonb_body{ "on"_k = true };
+    auto body = body_object{ "on"_k = true };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) { b.add("on", true); });
     CHECK(bytes == expected);
@@ -460,12 +460,12 @@ TEST_CASE("jsonb_body: bool strictly requires bool (no int implicit)") {
     // not bool — confirmed by the compile-fail test suite.
 }
 
-TEST_CASE("jsonb_body: std::string and string_view both work for string slot") {
+TEST_CASE("body_object: std::string and string_view both work for string slot") {
     using namespace note::body_literals;
     std::string str_value = "hello";
 
-    auto body1 = experimental::jsonb_body{ "k"_k = str_value };
-    auto body2 = experimental::jsonb_body{ "k"_k = string_view(str_value) };
+    auto body1 = body_object{ "k"_k = str_value };
+    auto body2 = body_object{ "k"_k = string_view(str_value) };
 
     auto bytes1 = capture_bytes(body1);
     auto bytes2 = capture_bytes(body2);
@@ -473,35 +473,35 @@ TEST_CASE("jsonb_body: std::string and string_view both work for string slot") {
 }
 
 // ===========================================================================
-// Surface 4: jsonb_builder().add(...).add(...) — fluent type-state.
+// Surface 4: body_builder().add(...).add(...) — fluent type-state.
 // Each .add returns a new builder type with the field appended; the chain
-// converts implicitly to jsonb_body and through that to BodyValue.
+// converts implicitly to body_object and through that to BodyValue.
 // ===========================================================================
 
-TEST_CASE("jsonb_builder: empty body") {
-    auto bytes = capture_bytes(experimental::jsonb_builder());
+TEST_CASE("body_builder: empty body") {
+    auto bytes = capture_bytes(body_builder());
     auto expected = wire_build([](JsonBuilder&) {});
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_builder: single field") {
+TEST_CASE("body_builder: single field") {
     using namespace note::body_literals;
-    auto builder = experimental::jsonb_builder().add("a"_k, 42);
+    auto builder = body_builder().add("a"_k, 42);
     auto bytes = capture_bytes(builder);
     auto expected = wire_build([](JsonBuilder& b) { b.add("a", int32_t{42}); });
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_builder: fluent chain produces same bytes as init-list") {
+TEST_CASE("body_builder: fluent chain produces same bytes as init-list") {
     using namespace note::body_literals;
-    auto builder = experimental::jsonb_builder()
+    auto builder = body_builder()
         .add("name"_k,  "station-7")
         .add("seq"_k,   42)
         .add("temp"_k,  22.5)
         .add("alarm"_k, true);
     auto chain_bytes = capture_bytes(builder);
 
-    auto init_body = experimental::jsonb_body{
+    auto init_body = body_object{
         "name"_k  = "station-7",
         "seq"_k   = 42,
         "temp"_k  = 22.5,
@@ -517,26 +517,26 @@ TEST_CASE("jsonb_builder: fluent chain produces same bytes as init-list") {
 // the same wire bytes.
 // ===========================================================================
 
-TEST_CASE("cross-surface parity: body_template / jsonb / jsonb_body / jsonb_builder all agree") {
+TEST_CASE("cross-surface parity: body_template / jsonb / body_object / body_builder all agree") {
     using namespace note::body_literals;
     // Logical body: {"name": "station-7", "seq": 42, "temp": 22.5}
 
     auto from_body_template = capture_bytes(
-        experimental::body_template<R"({"name":$1s,"seq":$2,"temp":$3f})">()
+        body_template<R"({"name":$1s,"seq":$2,"temp":$3f})">()
             .with("station-7", 42, 22.5));
 
-    auto from_jsonb = capture_bytes(
-        experimental::jsonb<R"({"name":$1s,"seq":$2,"temp":$3f})">(
+    auto from_make_body = capture_bytes(
+        make_body<R"({"name":$1s,"seq":$2,"temp":$3f})">(
             "station-7", 42, 22.5));
 
-    auto from_jsonb_body = capture_bytes(experimental::jsonb_body{
+    auto from_body_object = capture_bytes(body_object{
         "name"_k = "station-7",
         "seq"_k  = 42,
         "temp"_k = 22.5,
     });
 
     auto from_builder = capture_bytes(
-        experimental::jsonb_builder()
+        body_builder()
             .add("name"_k, "station-7")
             .add("seq"_k,  42)
             .add("temp"_k, 22.5)
@@ -549,8 +549,8 @@ TEST_CASE("cross-surface parity: body_template / jsonb / jsonb_body / jsonb_buil
     });
 
     CHECK(from_body_template == from_lambda);
-    CHECK(from_jsonb         == from_lambda);
-    CHECK(from_jsonb_body    == from_lambda);
+    CHECK(from_make_body         == from_lambda);
+    CHECK(from_body_object    == from_lambda);
     CHECK(from_builder       == from_lambda);
 }
 
@@ -569,13 +569,13 @@ std::string as_string(const std::vector<uint8_t>& v) {
 
 TEST_CASE("body_template: emits exact JSON text (all slot types + nesting)") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
+    auto body = body_object{
         "name"_k  = "station-7",
         "seq"_k   = 42,
         "temp"_k  = 22.5,
         "on"_k    = true,
-        "loc"_k   = experimental::jsonb_body{ "lat"_k = 1 },
-        "tags"_k  = experimental::jsonb_array{"a", "b"},
+        "loc"_k   = body_object{ "lat"_k = 1 },
+        "tags"_k  = body_array{"a", "b"},
     };
     CHECK(as_string(capture_bytes(body)) ==
         R"({"name":"station-7","seq":42,"temp":22.5,"on":true,"loc":{"lat":1},"tags":["a","b"]})");
@@ -583,34 +583,34 @@ TEST_CASE("body_template: emits exact JSON text (all slot types + nesting)") {
 
 TEST_CASE("body_template: JSON string slot escapes quotes and backslashes") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{ "k"_k = R"(a"b\c)" };
+    auto body = body_object{ "k"_k = R"(a"b\c)" };
     CHECK(as_string(capture_bytes(body)) == R"({"k":"a\"b\\c"})");
 }
 
 TEST_CASE("body_template: BodyValue emits exact \"body\":{...} JSON text") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{ "seq"_k = 7 };
+    auto body = body_object{ "seq"_k = 7 };
     // body_value_bytes wraps in a fresh request object: {"body":{...}}.
     CHECK(as_string(body_value_bytes(body)) == R"({"body":{"seq":7}})");
 }
 #endif  // NOTE_JSONB != 1
 
 // ===========================================================================
-// Stage 5a — nesting + arrays for surfaces 3 (jsonb_body) and 4 (jsonb_builder).
+// Stage 5a — nesting + arrays for surfaces 3 (body_object) and 4 (body_builder).
 //
-//   "k"_k = jsonb_body{...}   nests an object as a field value.
-//   "k"_k = jsonb_array{...}  nests an array as a field value.
-//   jsonb_array{a, b, c}      a free-standing heterogeneous array.
+//   "k"_k = body_object{...}   nests an object as a field value.
+//   "k"_k = body_array{...}  nests an array as a field value.
+//   body_array{a, b, c}      a free-standing heterogeneous array.
 //
 // Nested values carry their own emit_to(); the outer schema bakes only the
 // key bytes (no opcode prefix, no value bytes) and dispatches to the nested
 // value at the slot position.
 // ===========================================================================
 
-TEST_CASE("jsonb_array: homogeneous string elements as a field value") {
+TEST_CASE("body_array: homogeneous string elements as a field value") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
-        "tags"_k = experimental::jsonb_array{"red", "green", "blue"},
+    auto body = body_object{
+        "tags"_k = body_array{"red", "green", "blue"},
     };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
@@ -624,10 +624,10 @@ TEST_CASE("jsonb_array: homogeneous string elements as a field value") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_array: heterogeneous elements as a field value") {
+TEST_CASE("body_array: heterogeneous elements as a field value") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
-        "vals"_k = experimental::jsonb_array{42, "text", 22.5, true},
+    auto body = body_object{
+        "vals"_k = body_array{42, "text", 22.5, true},
     };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
@@ -642,10 +642,10 @@ TEST_CASE("jsonb_array: heterogeneous elements as a field value") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_array: empty array as a field value") {
+TEST_CASE("body_array: empty array as a field value") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
-        "tags"_k = experimental::jsonb_array{},
+    auto body = body_object{
+        "tags"_k = body_array{},
     };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
@@ -656,11 +656,11 @@ TEST_CASE("jsonb_array: empty array as a field value") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: nested body as a field value") {
+TEST_CASE("body_object: nested body as a field value") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
+    auto body = body_object{
         "name"_k   = "outer",
-        "nested"_k = experimental::jsonb_body{ "x"_k = 1, "y"_k = 2 },
+        "nested"_k = body_object{ "x"_k = 1, "y"_k = 2 },
     };
     auto bytes = capture_bytes(body);
     auto expected = wire_build([](JsonBuilder& b) {
@@ -674,11 +674,11 @@ TEST_CASE("jsonb_body: nested body as a field value") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: deeply nested object (body in body in body)") {
+TEST_CASE("body_object: deeply nested object (body in body in body)") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
-        "a"_k = experimental::jsonb_body{
-            "b"_k = experimental::jsonb_body{
+    auto body = body_object{
+        "a"_k = body_object{
+            "b"_k = body_object{
                 "c"_k = 99,
             },
         },
@@ -695,12 +695,12 @@ TEST_CASE("jsonb_body: deeply nested object (body in body in body)") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: array of nested objects") {
+TEST_CASE("body_object: array of nested objects") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
-        "items"_k = experimental::jsonb_array{
-            experimental::jsonb_body{ "id"_k = 1 },
-            experimental::jsonb_body{ "id"_k = 2 },
+    auto body = body_object{
+        "items"_k = body_array{
+            body_object{ "id"_k = 1 },
+            body_object{ "id"_k = 2 },
         },
     };
     auto bytes = capture_bytes(body);
@@ -718,12 +718,12 @@ TEST_CASE("jsonb_body: array of nested objects") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_body: mix of primitive and nested fields") {
+TEST_CASE("body_object: mix of primitive and nested fields") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
+    auto body = body_object{
         "name"_k  = "station-7",
-        "loc"_k   = experimental::jsonb_body{ "lat"_k = 1.5, "lon"_k = 2.5 },
-        "tags"_k  = experimental::jsonb_array{"a", "b"},
+        "loc"_k   = body_object{ "lat"_k = 1.5, "lon"_k = 2.5 },
+        "tags"_k  = body_array{"a", "b"},
         "seq"_k   = 42,
     };
     auto bytes = capture_bytes(body);
@@ -743,11 +743,11 @@ TEST_CASE("jsonb_body: mix of primitive and nested fields") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_builder: nested body via .add") {
+TEST_CASE("body_builder: nested body via .add") {
     using namespace note::body_literals;
-    auto builder = experimental::jsonb_builder()
+    auto builder = body_builder()
         .add("name"_k,   "outer")
-        .add("nested"_k, experimental::jsonb_body{ "x"_k = 1 });
+        .add("nested"_k, body_object{ "x"_k = 1 });
     auto bytes = capture_bytes(builder);
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("name", string_view("outer"));
@@ -759,13 +759,13 @@ TEST_CASE("jsonb_builder: nested body via .add") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("jsonb_builder: nested array via .add matches init-list") {
+TEST_CASE("body_builder: nested array via .add matches init-list") {
     using namespace note::body_literals;
     auto from_builder = capture_bytes(
-        experimental::jsonb_builder()
-            .add("tags"_k, experimental::jsonb_array{"a", "b", "c"}));
-    auto from_init = capture_bytes(experimental::jsonb_body{
-        "tags"_k = experimental::jsonb_array{"a", "b", "c"},
+        body_builder()
+            .add("tags"_k, body_array{"a", "b", "c"}));
+    auto from_init = capture_bytes(body_object{
+        "tags"_k = body_array{"a", "b", "c"},
     });
     CHECK(from_builder == from_init);
 }
@@ -773,8 +773,8 @@ TEST_CASE("jsonb_builder: nested array via .add matches init-list") {
 // ===========================================================================
 // Stage 5b — nesting + arrays for the template literal (surfaces 1 + 2).
 //
-//   $No  — object slot: the positional arg must be a jsonb_body (or array).
-//   $Na  — array slot:  the positional arg must be a jsonb_array (or body).
+//   $No  — object slot: the positional arg must be a body_object (or array).
+//   $Na  — array slot:  the positional arg must be a body_array (or body).
 //
 // Both map to slot_type::Nested; the o/a suffix documents intent. The
 // argument carries its own emit_to(), so the template's static pool holds
@@ -783,9 +783,9 @@ TEST_CASE("jsonb_builder: nested array via .add matches init-list") {
 
 TEST_CASE("body_template: object slot $No") {
     using namespace note::body_literals;
-    constexpr auto tpl = experimental::body_template<R"({"loc":$1o})">();
+    constexpr auto tpl = body_template<R"({"loc":$1o})">();
     auto bytes = capture_bytes(
-        tpl.with(experimental::jsonb_body{ "lat"_k = 1.5, "lon"_k = 2.5 }));
+        tpl.with(body_object{ "lat"_k = 1.5, "lon"_k = 2.5 }));
     auto expected = wire_build([](JsonBuilder& b) {
         b.begin_object("loc");
         b.add("lat", 1.5);
@@ -798,9 +798,9 @@ TEST_CASE("body_template: object slot $No") {
 
 TEST_CASE("body_template: array slot $Na") {
     using namespace note::body_literals;
-    constexpr auto tpl = experimental::body_template<R"({"tags":$1a})">();
+    constexpr auto tpl = body_template<R"({"tags":$1a})">();
     auto bytes = capture_bytes(
-        tpl.with(experimental::jsonb_array{"red", "green", "blue"}));
+        tpl.with(body_array{"red", "green", "blue"}));
     auto expected = wire_build([](JsonBuilder& b) {
         b.begin_array("tags");
         b.add_element(string_view("red"));
@@ -814,12 +814,12 @@ TEST_CASE("body_template: array slot $Na") {
 
 TEST_CASE("body_template: object + array + primitive slots mixed") {
     using namespace note::body_literals;
-    constexpr auto tpl = experimental::body_template<
+    constexpr auto tpl = body_template<
         R"({"name":$1s,"loc":$2o,"items":$3a,"seq":$4})">();
     auto bytes = capture_bytes(tpl.with(
         "station-7",
-        experimental::jsonb_body{ "lat"_k = 1.5 },
-        experimental::jsonb_array{1, 2, 3},
+        body_object{ "lat"_k = 1.5 },
+        body_array{1, 2, 3},
         int32_t{42}));
     auto expected = wire_build([](JsonBuilder& b) {
         b.add("name", string_view("station-7"));
@@ -837,28 +837,28 @@ TEST_CASE("body_template: object + array + primitive slots mixed") {
     CHECK(bytes == expected);
 }
 
-TEST_CASE("body_template: $No / $Na agree with jsonb_body nested fields") {
+TEST_CASE("body_template: $No / $Na agree with body_object nested fields") {
     using namespace note::body_literals;
     auto from_template = capture_bytes(
-        experimental::body_template<R"({"outer":$1o,"items":$2a})">()
-            .with(experimental::jsonb_body{ "x"_k = 1 },
-                  experimental::jsonb_array{1, 2, 3}));
-    auto from_init = capture_bytes(experimental::jsonb_body{
-        "outer"_k = experimental::jsonb_body{ "x"_k = 1 },
-        "items"_k = experimental::jsonb_array{1, 2, 3},
+        body_template<R"({"outer":$1o,"items":$2a})">()
+            .with(body_object{ "x"_k = 1 },
+                  body_array{1, 2, 3}));
+    auto from_init = capture_bytes(body_object{
+        "outer"_k = body_object{ "x"_k = 1 },
+        "items"_k = body_array{1, 2, 3},
     });
     CHECK(from_template == from_init);
 }
 
-TEST_CASE("jsonb<L>: nested object/array slots via one-call form") {
+TEST_CASE("make_body<L>: nested object/array slots via one-call form") {
     using namespace note::body_literals;
-    auto from_jsonb = capture_bytes(
-        experimental::jsonb<R"({"loc":$1o})">(
-            experimental::jsonb_body{ "lat"_k = 1.5 }));
+    auto from_make_body = capture_bytes(
+        make_body<R"({"loc":$1o})">(
+            body_object{ "lat"_k = 1.5 }));
     auto from_two_step = capture_bytes(
-        experimental::body_template<R"({"loc":$1o})">()
-            .with(experimental::jsonb_body{ "lat"_k = 1.5 }));
-    CHECK(from_jsonb == from_two_step);
+        body_template<R"({"loc":$1o})">()
+            .with(body_object{ "lat"_k = 1.5 }));
+    CHECK(from_make_body == from_two_step);
 }
 
 // ===========================================================================
@@ -866,9 +866,9 @@ TEST_CASE("jsonb<L>: nested object/array slots via one-call form") {
 // both wire modes (shared `compiled_body` base + `begin_raw_value` splice).
 // ===========================================================================
 
-TEST_CASE("jsonb_body: BodyValue conversion splices a \"body\" field") {
+TEST_CASE("body_object: BodyValue conversion splices a \"body\" field") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
+    auto body = body_object{
         "seq"_k  = 42,
         "temp"_k = 22.5,
     };
@@ -884,11 +884,11 @@ TEST_CASE("jsonb_body: BodyValue conversion splices a \"body\" field") {
     CHECK(actual == expected);
 }
 
-TEST_CASE("jsonb_builder: BodyValue conversion (named-builder lifetime)") {
+TEST_CASE("body_builder: BodyValue conversion (named-builder lifetime)") {
     // Builder must outlive the BodyValue — same contract as note::body(lambda).
     // Here the builder lives in this scope; bv captures &builder.
     using namespace note::body_literals;
-    auto builder = experimental::jsonb_builder()
+    auto builder = body_builder()
         .add("x"_k, 1)
         .add("y"_k, 2);
     auto actual = body_value_bytes(builder);
@@ -904,12 +904,12 @@ TEST_CASE("jsonb_builder: BodyValue conversion (named-builder lifetime)") {
 }
 
 // A nested body/array survives the BodyValue splice in both wire formats.
-TEST_CASE("jsonb_body: BodyValue conversion with nested object + array") {
+TEST_CASE("body_object: BodyValue conversion with nested object + array") {
     using namespace note::body_literals;
-    auto body = experimental::jsonb_body{
+    auto body = body_object{
         "name"_k = "station-7",
-        "loc"_k  = experimental::jsonb_body{ "lat"_k = 1.5, "lon"_k = 2.5 },
-        "tags"_k = experimental::jsonb_array{"a", "b"},
+        "loc"_k  = body_object{ "lat"_k = 1.5, "lon"_k = 2.5 },
+        "tags"_k = body_array{"a", "b"},
     };
     auto actual = body_value_bytes(body);
 

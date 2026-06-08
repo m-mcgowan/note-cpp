@@ -48,7 +48,7 @@ Both forms produce identical requests. The group syntax is more readable; the di
 
 Some Notecard requests behave differently depending on which fields you send. For example, `card.attn` arms or disarms attention pins, configures sleep, queries state, or acts as a watchdog — all under the same `req` string. `note-cpp` splits these into named **operations** so each behavior is a distinct C++ type with only the fields and response shape that apply to it.
 
-In the Overview tables below, multi-operation requests occupy one row per operation and share the same wire name. The wire name is shown on the first row and left blank on the continuation rows to make the grouping easier to scan. See [Focused operations](using-the-api.md#focused-operations-on-multi-purpose-endpoints) in the API guide for the broader pattern, including safety levels, retry semantics, and the deprecated HTTP-verb names (`get()` / `set()` / `delete_()`).
+In the Overview tables below, multi-operation requests occupy one row per operation and share the same wire name. The wire name is shown on the first row and left blank on the continuation rows to make the grouping easier to scan. See [Focused operations](using-the-api.md#focused-operations-on-multi-purpose-requests) in the API guide for the broader pattern, including safety levels, retry semantics, and the deprecated HTTP-verb names (`get()` / `set()` / `delete_()`).
 
 ## Contents
 

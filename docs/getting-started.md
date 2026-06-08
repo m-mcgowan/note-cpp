@@ -32,7 +32,7 @@ lib_deps = https://github.com/m-mcgowan/note-cpp.git
 build_flags = -std=gnu++20    ; or gnu++17 minimum
 ```
 
-Use the Arduino sketch above for the Arduino framework, or the [stdcpp setup](#stdcpp-cmake-host) below if you're building against ESP-IDF or a bare-metal framework. Build with `pio run -e myboard`.
+Use the Arduino sketch above for the Arduino framework, or the [stdcpp setup](#stdcpp--cmake-host) below if you're building against ESP-IDF or a bare-metal framework. Build with `pio run -e myboard`.
 
 ### stdcpp / CMake host
 
@@ -70,7 +70,7 @@ Build: `cmake -S . -B build && cmake --build build`. The runnable companion to t
 
 ### ESP-IDF
 
-ESP-IDF uses the same setup as the [stdcpp / CMake host](#stdcpp-cmake-host) section above — add `note-cpp` as a CMake subdirectory and link it. ESP-IDF already bundles cJSON, so `CjsonBackend` reuses it. For the C++ standard, set `target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)` in your component's `CMakeLists.txt` (C++17 minimum, C++20 unlocks designated initializers and `consteval` validation — see [cpp-version-compatibility.md § Setting the standard in your build](cpp-version-compatibility.md#setting-the-standard-in-your-build)).
+ESP-IDF uses the same setup as the [stdcpp / CMake host](#stdcpp--cmake-host) section above — add `note-cpp` as a CMake subdirectory and link it. ESP-IDF already bundles cJSON, so `CjsonBackend` reuses it. For the C++ standard, set `target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)` in your component's `CMakeLists.txt` (C++17 minimum, C++20 unlocks designated initializers and `consteval` validation — see [cpp-version-compatibility.md § Setting the standard in your build](cpp-version-compatibility.md#setting-the-standard-in-your-build)).
 
 The HAL implementation for ESP-IDF UART/I2C drivers is yours to wire (the same `note::Hal` interface used by the Arduino bindings).
 

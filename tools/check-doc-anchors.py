@@ -50,8 +50,10 @@ def slugify(text: str) -> str:
     text = text.lower()
     # Keep only [a-z0-9], spaces, hyphens, underscores; drop the rest.
     text = re.sub(r"[^a-z0-9 _-]+", "", text)
-    # Spaces (any run) → single hyphen.
-    text = re.sub(r"\s+", "-", text).strip("-")
+    # Each whitespace char → one hyphen (GitHub does NOT collapse runs, so a
+    # heading like "Arduino — streaming" — em-dash dropped above, two spaces
+    # left — slugs to "arduino--streaming", matching github-slugger).
+    text = re.sub(r"\s", "-", text).strip("-")
     return text
 
 

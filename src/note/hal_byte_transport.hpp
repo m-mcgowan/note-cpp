@@ -19,6 +19,7 @@
 /// chunk) aren't dropped. No wire-format knowledge (CRC, JSON, JSONB)
 /// lives here — see `json_transact.hpp` for that layer.
 
+#include <note/bus_lock.hpp>
 #include <note/error.hpp>
 #include <note/transport.hpp>
 #include <note/transport_hal.hpp>
@@ -148,14 +149,28 @@ private:
 /// Templated byte transport over any Hal-shaped type. No virtual methods,
 /// so concrete templated HALs (e.g. `SerialFramer<SerialHal<HardwareSerial>>`)
 /// can be inlined through both this layer and the wire-format layer above.
-template<typename HalT>
+///
+/// The optional `Lock` template parameter accepts any type with `lock()` and
+/// `unlock()` methods (a C++ Lockable). The default is `NullLock`, which has
+/// no vtable, no state, and is fully inlined — single-threaded and AVR users
+/// pay nothing (`[[no_unique_address]]` guarantees zero size overhead).
+///
+/// To protect a shared I2C/serial bus from concurrent access, pass a lock
+/// type whose `lock()`/`unlock()` invoke your RTOS or platform mutex:
+/// @code
+///   using MyTransport = note::HalByteTransportT<MyHal, MyMutex>;
+/// @endcode
+template<typename HalT, typename Lock = NullLock>
 class HalByteTransportT {
 public:
     explicit HalByteTransportT(HalT& hal) : hal_(hal) {}
 
     Result<void> begin_transaction(uint32_t) {
-        if (!ensure_init())
+        lock_.lock();
+        if (!ensure_init()) {
+            lock_.unlock();
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
+        }
         frame_terminated_ = false;
         any_data_received_ = false;
         return {};
@@ -164,6 +179,7 @@ public:
     void end_transaction() {
         if (!frame_terminated_ && any_data_received_)
             drain_frame_boundary();
+        lock_.unlock();
     }
 
     Result<void> write(const uint8_t* data, size_t len) {
@@ -252,6 +268,7 @@ private:
     }
 
     HalT& hal_;
+    [[no_unique_address]] Lock lock_{};
     bool initialized_ = false;
     bool frame_terminated_ = false;
     bool any_data_received_ = false;

@@ -1,5 +1,6 @@
 #include "doctest.h"
 #include <note/bus_lock.hpp>
+#include <note/hal_byte_transport.hpp>
 #include <note/protocol.hpp>
 #include <note/link/serial.hpp>
 
@@ -256,4 +257,81 @@ TEST_CASE("bus lock: clear_bus_lock disengages the lock") {
 
     REQUIRE(r.has_value());
     CHECK(lk.locks == 0);
+}
+
+// ---------------------------------------------------------------------------
+// HalByteTransportT<HalT, Lock> — compile-time lock template parameter.
+// NullLock (the default) must be zero-size. CountingTplLock proves that
+// begin_transaction acquires and end_transaction releases exactly once per
+// exchange.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct CountingTplLock {
+    static inline int locks = 0;
+    static inline int unlocks = 0;
+    void lock()   { ++locks; }
+    void unlock() { ++unlocks; }
+};
+
+// Minimal HAL-shaped stub for HalByteTransportT — non-virtual, satisfies
+// exactly the methods HalByteTransportT calls on hal_: transmit, read,
+// write_line_terminator, reset (returns bool), millis, delay.
+struct StubHal {
+    // Staged response for read() — '\n' terminates the frame.
+    std::string rx_buf;
+
+    void queue(const std::string& s) { rx_buf = s; }
+
+    bool transmit(const uint8_t* /*data*/, size_t /*len*/) { return true; }
+
+    note::Result<size_t> read(uint8_t* buf, size_t max, uint32_t /*timeout_ms*/) {
+        size_t n = std::min(max, rx_buf.size());
+        for (size_t i = 0; i < n; ++i)
+            buf[i] = static_cast<uint8_t>(rx_buf[i]);
+        rx_buf.erase(0, n);
+        return n;
+    }
+
+    bool write_line_terminator() { return true; }
+    bool reset() { return true; }
+    uint32_t millis() { return 0; }
+    void delay(uint32_t) {}
+};
+
+} // namespace
+
+static_assert(std::is_empty_v<note::NullLock>, "NullLock must be zero-size");
+
+TEST_CASE("HalByteTransportT: CountingTplLock is acquired in begin_transaction and released in end_transaction") {
+    CountingTplLock::locks   = 0;
+    CountingTplLock::unlocks = 0;
+
+    StubHal hal;
+    // Queue a minimal '\n'-terminated response so end_transaction doesn't drain.
+    hal.queue("\n");
+
+    note::HalByteTransportT<StubHal, CountingTplLock> bt{hal};
+
+    auto r = bt.begin_transaction(1000);
+    CHECK(r.has_value());
+    CHECK(CountingTplLock::locks == 1);
+
+    bt.end_transaction();
+    CHECK(CountingTplLock::unlocks == 1);
+}
+
+TEST_CASE("HalByteTransportT: default NullLock compiles and begin/end cycle succeeds") {
+    StubHal hal;
+    hal.queue("\n");
+
+    // Single-arg instantiation — Lock defaults to NullLock.
+    note::HalByteTransportT<StubHal> bt{hal};
+
+    auto r = bt.begin_transaction(1000);
+    CHECK(r.has_value());
+    bt.end_transaction();
+    // NullLock: no observable counters — just prove the path compiles and runs.
+    CHECK(true);
 }

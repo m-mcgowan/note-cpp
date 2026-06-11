@@ -115,3 +115,145 @@ TEST_CASE("bus lock: transact acquires and releases once per exchange") {
     CHECK(lk.unlocks == 1);
     CHECK(lk.max_held == 1);
 }
+
+// ---------------------------------------------------------------------------
+// LockObservingSerialHal — a serial HAL variant that defers the response
+// bytes until receive() is first called AFTER the line-terminator transmit.
+// This forces receive() to fetch bytes independently from transmit(), so the
+// test can detect whether the lock is held at the moment bytes are read.
+//
+// Byte delivery is deliberately split across two phases:
+//   Phase 0 (transmit active):  transmit() stores the line-terminator event
+//                               but does NOT stage bytes into rx.
+//   Phase 1 (first receive()):  bytes are moved from pending_response into rx
+//                               so the first receive() call that the protocol
+//                               drives actually delivers them.
+//
+// This mimics real hardware where the response only arrives over the wire
+// after transmit is complete — the lock must span both halves.
+// ---------------------------------------------------------------------------
+namespace {
+
+struct LockObservingSerialHal : public note::link::SerialHal {
+    // Set by test before each transaction
+    RecordingLock* lock = nullptr;
+    std::string pending_response;   // bytes to deliver on first receive()
+    bool response_pending = false;  // set when \r\n terminator seen
+    bool delivered = false;         // true once pending bytes moved to rx
+    std::string rx;
+    uint32_t now_ms = 0;
+
+    // Result tracking
+    int held_on_first_data_rx = -1; // held count when first real byte read
+
+    void queue(const std::string& rsp) {
+        pending_response = rsp;
+        response_pending = false;
+        delivered = false;
+        held_on_first_data_rx = -1;
+    }
+
+    bool transmit(const uint8_t* d, size_t n) override {
+        // Detect reset probe (\n alone) — drain with empty line
+        if (n == 1 && d[0] == '\n') {
+            rx += "\r\n";
+        }
+        // Detect line terminator (\r\n) — arm response but do NOT stage bytes
+        else if (n == 2 && d[0] == '\r' && d[1] == '\n') {
+            response_pending = true;
+        }
+        return true;
+    }
+
+    size_t receive(uint8_t* buf, size_t max_len) override {
+        // On first call after line-terminator, move bytes from pending to rx
+        if (response_pending && !delivered) {
+            rx += pending_response;
+            delivered = true;
+            // Record lock state at the moment real response bytes arrive
+            if (held_on_first_data_rx < 0)
+                held_on_first_data_rx = lock ? lock->held : 0;
+        }
+        size_t n = std::min(max_len, rx.size());
+        for (size_t i = 0; i < n; ++i) buf[i] = static_cast<uint8_t>(rx[i]);
+        rx.erase(0, n);
+        return n;
+    }
+
+    uint32_t millis() override { return now_ms; }
+    void delay(uint32_t ms) override { now_ms += ms; }
+};
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// Regression: string_view+JsonSink transact must hold the bus lock DURING
+// receive. Bug: the old implementation called send_raw() (which acquired and
+// released the lock) and then called receive_dispatch() with no lock held —
+// leaving the receive half of the exchange unprotected.
+//
+// This test uses LockObservingSerialHal, which defers byte delivery until
+// receive() is called. held_on_first_data_rx records the lock->held count
+// at the moment the first real response bytes are made available. A value
+// of 0 means receive ran with no lock — the bug. The fix gives the overload
+// its own BusLockGuard spanning transmit+receive, matching transact_raw.
+// ---------------------------------------------------------------------------
+TEST_CASE("bus lock: string_view+sink transact holds lock during receive") {
+    LockObservingSerialHal hal;
+    note::link::SerialFramer<note::link::SerialPolicy> ns{hal};
+    note::Protocol transport{ns};
+
+    RecordingLock lk;
+    transport.set_bus_lock(lk);
+    hal.lock = &lk;
+
+    hal.queue("{\"connected\":true}\r\n");
+
+    note::JsonSink null_sink;
+    auto r = transport.transact(note::string_view{"{\"req\":\"hub.status\"}"}, null_sink, 5000u);
+
+    REQUIRE(r.has_value());
+    CHECK(lk.locks   == 1);
+    CHECK(lk.unlocks == 1);
+    CHECK(hal.held_on_first_data_rx == 1);
+}
+
+// ---------------------------------------------------------------------------
+// No-lock path: transact still succeeds when no lock is registered.
+// ---------------------------------------------------------------------------
+TEST_CASE("bus lock: transact succeeds with no lock registered") {
+    ScriptedSerialHal hal;
+    note::link::SerialFramer<note::link::SerialPolicy> ns{hal};
+    note::Protocol transport{ns};
+    // No set_bus_lock call.
+
+    hal.queue("{\"connected\":true}\r\n");
+
+    note::JsonSink null_sink;
+    auto build = [&](note::JsonBuilder& b) { b.add("req", "hub.status"); };
+    auto r = transport.transact(build, null_sink, 5000u);
+
+    CHECK(r.has_value());
+}
+
+// ---------------------------------------------------------------------------
+// clear_bus_lock: after clearing, lock is no longer acquired.
+// ---------------------------------------------------------------------------
+TEST_CASE("bus lock: clear_bus_lock disengages the lock") {
+    ScriptedSerialHal hal;
+    note::link::SerialFramer<note::link::SerialPolicy> ns{hal};
+    note::Protocol transport{ns};
+
+    RecordingLock lk;
+    transport.set_bus_lock(lk);
+    transport.clear_bus_lock();
+
+    hal.queue("{\"connected\":true}\r\n");
+
+    note::JsonSink null_sink;
+    auto build = [&](note::JsonBuilder& b) { b.add("req", "hub.status"); };
+    auto r = transport.transact(build, null_sink, 5000u);
+
+    REQUIRE(r.has_value());
+    CHECK(lk.locks == 0);
+}

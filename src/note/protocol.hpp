@@ -262,6 +262,7 @@ public:
     /// wire exchange and releases it between exchanges. Share the SAME lock
     /// object with the application's other I2C drivers. See note/bus_lock.hpp.
     void set_bus_lock(IBusLock& l) { bus_lock_ = &l; }
+    /// Remove the bus lock (e.g. for testing).
     void clear_bus_lock() { bus_lock_ = nullptr; }
 #endif
 
@@ -314,8 +315,20 @@ public:
     /// side, just with the request bytes already materialised.
     Result<void> transact(string_view request, JsonSink& sink,
                           uint32_t timeout_ms) override {
-        auto sv = send_raw(request);
-        if (!sv) return Unexpected(sv.error());
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
+#endif
+        if (!ensure_init())
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+        if (!hal_.transmit(reinterpret_cast<const uint8_t*>(request.data()), request.size()))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        if (!hal_.write_line_terminator())
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("line terminator failed"));
         auto dispatch = make_sax_dispatch(sink);
         detail::NcErrorCapture nc_err;
         return receive_dispatch(dispatch, timeout_ms, nc_err);

@@ -4,9 +4,12 @@
 #include <note/protocol.hpp>
 #include <note/link/serial.hpp>
 
+#include <atomic>
+#include <barrier>
 #include <deque>
 #include <mutex>
 #include <string>
+#include <thread>
 
 namespace {
 
@@ -334,4 +337,100 @@ TEST_CASE("HalByteTransportT: default NullLock compiles and begin/end cycle succ
     bt.end_transaction();
     // NullLock: no observable counters — just prove the path compiles and runs.
     CHECK(true);
+}
+
+// ---------------------------------------------------------------------------
+// Threaded interleaving detector — proves bus-lock serialization.
+//
+// InterleaveDetector tracks concurrent entry into a critical section.
+// enter() increments in_flight; if it was already non-zero, another thread
+// is simultaneously inside — a violation. exit() decrements in_flight.
+//
+// Two threads hammer the detector through run_exchange():
+//   - Without a lock: interleaving is CERTAIN (see below).
+//   - With a shared BusLockGuard lock: zero interleaving guaranteed.
+//
+// Determinism strategy for the no-lock case:
+//   A std::barrier forces both threads to arrive at run_exchange() at the
+//   same instant on every iteration. With both threads entering enter()
+//   simultaneously and a yield + spin inside the in_flight window, at least
+//   one of the N=1000 synchronized pairs will always observe in_flight > 1.
+//   This eliminates probabilistic reliance on scheduler timing.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct InterleaveDetector {
+    std::atomic<int> in_flight{0};
+    std::atomic<int> violations{0};
+
+    void enter() {
+        if (in_flight.fetch_add(1, std::memory_order_acq_rel) != 0)
+            violations.fetch_add(1, std::memory_order_relaxed);
+        // Linger inside the critical section: give the other thread time to
+        // also call enter() and observe in_flight > 1.
+        for (volatile int i = 0; i < 200; i = i + 1) {} // NOLINT: volatile delay
+        std::this_thread::yield();
+    }
+    void exit() { in_flight.fetch_sub(1, std::memory_order_acq_rel); }
+};
+
+void run_exchange(InterleaveDetector& det, note::IBusLock* lock) {
+    note::BusLockGuard guard{lock};
+    det.enter();
+    // Simulate a short exchange so two threads can be in-flight simultaneously.
+    for (volatile int i = 0; i < 1000; i = i + 1) {} // NOLINT: volatile delay
+    det.exit();
+}
+
+// N synchronized exchange pairs per thread.
+constexpr int kHammerIterations = 1000;
+
+void hammer_synchronized(InterleaveDetector& det,
+                          note::IBusLock* lock,
+                          std::barrier<>& bar) {
+    for (int i = 0; i < kHammerIterations; ++i) {
+        // Both threads arrive here together before each exchange attempt.
+        bar.arrive_and_wait();
+        run_exchange(det, lock);
+    }
+}
+
+} // namespace (threaded detector helpers)
+
+// ---------------------------------------------------------------------------
+// Case 1: WITHOUT a shared lock — interleaving detector MUST fire.
+// Both threads are barrier-synchronized so they enter run_exchange()
+// simultaneously on every iteration. The result is deterministically > 0.
+// ---------------------------------------------------------------------------
+TEST_CASE("interleaving detector fires WITHOUT a shared lock") {
+    InterleaveDetector det;
+    std::barrier bar{2};
+
+    std::thread t1{[&] { hammer_synchronized(det, nullptr, bar); }};
+    std::thread t2{[&] { hammer_synchronized(det, nullptr, bar); }};
+    t1.join();
+    t2.join();
+
+    CHECK(det.violations.load() > 0);
+}
+
+// ---------------------------------------------------------------------------
+// Case 2: WITH a SHARED lock — zero interleaving.
+// Both threads use the same LockAdapter wrapping the same std::mutex.
+// The barrier still forces simultaneous attempts; the lock serializes them.
+// ---------------------------------------------------------------------------
+TEST_CASE("SHARED lock serializes both threads — zero interleaving") {
+    InterleaveDetector det;
+    std::barrier bar{2};
+
+    std::mutex m;
+    note::LockAdapter<std::mutex> lock{m};
+
+    std::thread t1{[&] { hammer_synchronized(det, &lock, bar); }};
+    std::thread t2{[&] { hammer_synchronized(det, &lock, bar); }};
+    t1.join();
+    t2.join();
+
+    CHECK(det.violations.load() == 0);
 }

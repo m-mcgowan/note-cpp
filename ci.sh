@@ -160,7 +160,7 @@ NFEOF
     # Build and run unit tests
     echo
     ci_stage "Unit tests"
-    nice $CXX $CXXFLAGS $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests \
+    nice $CXX $CXXFLAGS $INCLUDE -I "$ROOT/tests" -pthread -o /tmp/note-cpp-tests \
         "$ROOT/tests/doctest_main.cpp" \
         "$ROOT/tests/test_wire_format.cpp" \
         "$ROOT/tests/test_samples.cpp" \

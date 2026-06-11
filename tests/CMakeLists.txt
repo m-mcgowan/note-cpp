@@ -112,6 +112,16 @@ target_compile_options(note-cpp-tests-arduino PRIVATE -include ${CMAKE_CURRENT_S
 target_include_directories(note-cpp-tests-arduino PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stubs)
 add_test(NAME unit-tests-arduino COMMAND note-cpp-tests-arduino)
 
+find_package(Threads REQUIRED)
+target_link_libraries(note-cpp-tests PRIVATE Threads::Threads)
+target_link_libraries(note-cpp-tests-arduino PRIVATE Threads::Threads)
+
+option(NOTE_CPP_TSAN "Build note-cpp-tests with ThreadSanitizer" OFF)
+if(NOTE_CPP_TSAN)
+    target_compile_options(note-cpp-tests PRIVATE -fsanitize=thread -g -O1)
+    target_link_options(note-cpp-tests PRIVATE -fsanitize=thread)
+endif()
+
 # ---------------------------------------------------------------------------
 # Backend parity integration tests (doctest).
 # Compiled on host here; compiled on device via

@@ -42,6 +42,10 @@
 #include <note/txn_handshake.hpp>
 #endif
 
+#if NOTE_I2C_BUS_LOCK
+#include <note/bus_lock.hpp>
+#endif
+
 namespace note {
 
 #if NOTE_TXN_HANDSHAKE
@@ -253,6 +257,14 @@ public:
     void clear_handshake() { handshake_ = nullptr; }
 #endif
 
+#if NOTE_I2C_BUS_LOCK
+    /// Register a bus lock; the transport acquires it for the duration of each
+    /// wire exchange and releases it between exchanges. Share the SAME lock
+    /// object with the application's other I2C drivers. See note/bus_lock.hpp.
+    void set_bus_lock(IBusLock& l) { bus_lock_ = &l; }
+    void clear_bus_lock() { bus_lock_ = nullptr; }
+#endif
+
 #if NOTE_STATIC_HAL
     HalT& hal() { return hal_; }
 #elif NOTE_NO_POLYMORPHIC
@@ -334,6 +346,9 @@ public:
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
+#endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
@@ -353,6 +368,9 @@ public:
         detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
 #endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -374,6 +392,9 @@ public:
         detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
 #endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -426,6 +447,9 @@ public:
         detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
 #endif
         if (!ensure_init()) {
             debug_transport(debug_, TransportEvent::ResetFailed, 0);
@@ -491,6 +515,9 @@ public:
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
+#endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
@@ -513,6 +540,9 @@ public:
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
+#endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
@@ -532,6 +562,9 @@ public:
         detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
         if (!handshake_scope.ok())
             return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+#if NOTE_I2C_BUS_LOCK
+        BusLockGuard bus_guard{bus_lock_};
 #endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -899,6 +932,10 @@ private:
 
 #if NOTE_TXN_HANDSHAKE
     TxnHandshake* handshake_ = nullptr;
+#endif
+
+#if NOTE_I2C_BUS_LOCK
+    IBusLock* bus_lock_ = nullptr;
 #endif
 };
 

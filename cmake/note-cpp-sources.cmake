@@ -95,6 +95,7 @@ set(NOTE_CPP_THIRD_PARTY_HEADERS
 
 # Tests that compile under both regular and NOTE_MINIMAL builds.
 set(NOTE_CPP_TEST_SOURCES_COMMON
+    test_bus_lock.cpp
     test_buffer_backend.cpp
     test_body_template.cpp
     test_cobs.cpp

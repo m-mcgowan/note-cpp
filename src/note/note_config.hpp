@@ -101,6 +101,10 @@
 #    define NOTE_TXN_HANDSHAKE 0
 #  endif
 
+#  ifndef NOTE_I2C_BUS_LOCK
+#    define NOTE_I2C_BUS_LOCK 0
+#  endif
+
 #endif // NOTE_MINIMAL
 
 // ── Individual flag defaults ───────────────────────────────────────────
@@ -223,6 +227,16 @@
 // CTX/RTX). See include/note/sku_info.hpp for per-SKU capability.
 #ifndef NOTE_TXN_HANDSHAKE
 #define NOTE_TXN_HANDSHAKE 1
+#endif
+
+// NOTE_I2C_BUS_LOCK — when 1, enable the optional bus-lock hook on the
+// transport. Each wire exchange is bracketed by IBusLock::lock()/unlock()
+// when a lock is registered via set_bus_lock(). When 0, the hook code is
+// fully compiled out. Lets a Notecard share an I2C bus with other devices or
+// be driven from multiple threads. Single-device/single-thread users register
+// no lock and pay nothing.
+#ifndef NOTE_I2C_BUS_LOCK
+#define NOTE_I2C_BUS_LOCK 1
 #endif
 
 #ifndef NOTE_PRINTABLE

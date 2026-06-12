@@ -179,6 +179,7 @@ Wraps any type that satisfies the C++ `Lockable` concept — `std::mutex`,
 `std::recursive_mutex`, or your platform's equivalent:
 
 ```cpp
+#include <note.hpp>
 #include <note/bus_lock.hpp>
 #include <note/link/i2c.hpp>
 #include <mutex>
@@ -208,6 +209,7 @@ Wraps a `SemaphoreHandle_t` created with `xSemaphoreCreateMutex()`. Include
 FreeRTOS headers and must not be included on host builds.
 
 ```cpp
+#include <note.hpp>
 #include <note/bus_lock.hpp>
 #include <note/arduino/freertos_bus_lock.hpp>
 #include <note/link/i2c.hpp>
@@ -233,6 +235,7 @@ any mutex API that exposes a C callback surface — Zephyr's `k_mutex`,
 CMSIS-RTOS, or a hand-written critical-section:
 
 ```cpp
+#include <note.hpp>
 #include <note/bus_lock.hpp>
 #include <note/link/i2c.hpp>
 
@@ -257,29 +260,38 @@ though in practice both should always be provided.
 
 ### Arduino `Notecard` wrapper
 
-The Arduino `note::arduino::Notecard` convenience type (`nc.begin(Wire)`)
-constructs the `Protocol` object internally and does not expose it through a
-public accessor. To register a bus lock on Arduino, construct the transport
-stack explicitly and call `begin()` with it:
+The `note::arduino::Notecard` convenience type (`nc.begin(Wire)`) constructs
+its `Protocol` object internally and does not currently expose a way to
+register a bus lock on it. Users who need a shared bus lock on Arduino should
+build the transport stack explicitly using the core `note::Notecard` instead
+of the convenience wrapper:
 
 ```cpp
-#include <note/link/i2c.hpp>
+#include <note.hpp>
 #include <note/bus_lock.hpp>
+#include <note/arduino/i2c.hpp>
+#include <note/link/i2c.hpp>
+#include <mutex>
+
+// Wire must be initialised before constructing the HAL with external_bus.
+Wire.begin(sda, scl);
 
 note::arduino::I2cHal hal{Wire, note::arduino::external_bus};
-note::link::I2cFramer i2c{hal};
+note::link::I2cFramer<> i2c{hal};
 note::Protocol transport{i2c};
 
 std::mutex i2c_bus_mutex;
 note::LockAdapter<std::mutex> lock{i2c_bus_mutex};
 transport.set_bus_lock(lock);
 
-note::arduino::Notecard<> nc;
-nc.begin(transport);
+note::backends::StaticJsonBackend<512, 64> backend;
+note::Notecard nc{backend, transport};
 ```
 
-Wire.begin() must be called by the application before `begin()` when using
-`external_bus` — the HAL leaves bus initialisation entirely to the app.
+This uses the Arduino `I2cHal` and `I2cFramer` for the hardware layer but
+wires them into the core `note::Notecard` directly, bypassing the convenience
+wrapper. `external_bus` tells the HAL not to call `Wire.begin()` or
+`Wire.end()` internally — the application controls bus lifetime.
 
 ### Zero cost on constrained devices
 
@@ -289,6 +301,10 @@ compile-time `NullLock` type provides an empty `lock()`/`unlock()` with no
 vtable; it is used internally by the template-specialised path and contributes
 zero code to the final binary.
 
-To remove the lock hook entirely from the polymorphic path (saving one pointer
-and one null check per exchange), set `NOTE_I2C_BUS_LOCK=0` — or use
-`NOTE_MINIMAL`, which sets it to `0` automatically.
+To remove the lock hook entirely from the default vtable-dispatched transport
+(saving one pointer and one null check per exchange), set `NOTE_I2C_BUS_LOCK=0`
+— or use `NOTE_MINIMAL`, which sets it to `0` automatically.
+
+Note: the low-level binary transfer primitives (used by `card.binary` put/get)
+are not yet covered by the bus lock; bus-lock coverage for binary transfers is
+planned.

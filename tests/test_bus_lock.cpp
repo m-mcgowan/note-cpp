@@ -363,8 +363,10 @@ namespace {
 struct InterleaveDetector {
     std::atomic<int> in_flight{0};
     std::atomic<int> violations{0};
+    std::atomic<int> enter_count{0};
 
     void enter() {
+        enter_count.fetch_add(1, std::memory_order_relaxed);
         if (in_flight.fetch_add(1, std::memory_order_acq_rel) != 0)
             violations.fetch_add(1, std::memory_order_relaxed);
         // Linger inside the critical section: give the other thread time to
@@ -557,6 +559,7 @@ TEST_CASE("two Protocols sharing one bus lock never overlap an exchange") {
     t1.join();
     t2.join();
 
+    CHECK(det.enter_count.load() == kE2eIterations * 2);
     CHECK(det.violations.load() == 0);
 }
 

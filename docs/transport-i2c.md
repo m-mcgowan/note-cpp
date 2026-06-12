@@ -148,3 +148,147 @@ Wire library's static 32-byte buffer minus the 2-byte Notecard header.
 Platforms with a dynamically-allocated I2C buffer (STM32Duino, most ESP32
 boards) can safely use 253. Override `max_transfer()` in your `I2cHal`
 subclass or pass the size as the 6th argument to `I2cCallbackHal`.
+
+## Sharing the bus / multi-threaded use
+
+The library is **not** internally thread-safe by default. It makes no locking
+assumptions — concurrent calls from different threads, or concurrent I2C
+activity from another driver, will corrupt the wire exchange. For
+single-device, single-threaded applications this is fine and costs nothing.
+
+When you need to share the I2C bus — whether with another chip driver, a
+sensor library, or a second task — you register an `IBusLock` with the
+transport. The library acquires the lock for exactly one complete
+request/response wire exchange and releases it between exchanges, so the rest
+of the bus is free in the gaps. Critically, **all drivers on the same bus must
+share the same lock object**. A lock that only the Notecard knows about cannot
+serialize against an opaque third-party driver.
+
+`IBusLock` is declared in `<note/bus_lock.hpp>`. Register a lock by calling
+`set_bus_lock()` on the `Protocol` object before the first request:
+
+```cpp
+transport.set_bus_lock(lock);   // transport is a note::Protocol&
+```
+
+Three adapters cover the common cases:
+
+### `LockAdapter<Lockable>` — any C++ lockable (host, multi-threaded RTOS)
+
+Wraps any type that satisfies the C++ `Lockable` concept — `std::mutex`,
+`std::recursive_mutex`, or your platform's equivalent:
+
+```cpp
+#include <note/bus_lock.hpp>
+#include <note/link/i2c.hpp>
+#include <mutex>
+
+MyI2c hal;
+note::link::I2cFramer i2c{hal};
+note::Protocol transport{i2c};
+
+// Shared with every other I2C driver on this bus.
+std::mutex i2c_bus_mutex;
+note::LockAdapter<std::mutex> lock{i2c_bus_mutex};
+
+transport.set_bus_lock(lock);
+
+note::backends::CjsonBackend backend;
+note::Notecard nc{backend, transport};
+```
+
+Pass `i2c_bus_mutex` to your other I2C drivers so all of them compete for the
+same mutex. The `LockAdapter` owns only a reference; the mutex must outlive the
+transport.
+
+### `FreeRtosBusLock` — FreeRTOS (Arduino ESP-IDF, most RTOS-based boards)
+
+Wraps a `SemaphoreHandle_t` created with `xSemaphoreCreateMutex()`. Include
+`<note/arduino/freertos_bus_lock.hpp>` on FreeRTOS targets only — it pulls in
+FreeRTOS headers and must not be included on host builds.
+
+```cpp
+#include <note/bus_lock.hpp>
+#include <note/arduino/freertos_bus_lock.hpp>
+#include <note/link/i2c.hpp>
+
+MyI2c hal;
+note::link::I2cFramer i2c{hal};
+note::Protocol transport{i2c};
+
+// Create once; share this handle with every other I2C task.
+SemaphoreHandle_t i2c_mutex = xSemaphoreCreateMutex();
+note::FreeRtosBusLock lock{i2c_mutex};
+
+transport.set_bus_lock(lock);
+```
+
+`FreeRtosBusLock` holds only the handle; the semaphore must be created before
+the transport starts and must not be deleted while the transport is in use.
+
+### `CallbackBusLock` — other RTOS or bare-metal mutex APIs
+
+Takes a pair of C function pointers plus a context pointer. Use this to bridge
+any mutex API that exposes a C callback surface — Zephyr's `k_mutex`,
+CMSIS-RTOS, or a hand-written critical-section:
+
+```cpp
+#include <note/bus_lock.hpp>
+#include <note/link/i2c.hpp>
+
+// Your RTOS mutex, however it is typed.
+static MyRtosMutex i2c_mutex;
+
+MyI2c hal;
+note::link::I2cFramer i2c{hal};
+note::Protocol transport{i2c};
+
+note::CallbackBusLock lock{
+    [](void* ctx) { MyRtos_MutexAcquire(static_cast<MyRtosMutex*>(ctx)); },
+    [](void* ctx) { MyRtos_MutexRelease(static_cast<MyRtosMutex*>(ctx)); },
+    &i2c_mutex
+};
+
+transport.set_bus_lock(lock);
+```
+
+Both function pointers may be null (treated as a no-op for that direction),
+though in practice both should always be provided.
+
+### Arduino `Notecard` wrapper
+
+The Arduino `note::arduino::Notecard` convenience type (`nc.begin(Wire)`)
+constructs the `Protocol` object internally and does not expose it through a
+public accessor. To register a bus lock on Arduino, construct the transport
+stack explicitly and call `begin()` with it:
+
+```cpp
+#include <note/link/i2c.hpp>
+#include <note/bus_lock.hpp>
+
+note::arduino::I2cHal hal{Wire, note::arduino::external_bus};
+note::link::I2cFramer i2c{hal};
+note::Protocol transport{i2c};
+
+std::mutex i2c_bus_mutex;
+note::LockAdapter<std::mutex> lock{i2c_bus_mutex};
+transport.set_bus_lock(lock);
+
+note::arduino::Notecard<> nc;
+nc.begin(transport);
+```
+
+Wire.begin() must be called by the application before `begin()` when using
+`external_bus` — the HAL leaves bus initialisation entirely to the app.
+
+### Zero cost on constrained devices
+
+On AVR and other single-threaded platforms where a mutex would never be needed,
+no lock is registered and no lock-related code runs. The static and
+compile-time `NullLock` type provides an empty `lock()`/`unlock()` with no
+vtable; it is used internally by the template-specialised path and contributes
+zero code to the final binary.
+
+To remove the lock hook entirely from the polymorphic path (saving one pointer
+and one null check per exchange), set `NOTE_I2C_BUS_LOCK=0` — or use
+`NOTE_MINIMAL`, which sets it to `0` automatically.

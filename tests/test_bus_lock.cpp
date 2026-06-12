@@ -434,3 +434,145 @@ TEST_CASE("SHARED lock serializes both threads — zero interleaving") {
 
     CHECK(det.violations.load() == 0);
 }
+
+// ---------------------------------------------------------------------------
+// End-to-end threaded test: two real Protocols sharing ONE bus lock.
+//
+// Each thread drives its own Protocol over its own scripted HAL. Both share
+// a single IBusLock and a shared InterleaveDetector. The HAL marks the
+// transmit→read span of each exchange against the detector so any overlap
+// between two concurrent exchanges is counted as a violation.
+//
+// DetectingSerialHal behaviour:
+//   transmit('\n', 1)     → inject "\r\n" (reset probe response)
+//   transmit(data, n!=2)  → no-op (request body bytes)
+//   transmit('\r\n', 2)   → call det.enter(), yield, stage queued response
+//   receive(...)          → drain rx; when rx is emptied after having entered,
+//                           call det.exit()
+//
+// An optional barrier pointer (null by default) lets the no-lock variant
+// synchronise both threads at enter() time to force deterministic overlap.
+// Never set the barrier when a real lock is used — deadlock would result.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct DetectingSerialHal : public note::link::SerialHal {
+    InterleaveDetector&  det;
+    std::barrier<>*      sync_barrier = nullptr;  // only for no-lock contention test
+    std::deque<std::string> queued_responses;
+    std::string rx;
+    uint32_t    now_ms    = 0;
+    bool        entered   = false;   // true between enter() and exit()
+
+    explicit DetectingSerialHal(InterleaveDetector& d) : det(d) {}
+
+    void queue(const std::string& rsp) { queued_responses.push_back(rsp); }
+
+    bool transmit(const uint8_t* d, size_t n) override {
+        // Reset probe (\n alone): respond with empty framed line.
+        if (n == 1 && d[0] == '\n') {
+            rx += "\r\n";
+            return true;
+        }
+        // Line terminator (\r\n): mark start of critical region, then stage response.
+        if (n == 2 && d[0] == '\r' && d[1] == '\n') {
+            if (sync_barrier) {
+                // Synchronize both threads at exchange start so they enter
+                // the detector together. Only used in the no-lock contention test.
+                sync_barrier->arrive_and_wait();
+            }
+            det.enter();
+            entered = true;
+            // Widen the detection window: give the other thread a chance to
+            // also enter if no lock is held.
+            std::this_thread::yield();
+            if (!queued_responses.empty()) {
+                rx += queued_responses.front();
+                queued_responses.pop_front();
+            }
+            return true;
+        }
+        // Request body bytes: no-op.
+        return true;
+    }
+
+    size_t receive(uint8_t* buf, size_t max_len) override {
+        size_t n = std::min(max_len, rx.size());
+        for (size_t i = 0; i < n; ++i)
+            buf[i] = static_cast<uint8_t>(rx[i]);
+        rx.erase(0, n);
+        // Exit critical region once the response buffer is fully drained.
+        if (entered && rx.empty()) {
+            entered = false;
+            det.exit();
+        }
+        return n;
+    }
+
+    uint32_t millis() override { return now_ms; }
+    void     delay(uint32_t ms) override { now_ms += ms; }
+};
+
+// Number of back-to-back exchanges per thread in the end-to-end test.
+constexpr int kE2eIterations = 500;
+
+// Worker: constructs its own DetectingSerialHal + SerialFramer + Protocol,
+// optionally sets a shared bus lock, then runs N transact calls.
+void protocol_worker(InterleaveDetector& det,
+                     note::IBusLock*     lock,
+                     std::barrier<>*     sync_barrier = nullptr) {
+    DetectingSerialHal hal{det};
+    hal.sync_barrier = sync_barrier;
+
+    note::link::SerialFramer<note::link::SerialPolicy> framer{hal};
+    note::Protocol transport{framer};
+
+    if (lock) transport.set_bus_lock(*lock);
+
+    note::JsonSink null_sink;
+    auto build = [](note::JsonBuilder& b, void* /*ctx*/) {
+        b.add("req", "card.status");
+    };
+
+    for (int i = 0; i < kE2eIterations; ++i) {
+        hal.queue("{\"connected\":true}\r\n");
+        auto r = transport.transact(build, nullptr, null_sink, 5000u);
+        (void)r;  // result not checked — we care about lock ordering, not values
+    }
+}
+
+} // namespace (e2e threaded helpers)
+
+// ---------------------------------------------------------------------------
+// With-lock case: two Protocols sharing one bus lock never overlap.
+// ---------------------------------------------------------------------------
+TEST_CASE("two Protocols sharing one bus lock never overlap an exchange") {
+    InterleaveDetector det;
+    std::mutex m;
+    note::LockAdapter<std::mutex> lock{m};
+
+    std::thread t1{[&] { protocol_worker(det, &lock); }};
+    std::thread t2{[&] { protocol_worker(det, &lock); }};
+    t1.join();
+    t2.join();
+
+    CHECK(det.violations.load() == 0);
+}
+
+// ---------------------------------------------------------------------------
+// Non-vacuity: without a lock, a barrier forces simultaneous entry and
+// the detector MUST fire. This proves the end-to-end harness can catch
+// the bug it is designed to catch.
+// ---------------------------------------------------------------------------
+TEST_CASE("two Protocols WITHOUT a shared lock detect overlap via barrier") {
+    InterleaveDetector det;
+    std::barrier bar{2};
+
+    std::thread t1{[&] { protocol_worker(det, nullptr, &bar); }};
+    std::thread t2{[&] { protocol_worker(det, nullptr, &bar); }};
+    t1.join();
+    t2.join();
+
+    CHECK(det.violations.load() > 0);
+}

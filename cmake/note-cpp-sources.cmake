@@ -95,7 +95,6 @@ set(NOTE_CPP_THIRD_PARTY_HEADERS
 
 # Tests that compile under both regular and NOTE_MINIMAL builds.
 set(NOTE_CPP_TEST_SOURCES_COMMON
-    test_bus_lock.cpp
     test_buffer_backend.cpp
     test_body_template.cpp
     test_cobs.cpp
@@ -125,6 +124,7 @@ set(NOTE_CPP_TEST_SOURCES_COMMON
 
 # Tests that require the polymorphic Notecard class (not available under NOTE_MINIMAL).
 set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
+    test_bus_lock.cpp
     test_arduino_i2c_hal.cpp
     test_arduino_printable.cpp
     test_transport_agnostic_api.cpp
@@ -169,6 +169,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
 # a port of these specific assertions to the JSONB wire format is the
 # follow-up project. See HANDOFF-tree-jsonb-orthogonality.md.
 set(NOTE_CPP_TEST_SOURCES_JSON_WIRE
+    test_bus_lock.cpp
     test_allocator_lifetime.cpp
     test_attention.cpp
     test_binary_execute.cpp

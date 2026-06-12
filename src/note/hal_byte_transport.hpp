@@ -19,7 +19,7 @@
 /// chunk) aren't dropped. No wire-format knowledge (CRC, JSON, JSONB)
 /// lives here — see `json_transact.hpp` for that layer.
 
-#include <note/bus_lock.hpp>
+#include <note/bus_lock.hpp>  // unconditional: NullLock is the default Lock template param
 #include <note/error.hpp>
 #include <note/transport.hpp>
 #include <note/transport_hal.hpp>

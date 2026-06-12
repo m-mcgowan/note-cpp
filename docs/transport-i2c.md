@@ -270,8 +270,8 @@ of the convenience wrapper:
 #include <note.hpp>
 #include <note/bus_lock.hpp>
 #include <note/arduino/i2c.hpp>
+#include <note/arduino/freertos_bus_lock.hpp>
 #include <note/link/i2c.hpp>
-#include <mutex>
 
 // Wire must be initialised before constructing the HAL with external_bus.
 Wire.begin(sda, scl);
@@ -280,8 +280,9 @@ note::arduino::I2cHal hal{Wire, note::arduino::external_bus};
 note::link::I2cFramer<> i2c{hal};
 note::Protocol transport{i2c};
 
-std::mutex i2c_bus_mutex;
-note::LockAdapter<std::mutex> lock{i2c_bus_mutex};
+// Share this same semaphore with the application's other I2C drivers.
+SemaphoreHandle_t i2c_bus_mutex = xSemaphoreCreateMutex();
+note::FreeRtosBusLock lock{i2c_bus_mutex};
 transport.set_bus_lock(lock);
 
 note::backends::StaticJsonBackend<512, 64> backend;
@@ -291,7 +292,10 @@ note::Notecard nc{backend, transport};
 This uses the Arduino `I2cHal` and `I2cFramer` for the hardware layer but
 wires them into the core `note::Notecard` directly, bypassing the convenience
 wrapper. `external_bus` tells the HAL not to call `Wire.begin()` or
-`Wire.end()` internally — the application controls bus lifetime.
+`Wire.end()` internally — the application controls bus lifetime. The example
+uses `FreeRtosBusLock` because shared-bus concurrency on Arduino almost always
+means an RTOS target (e.g. ESP32); single-threaded AVR sketches need no lock at
+all.
 
 ### Zero cost on constrained devices
 

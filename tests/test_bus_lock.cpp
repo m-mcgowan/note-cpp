@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <barrier>
+#include <chrono>
 #include <deque>
 #include <mutex>
 #include <string>
@@ -370,9 +371,10 @@ struct InterleaveDetector {
         if (in_flight.fetch_add(1, std::memory_order_acq_rel) != 0)
             violations.fetch_add(1, std::memory_order_relaxed);
         // Linger inside the critical section: give the other thread time to
-        // also call enter() and observe in_flight > 1.
-        for (volatile int i = 0; i < 200; i = i + 1) {} // NOLINT: volatile delay
-        std::this_thread::yield();
+        // also call enter() and observe in_flight > 1. The barrier guarantees
+        // both threads are released together, so this short sleep deterministically
+        // overlaps their critical sections in the no-lock case.
+        std::this_thread::sleep_for(std::chrono::microseconds(20));
     }
     void exit() { in_flight.fetch_sub(1, std::memory_order_acq_rel); }
 };
@@ -381,7 +383,7 @@ void run_exchange(InterleaveDetector& det, note::IBusLock* lock) {
     note::BusLockGuard guard{lock};
     det.enter();
     // Simulate a short exchange so two threads can be in-flight simultaneously.
-    for (volatile int i = 0; i < 1000; i = i + 1) {} // NOLINT: volatile delay
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
     det.exit();
 }
 

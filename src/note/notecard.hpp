@@ -297,9 +297,14 @@ public:
 
     /// Serialize whole Notecard operations against other threads sharing this
     /// Notecard instance. The lock is held across the entire operation
-    /// (including multi-step binary transfers); nested entry points (e.g.
-    /// execute() called from within do_binary_send) re-enter without
-    /// re-acquiring. Null by default = no locking, zero behavioral cost.
+    /// (including multi-step binary transfers). Null by default = no locking,
+    /// zero behavioral cost.
+    ///
+    /// **The lock must be recursive** (e.g. `std::recursive_mutex`, or a
+    /// recursive RTOS mutex). Nested entry points — such as execute() called
+    /// from within do_binary_send — re-acquire the lock on the same thread;
+    /// a non-recursive lock would deadlock. (The bus lock set via
+    /// `set_bus_lock` on the transport does not need to be recursive.)
     void set_request_lock(IBusLock& l) { request_lock_ = &l; }
     void clear_request_lock() { request_lock_ = nullptr; }
 
@@ -401,7 +406,7 @@ public:
         return run_operation([&]() -> ApiResult<typename RequestT::Response> {
             auto saved = alloc_;
             alloc_ = alloc;
-            auto result = execute(req);
+            auto result = execute(req);  // intentionally re-entrant (op_depth_ already > 0)
             alloc_ = saved;
             return result;
         });
@@ -497,48 +502,48 @@ public:
                               detail::NcErrorCapture& nc_err,
                               [[maybe_unused]] Safety safety = Safety::NonIdempotent) {
         return run_operation([&]() -> Result<void> {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
-        if (alloc_.has_value()) {
-            RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
-            JsonSink null_sink;
-            auto ei = streaming_execute(frame, null_sink, safety, nullptr, nullptr);
-            if (ei.code == Error::Notecard) {
-                nc_err.capture(string_view{ei.message.data(), ei.message.size()});
+            if (alloc_.has_value()) {
+                RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
+                JsonSink null_sink;
+                auto ei = streaming_execute(frame, null_sink, safety, nullptr, nullptr);
+                if (ei.code == Error::Notecard) {
+                    nc_err.capture(string_view{ei.message.data(), ei.message.size()});
+                    return {};
+                }
+                if (ei.code != Error{}) return Unexpected(ei);
                 return {};
             }
-            if (ei.code != Error{}) return Unexpected(ei);
-            return {};
-        }
 
 #if !NOTE_NO_JSON_TREE
-        if (backend_) {
-            debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
-            enforce_timing();
-            debug_timing(debug_, TimingEvent::BuildBegin, req_type);
-            auto& builder = backend_->get_builder();
-            add_flash(builder, flash(detail::common_keys::req), req_type);
-            fields_fn(builder, fields_ctx);
-            auto req_json = builder.to_view();
-            debug_timing(debug_, TimingEvent::BuildEnd, req_type);
-            debug_wire(debug_, req_json, WireDirection::Send);
-            auto rsp = transport_->transact(req_json, rsp_buf(),
-                                            default_timeout_ms_);
-            record_timing();
-            debug_timing(debug_, TimingEvent::TransactionEnd, req_type);
-            if (!rsp) return Unexpected(rsp.error());
-            debug_wire(debug_, *rsp, WireDirection::Receive);
-            auto& reader = backend_->get_reader(*rsp);
-            if (reader.has_error())
-                return make_error(Error::Json, NOTE_ERR("JSON parse error"));
-            auto err = reader.get_error();
-            if (!err.empty()) nc_err.capture(err);
-            return {};
-        }
+            if (backend_) {
+                debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
+                enforce_timing();
+                debug_timing(debug_, TimingEvent::BuildBegin, req_type);
+                auto& builder = backend_->get_builder();
+                add_flash(builder, flash(detail::common_keys::req), req_type);
+                fields_fn(builder, fields_ctx);
+                auto req_json = builder.to_view();
+                debug_timing(debug_, TimingEvent::BuildEnd, req_type);
+                debug_wire(debug_, req_json, WireDirection::Send);
+                auto rsp = transport_->transact(req_json, rsp_buf(),
+                                                default_timeout_ms_);
+                record_timing();
+                debug_timing(debug_, TimingEvent::TransactionEnd, req_type);
+                if (!rsp) return Unexpected(rsp.error());
+                debug_wire(debug_, *rsp, WireDirection::Receive);
+                auto& reader = backend_->get_reader(*rsp);
+                if (reader.has_error())
+                    return make_error(Error::Json, NOTE_ERR("JSON parse error"));
+                auto err = reader.get_error();
+                if (!err.empty()) nc_err.capture(err);
+                return {};
+            }
 #endif
-        return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
-        }); // run_operation
+            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+        });
     }
 
     Result<void> execute_generic_with_body(
@@ -548,78 +553,78 @@ public:
             void* body_ptr, BodyHandlerFactory body_factory,
             Safety safety = Safety::NonIdempotent) {
         return run_operation([&]() -> Result<void> {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
-        if (alloc_.has_value()) {
-            StringPool pool(*alloc_);
-            GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
-            alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
-            if (body_factory) {
-                auto bh = body_factory(body_ptr, pool, body_storage);
-                if (bh) gsink.set_body_handler(bh);
-            }
-            JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
+            if (alloc_.has_value()) {
+                StringPool pool(*alloc_);
+                GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
+                alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+                if (body_factory) {
+                    auto bh = body_factory(body_ptr, pool, body_storage);
+                    if (bh) gsink.set_body_handler(bh);
+                }
+                JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
 
-            RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
-            auto ei = streaming_execute(frame, sink_adapter, safety,
-                                        nullptr, nullptr);
-            arena_exhausted = pool.exhausted();
-            if (ei.code == Error::Notecard) {
-                nc_err.capture(string_view{ei.message.data(), ei.message.size()});
+                RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
+                auto ei = streaming_execute(frame, sink_adapter, safety,
+                                            nullptr, nullptr);
+                arena_exhausted = pool.exhausted();
+                if (ei.code == Error::Notecard) {
+                    nc_err.capture(string_view{ei.message.data(), ei.message.size()});
+                    return {};
+                }
+                if (ei.code != Error{}) return Unexpected(ei);
                 return {};
             }
-            if (ei.code != Error{}) return Unexpected(ei);
-            return {};
-        }
 
 #if !NOTE_NO_JSON_TREE
-        if (backend_) {
-            debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
-            enforce_timing();
-            debug_timing(debug_, TimingEvent::BuildBegin, req_type);
-            auto& builder = backend_->get_builder();
-            add_flash(builder, flash(detail::common_keys::req), req_type);
-            fields_fn(builder, fields_ctx);
-            auto req_json = builder.to_view();
-            debug_timing(debug_, TimingEvent::BuildEnd, req_type);
-            debug_wire(debug_, req_json, WireDirection::Send);
-            auto rsp = transport_->transact(req_json, rsp_buf(),
-                                            default_timeout_ms_);
-            record_timing();
-            debug_timing(debug_, TimingEvent::TransactionEnd, req_type);
-            if (!rsp) return Unexpected(rsp.error());
-            debug_wire(debug_, *rsp, WireDirection::Receive);
-            auto& reader = backend_->get_reader(*rsp);
-            if (reader.has_error())
-                return make_error(Error::Json, NOTE_ERR("JSON parse error"));
-            auto err = reader.get_error();
-            if (!err.empty()) {
-                nc_err.capture(err);
+            if (backend_) {
+                debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
+                enforce_timing();
+                debug_timing(debug_, TimingEvent::BuildBegin, req_type);
+                auto& builder = backend_->get_builder();
+                add_flash(builder, flash(detail::common_keys::req), req_type);
+                fields_fn(builder, fields_ctx);
+                auto req_json = builder.to_view();
+                debug_timing(debug_, TimingEvent::BuildEnd, req_type);
+                debug_wire(debug_, req_json, WireDirection::Send);
+                auto rsp = transport_->transact(req_json, rsp_buf(),
+                                                default_timeout_ms_);
+                record_timing();
+                debug_timing(debug_, TimingEvent::TransactionEnd, req_type);
+                if (!rsp) return Unexpected(rsp.error());
+                debug_wire(debug_, *rsp, WireDirection::Receive);
+                auto& reader = backend_->get_reader(*rsp);
+                if (reader.has_error())
+                    return make_error(Error::Json, NOTE_ERR("JSON parse error"));
+                auto err = reader.get_error();
+                if (!err.empty()) {
+                    nc_err.capture(err);
+                    return {};
+                }
+
+                StringPool pool(alloc_value());
+                GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
+                alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+                if (body_factory) {
+                    auto bh = body_factory(body_ptr, pool, body_storage);
+                    if (bh) gsink.set_body_handler(bh);
+                }
+                // Use the lexer-based `sax_lex` (not `sax_parse`): it emits
+                // typed `on_int` / `on_float` / `on_bool` events that
+                // `GenericResponseSink` dispatches into the field table.
+                // The buffer-based `sax_parse` only emits `on_number` (raw
+                // string), which `GenericResponseSink` only forwards to
+                // body handlers — top-level scalar fields silently drop.
+                JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
+                sax_lex(*rsp, sink_adapter);
+                arena_exhausted = pool.exhausted();
                 return {};
             }
-
-            StringPool pool(alloc_value());
-            GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
-            alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
-            if (body_factory) {
-                auto bh = body_factory(body_ptr, pool, body_storage);
-                if (bh) gsink.set_body_handler(bh);
-            }
-            // Use the lexer-based `sax_lex` (not `sax_parse`): it emits
-            // typed `on_int` / `on_float` / `on_bool` events that
-            // `GenericResponseSink` dispatches into the field table.
-            // The buffer-based `sax_parse` only emits `on_number` (raw
-            // string), which `GenericResponseSink` only forwards to
-            // body handlers — top-level scalar fields silently drop.
-            JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
-            sax_lex(*rsp, sink_adapter);
-            arena_exhausted = pool.exhausted();
-            return {};
-        }
 #endif
-        return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
-        }); // run_operation
+            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+        });
     }
 
     template<typename RequestT>
@@ -958,22 +963,31 @@ public:
         return p;
     }
 
-    /// Re-entrant operation gate. Acquires the operation lock (if any) only
-    /// for the outermost call; nested calls (e.g. execute() from inside
-    /// do_binary_send) detect depth > 0 and skip the acquire. The lock is
-    /// always released by the outermost scope's destructor, even if fn()
-    /// throws.
+    /// Operation gate. Acquires the operation lock (if any) before doing
+    /// anything else, so that cross-thread exclusion is immediate: a second
+    /// thread entering any operation blocks here until the first thread's
+    /// outermost operation completes.
+    ///
+    /// The lock must be recursive: same-thread nested calls (e.g. execute()
+    /// called from within do_binary_send) re-acquire it on the same thread,
+    /// which a recursive lock handles without deadlock. op_depth_ is only
+    /// incremented/decremented while the lock is held (or when no lock is
+    /// configured), so it is race-free.
+    ///
+    /// op_depth_ is retained as the outermost-detector for a future
+    /// RTX-once-per-operation step; it has no effect on locking here.
     template<typename Fn>
     auto run_operation(Fn&& fn) -> decltype(fn()) {
+        if (request_lock_) request_lock_->lock();  // recursive: same thread re-enters, other threads block
         const bool outermost = (op_depth_++ == 0);
-        if (outermost && request_lock_) request_lock_->lock();
+        (void)outermost;  // reserved for upcoming RTX step
         struct Exit {
-            Notecard* self; bool outermost;
+            Notecard* self;
             ~Exit() {
-                if (outermost && self->request_lock_) self->request_lock_->unlock();
                 --self->op_depth_;
+                if (self->request_lock_) self->request_lock_->unlock();
             }
-        } exit_guard{this, outermost};
+        } exit_guard{this};
         return fn();
     }
 

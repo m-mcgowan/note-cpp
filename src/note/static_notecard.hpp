@@ -526,21 +526,13 @@ private:
     /// Exit guard releases it on any return path, including exceptions.
     ///
     /// The Lock template parameter MUST be recursive: same-thread nested
-    /// entry points (e.g. a singleton thunk calling execute_void from within
-    /// a wrapping execute()) re-acquire the lock on the same thread. A
-    /// non-recursive lock would deadlock. For NullLock (the default), both
-    /// lock() and unlock() are empty inline no-ops — the compiler eliminates
-    /// the entire chokepoint for single-threaded / constrained targets.
-    ///
-    /// RAII operation guard. For NullLock (the default), detail::StaticNcOpGuard
-    /// specializes to zero members + trivial ctor/dtor — GCC eliminates it
-    /// entirely even on AVR with GCC 7.3.
-    ///
-    /// The Lock MUST be recursive: nested entry points (e.g. execute_void
-    /// called from execute() through execute_void_body_) re-acquire on the
-    /// same thread; a non-recursive lock would deadlock.
+    /// entry points (e.g. execute() calling execute_void()) re-acquire the
+    /// lock on the same thread, and a non-recursive lock would deadlock. For
+    /// NullLock (the default), detail::StaticNcOpGuard specializes to zero
+    /// members + trivial ctor/dtor, so the compiler eliminates the entire
+    /// chokepoint — even on AVR with GCC 7.3 (which a pointer-carrying guard
+    /// would not fully erase).
     using OpGuard = detail::StaticNcOpGuard<Lock>;
-
 
 #if !NOTE_NO_RETRY
     RetryTransportOps transport_ops() {

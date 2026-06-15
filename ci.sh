@@ -196,7 +196,8 @@ NFEOF
         "$ROOT/tests/test_posix_serial.cpp" \
         "$ROOT/tests/test_notecard_move_semantics.cpp" \
         "$ROOT/tests/test_struct_sink_strings.cpp" \
-        "$ROOT/tests/test_bus_lock.cpp"
+        "$ROOT/tests/test_bus_lock.cpp" \
+        "$ROOT/tests/test_operation_lock.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 

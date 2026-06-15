@@ -158,6 +158,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_transport_timing.cpp
     test_layered_transport.cpp
     test_txn_handshake.cpp
+    test_operation_lock.cpp
     test_wire_format.cpp
     test_wire_format_jsonb.cpp
 )
@@ -194,6 +195,7 @@ set(NOTE_CPP_TEST_SOURCES_JSON_WIRE
     test_transport_serial.cpp
     test_transport_streaming.cpp
     test_txn_handshake.cpp
+    test_operation_lock.cpp
     test_wire_format.cpp
 )
 

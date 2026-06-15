@@ -2,6 +2,7 @@
 
 #include "allocator.hpp"
 #include "binary_request.hpp"
+#include "bus_lock.hpp"
 #include "debug.hpp"
 #include "owned_buffer.hpp"
 #include "json.hpp"
@@ -294,6 +295,14 @@ public:
     template<size_t N>
     void set_response_buffer(char (&buf)[N]) { rsp_buf_override_ = {buf, N}; }
 
+    /// Serialize whole Notecard operations against other threads sharing this
+    /// Notecard instance. The lock is held across the entire operation
+    /// (including multi-step binary transfers); nested entry points (e.g.
+    /// execute() called from within do_binary_send) re-enter without
+    /// re-acquiring. Null by default = no locking, zero behavioral cost.
+    void set_request_lock(IBusLock& l) { request_lock_ = &l; }
+    void clear_request_lock() { request_lock_ = nullptr; }
+
     // Execute a typed, generated request.
     // RequestT must provide:
     //   static constexpr string_view notecard_request;
@@ -303,46 +312,48 @@ public:
     //   void build(JsonBuilder&) const;
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
-        using Rsp = typename RequestT::Response;
+        return run_operation([&]() -> ApiResult<typename RequestT::Response> {
+            using Rsp = typename RequestT::Response;
 
-        debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
+            debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
 
-        if (!transport_) {
-            debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-            return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
-        }
+            if (!transport_) {
+                debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+                return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
+            }
 
-        // Streaming path: SAX-stream the response straight into the
-        // typed Rsp::Sink, no intermediate tree. Parallel to
-        // execute_tree below — the two are siblings, picked at this
-        // call site by (a) whether the response type has a sink and
-        // (b) whether an allocator is configured.
-        if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
-            if (alloc_.has_value()) {
-                auto result = execute_streaming(req);
+            // Streaming path: SAX-stream the response straight into the
+            // typed Rsp::Sink, no intermediate tree. Parallel to
+            // execute_tree below — the two are siblings, picked at this
+            // call site by (a) whether the response type has a sink and
+            // (b) whether an allocator is configured.
+            if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
+                if (alloc_.has_value()) {
+                    auto result = execute_streaming(req);
+                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+                    return result;
+                }
+            }
+
+            // Buffered fallback: requires a JsonBackend + buffered transport.
+#if !NOTE_NO_JSON_TREE
+            if (backend_) {
+                const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
+                auto attempt = [&]() -> ApiResult<Rsp> {
+                    return execute_tree(req, req_id);
+                };
+                auto reset = [&]() { transport_->reset(); };
+
+                auto result = retry_transaction<ApiResult<Rsp>>(
+                    hal(), timing_, RequestT::safety, retry_policy_,
+                    attempt, reset);
                 debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
                 return result;
             }
-        }
-
-        // Buffered fallback: requires a JsonBackend + buffered transport.
-#if !NOTE_NO_JSON_TREE
-        if (backend_) {
-            const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
-            auto attempt = [&]() -> ApiResult<Rsp> {
-                return execute_tree(req, req_id);
-            };
-            auto reset = [&]() { transport_->reset(); };
-
-            auto result = retry_transaction<ApiResult<Rsp>>(
-                hal(), timing_, RequestT::safety, retry_policy_,
-                attempt, reset);
-            debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-            return result;
-        }
 #endif
-        debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-        return Unexpected(make_error(Error::NotReady, NOTE_ERR("no backend or streaming transport configured")));
+            debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+            return Unexpected(make_error(Error::NotReady, NOTE_ERR("no backend or streaming transport configured")));
+        });
     }
 
     // ── Binary transfer support ────────────────────────────────────────────
@@ -354,17 +365,19 @@ public:
     /// Execute a mutable request — checks for attached binary buffers.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(RequestT& req) {
-        if constexpr (detail::has_binary_src<RequestT>::value) {
-            if (req.has_binary_data()) {
-                return do_binary_send(req);
+        return run_operation([&]() -> ApiResult<typename RequestT::Response> {
+            if constexpr (detail::has_binary_src<RequestT>::value) {
+                if (req.has_binary_data()) {
+                    return do_binary_send(req);
+                }
             }
-        }
-        if constexpr (detail::has_binary_dst<RequestT>::value) {
-            if (req.has_binary_buffer()) {
-                return do_binary_receive(req);
+            if constexpr (detail::has_binary_dst<RequestT>::value) {
+                if (req.has_binary_buffer()) {
+                    return do_binary_receive(req);
+                }
             }
-        }
-        return execute(static_cast<const RequestT&>(req));
+            return execute(static_cast<const RequestT&>(req));
+        });
     }
 
 #if !NOTE_SINGLETON && !NOTE_NO_RESPONSE_RAII
@@ -385,11 +398,13 @@ public:
     // (non-singleton, RAII-enabled) build.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req, Allocator alloc) {
-        auto saved = alloc_;
-        alloc_ = alloc;
-        auto result = execute(req);
-        alloc_ = saved;
-        return result;
+        return run_operation([&]() -> ApiResult<typename RequestT::Response> {
+            auto saved = alloc_;
+            alloc_ = alloc;
+            auto result = execute(req);
+            alloc_ = saved;
+            return result;
+        });
     }
 #endif
 
@@ -399,22 +414,24 @@ public:
     Result<std::unique_ptr<JsonReader>> request(
             string_view req_type,
             std::function<void(JsonBuilder&)> build_fn = {}) {
-        if (!transport_ || !backend_)
-            return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
+        return run_operation([&]() -> Result<std::unique_ptr<JsonReader>> {
+            if (!transport_ || !backend_)
+                return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
 
-        auto& builder = backend_->get_builder();
-        add_flash(builder, flash(detail::common_keys::req), req_type);
-        if (build_fn) build_fn(builder);
-        auto rsp = transport_->transact(builder.to_view(),
-                                        rsp_buf(),
-                                        default_timeout_ms_);
-        if (!rsp) return Unexpected(rsp.error());
+            auto& builder = backend_->get_builder();
+            add_flash(builder, flash(detail::common_keys::req), req_type);
+            if (build_fn) build_fn(builder);
+            auto rsp = transport_->transact(builder.to_view(),
+                                            rsp_buf(),
+                                            default_timeout_ms_);
+            if (!rsp) return Unexpected(rsp.error());
 
-        auto reader = backend_->parse_response(*rsp);
-        if (reader->has_error()) {
-            return make_error(Error::Json, reader->get_error());
-        }
-        return Result<std::unique_ptr<JsonReader>>(std::move(reader));
+            auto reader = backend_->parse_response(*rsp);
+            if (reader->has_error()) {
+                return make_error(Error::Json, reader->get_error());
+            }
+            return Result<std::unique_ptr<JsonReader>>(std::move(reader));
+        });
     }
 
 #endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
@@ -428,25 +445,27 @@ public:
     /// path's exact wire encoding (used by tests' `last_req` capture) is
     /// preserved.
     Result<void> send_command(BuildFn build_fn, void* ctx) {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
-        enforce_timing();
-        Result<void> result;
-        if (alloc_.has_value()) {
-            BuildFnRequestSource src(build_fn, ctx);
-            result = transport_->send(src.as_source());
-        }
+        return run_operation([&]() -> Result<void> {
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            enforce_timing();
+            Result<void> result;
+            if (alloc_.has_value()) {
+                BuildFnRequestSource src(build_fn, ctx);
+                result = transport_->send(src.as_source());
+            }
 #if !NOTE_NO_JSON_TREE
-        else if (backend_) {
-            auto& builder = backend_->get_builder();
-            build_fn(builder, ctx);
-            result = transport_->send(builder.to_view());
-        }
+            else if (backend_) {
+                auto& builder = backend_->get_builder();
+                build_fn(builder, ctx);
+                result = transport_->send(builder.to_view());
+            }
 #endif
-        else
-            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
-        record_timing();
-        return result;
+            else
+                return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+            record_timing();
+            return result;
+        });
     }
 
     // ── Singleton-thunk adapters ───────────────────────────────────────
@@ -477,6 +496,7 @@ public:
     Result<void> execute_void(string_view req_type, BuildFn fields_fn, void* fields_ctx,
                               detail::NcErrorCapture& nc_err,
                               [[maybe_unused]] Safety safety = Safety::NonIdempotent) {
+        return run_operation([&]() -> Result<void> {
         if (!transport_)
             return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
@@ -518,6 +538,7 @@ public:
         }
 #endif
         return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+        }); // run_operation
     }
 
     Result<void> execute_generic_with_body(
@@ -526,6 +547,7 @@ public:
             detail::NcErrorCapture& nc_err, bool& arena_exhausted,
             void* body_ptr, BodyHandlerFactory body_factory,
             Safety safety = Safety::NonIdempotent) {
+        return run_operation([&]() -> Result<void> {
         if (!transport_)
             return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
@@ -597,34 +619,37 @@ public:
         }
 #endif
         return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+        }); // run_operation
     }
 
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
-        enforce_timing();
-        Result<void> result;
-        if (alloc_.has_value()) {
-            auto build = [&](JsonBuilder& b) {
-                add_flash(b, flash(detail::common_keys::cmd), RequestT::notecard_request);
-                req.build(b);
-            };
-            BuildFn fn = [](JsonBuilder& b, void* p) {
-                (*static_cast<decltype(build)*>(p))(b);
-            };
-            BuildFnRequestSource src(fn, &build);
-            result = transport_->send(src.as_source());
-        } else if (backend_) {
-            auto& builder = backend_->get_builder();
-            add_flash(builder, flash(detail::common_keys::cmd), RequestT::notecard_request);
-            req.build(builder);
-            result = transport_->send(builder.to_view());
-        } else {
-            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
-        }
-        record_timing();
-        return result;
+        return run_operation([&]() -> Result<void> {
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            enforce_timing();
+            Result<void> result;
+            if (alloc_.has_value()) {
+                auto build = [&](JsonBuilder& b) {
+                    add_flash(b, flash(detail::common_keys::cmd), RequestT::notecard_request);
+                    req.build(b);
+                };
+                BuildFn fn = [](JsonBuilder& b, void* p) {
+                    (*static_cast<decltype(build)*>(p))(b);
+                };
+                BuildFnRequestSource src(fn, &build);
+                result = transport_->send(src.as_source());
+            } else if (backend_) {
+                auto& builder = backend_->get_builder();
+                add_flash(builder, flash(detail::common_keys::cmd), RequestT::notecard_request);
+                req.build(builder);
+                result = transport_->send(builder.to_view());
+            } else {
+                return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+            }
+            record_timing();
+            return result;
+        });
     }
 
 #if !NOTE_NO_STD_STRING
@@ -632,23 +657,25 @@ public:
     // Requires std::function.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
-        if (alloc_.has_value()) {
-            auto build = [&](JsonBuilder& b) {
-                add_flash(b, flash(detail::common_keys::cmd), cmd_type);
-                if (build_fn) build_fn(b);
-            };
-            BuilderRequestSource src(build);
-            return transport_->send(src.as_source());
-        }
-        if (!backend_)
-            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+        return run_operation([&]() -> Result<void> {
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            if (alloc_.has_value()) {
+                auto build = [&](JsonBuilder& b) {
+                    add_flash(b, flash(detail::common_keys::cmd), cmd_type);
+                    if (build_fn) build_fn(b);
+                };
+                BuilderRequestSource src(build);
+                return transport_->send(src.as_source());
+            }
+            if (!backend_)
+                return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
 
-        auto& builder = backend_->get_builder();
-        add_flash(builder, flash(detail::common_keys::cmd), cmd_type);
-        if (build_fn) build_fn(builder);
-        return transport_->send(builder.to_view());
+            auto& builder = backend_->get_builder();
+            add_flash(builder, flash(detail::common_keys::cmd), cmd_type);
+            if (build_fn) build_fn(builder);
+            return transport_->send(builder.to_view());
+        });
     }
 #endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
 
@@ -662,29 +689,47 @@ public:
     /// to the bounded buffered path — bounded by `rsp_buf()` (default
     /// NOTE_RSP_BUF_SIZE), enlarge via `set_response_buffer(span)`.
     Result<OwnedBuffer> transact(string_view json) {
-        if (!validate_json_envelope(json))
-            return make_error(Error::Json, NOTE_ERR("malformed JSON"));
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        return run_operation([&]() -> Result<OwnedBuffer> {
+            if (!validate_json_envelope(json))
+                return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
-        if (streaming_protocol_ && alloc_.has_value()) {
+            if (streaming_protocol_ && alloc_.has_value()) {
+                auto attempt = [&]() -> Result<OwnedBuffer> {
+                    auto send_rv = streaming_protocol_->send_raw(json);
+                    if (!send_rv) return Unexpected(send_rv.error());
+
+                    auto buf = OwnedBuffer::create(alloc_value(), 1024);
+                    if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
+
+                    for (;;) {
+                        uint8_t byte;
+                        auto rv = streaming_protocol_->read(&byte, 1, default_timeout_ms_);
+                        if (!rv) return Unexpected(rv.error());
+                        if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
+                        if (byte == '\n') break;
+                        if (byte == '\r') continue;
+                        if (!buf.append(static_cast<char>(byte)))
+                            return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
+                    }
+                    buf.null_terminate();
+                    return buf;
+                };
+                auto reset = [&]() { transport_->reset(); };
+                return retry_transaction<Result<OwnedBuffer>>(
+                    hal(), timing_, Safety::NonIdempotent, retry_policy_,
+                    attempt, reset);
+            }
+
             auto attempt = [&]() -> Result<OwnedBuffer> {
-                auto send_rv = streaming_protocol_->send_raw(json);
-                if (!send_rv) return Unexpected(send_rv.error());
-
-                auto buf = OwnedBuffer::create(alloc_value(), 1024);
+                auto rv = transport_->transact(json,
+                                               rsp_buf(),
+                                               default_timeout_ms_);
+                if (!rv) return Unexpected(rv.error());
+                auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
                 if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
-
-                for (;;) {
-                    uint8_t byte;
-                    auto rv = streaming_protocol_->read(&byte, 1, default_timeout_ms_);
-                    if (!rv) return Unexpected(rv.error());
-                    if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
-                    if (byte == '\n') break;
-                    if (byte == '\r') continue;
-                    if (!buf.append(static_cast<char>(byte)))
-                        return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
-                }
+                buf.append(rv->data(), rv->size());
                 buf.null_terminate();
                 return buf;
             };
@@ -692,60 +737,48 @@ public:
             return retry_transaction<Result<OwnedBuffer>>(
                 hal(), timing_, Safety::NonIdempotent, retry_policy_,
                 attempt, reset);
-        }
-
-        auto attempt = [&]() -> Result<OwnedBuffer> {
-            auto rv = transport_->transact(json,
-                                           rsp_buf(),
-                                           default_timeout_ms_);
-            if (!rv) return Unexpected(rv.error());
-            auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
-            if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
-            buf.append(rv->data(), rv->size());
-            buf.null_terminate();
-            return buf;
-        };
-        auto reset = [&]() { transport_->reset(); };
-        return retry_transaction<Result<OwnedBuffer>>(
-            hal(), timing_, Safety::NonIdempotent, retry_policy_,
-            attempt, reset);
+        });
     }
 
     /// Validated JSON passthrough — caller-provided buffer variant.
     /// The response is written into buf and returned as string_view.
     /// Assumes NonIdempotent safety (only retries on SendFailed).
     Result<string_view> transact(string_view json, span<char> buf) {
-        if (!validate_json_envelope(json))
-            return make_error(Error::Json, NOTE_ERR("malformed JSON"));
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        return run_operation([&]() -> Result<string_view> {
+            if (!validate_json_envelope(json))
+                return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
-        auto attempt = [&]() -> Result<string_view> {
-            // Caller's buffer goes straight to the transport; ITransact
-            // copies the response into `buf` and returns a view of it.
-            auto rv = transport_->transact(json, buf, default_timeout_ms_);
-            if (!rv) return rv;
-            if (rv->size() < buf.size())
-                buf[rv->size()] = '\0';
-            return rv;
-        };
-        auto reset = [&]() { transport_->reset(); };
-        return retry_transaction<Result<string_view>>(
-            hal(), timing_, Safety::NonIdempotent, retry_policy_,
-            attempt, reset);
+            auto attempt = [&]() -> Result<string_view> {
+                // Caller's buffer goes straight to the transport; ITransact
+                // copies the response into `buf` and returns a view of it.
+                auto rv = transport_->transact(json, buf, default_timeout_ms_);
+                if (!rv) return rv;
+                if (rv->size() < buf.size())
+                    buf[rv->size()] = '\0';
+                return rv;
+            };
+            auto reset = [&]() { transport_->reset(); };
+            return retry_transaction<Result<string_view>>(
+                hal(), timing_, Safety::NonIdempotent, retry_policy_,
+                attempt, reset);
+        });
     }
 
     /// Validated JSON fire-and-forget — send pre-formatted JSON, no response.
     /// Inter-transaction timing enforced, but no retry (no response to check).
     Result<void> send(string_view json) {
-        if (!validate_json_envelope(json))
-            return make_error(Error::Json, NOTE_ERR("malformed JSON"));
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
-        enforce_timing();
-        auto result = transport_->send(json);
-        record_timing();
-        return result;
+        return run_operation([&]() -> Result<void> {
+            if (!validate_json_envelope(json))
+                return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            enforce_timing();
+            auto result = transport_->send(json);
+            record_timing();
+            return result;
+        });
     }
 
     /// Send a one-shot `echo` probe and confirm the Notecard is reachable.
@@ -772,52 +805,54 @@ public:
     /// is missing a `text` field or its `text` value does not match the
     /// sent nonce.
     Result<void> ping(uint32_t timeout_ms = 500, PingSeedFn seed_fn = nullptr) {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        return run_operation([&]() -> Result<void> {
+            if (!transport_)
+                return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
-        uint32_t seed = (seed_fn ? seed_fn() : hal().millis()) ^ 0x2545F491u;
+            uint32_t seed = (seed_fn ? seed_fn() : hal().millis()) ^ 0x2545F491u;
 
-        char nonce[16];
-        for (int i = 0; i < 16; ++i) {
-            seed ^= seed << 13;
-            seed ^= seed >> 17;
-            seed ^= seed << 5;
-            nonce[i] = static_cast<char>('A' + (seed % 26));
-        }
+            char nonce[16];
+            for (int i = 0; i < 16; ++i) {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                nonce[i] = static_cast<char>('A' + (seed % 26));
+            }
 
-        // Hand-build the request so we do not pull in snprintf on AVR.
-        // Shape: {"req":"echo","text":"NNNN...NNNN"}
-        constexpr char kPrefix[] = R"({"req":"echo","text":")";
-        constexpr char kSuffix[] = R"("})";
-        constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
-        constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
-        char req[kPrefixLen + 16 + kSuffixLen];
-        memcpy(req, kPrefix, kPrefixLen);
-        memcpy(req + kPrefixLen, nonce, 16);
-        memcpy(req + kPrefixLen + 16, kSuffix, kSuffixLen);
+            // Hand-build the request so we do not pull in snprintf on AVR.
+            // Shape: {"req":"echo","text":"NNNN...NNNN"}
+            constexpr char kPrefix[] = R"({"req":"echo","text":")";
+            constexpr char kSuffix[] = R"("})";
+            constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
+            constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
+            char req[kPrefixLen + 16 + kSuffixLen];
+            memcpy(req, kPrefix, kPrefixLen);
+            memcpy(req + kPrefixLen, nonce, 16);
+            memcpy(req + kPrefixLen + 16, kSuffix, kSuffixLen);
 
-        enforce_timing();
-        char rsp_buf[64];
-        auto rv = transport_->transact(string_view(req, sizeof(req)),
-                                       span<char>(rsp_buf, sizeof(rsp_buf)),
-                                       timeout_ms);
-        record_timing();
-        if (!rv) return Unexpected(rv.error());
+            enforce_timing();
+            char rsp_buf[64];
+            auto rv = transport_->transact(string_view(req, sizeof(req)),
+                                           span<char>(rsp_buf, sizeof(rsp_buf)),
+                                           timeout_ms);
+            record_timing();
+            if (!rv) return Unexpected(rv.error());
 
-        // The Notecard returns canonical JSON with no whitespace or
-        // escapes, so a substring match on "text":"<nonce>" is enough
-        // and avoids pulling in a SAX parser here.
-        string_view rsp = *rv;
-        constexpr string_view key = R"("text":")";
-        auto pos = rsp.find(key);
-        if (pos == string_view::npos)
-            return make_error(Error::Json, NOTE_ERR("ping: response missing text field"));
-        pos += key.size();
-        if (pos + 16 > rsp.size())
-            return make_error(Error::Json, NOTE_ERR("ping: response text too short"));
-        if (memcmp(rsp.data() + pos, nonce, 16) != 0)
-            return make_error(Error::Json, NOTE_ERR("ping: nonce mismatch"));
-        return Result<void>{};
+            // The Notecard returns canonical JSON with no whitespace or
+            // escapes, so a substring match on "text":"<nonce>" is enough
+            // and avoids pulling in a SAX parser here.
+            string_view rsp = *rv;
+            constexpr string_view key = R"("text":")";
+            auto pos = rsp.find(key);
+            if (pos == string_view::npos)
+                return make_error(Error::Json, NOTE_ERR("ping: response missing text field"));
+            pos += key.size();
+            if (pos + 16 > rsp.size())
+                return make_error(Error::Json, NOTE_ERR("ping: response text too short"));
+            if (memcmp(rsp.data() + pos, nonce, 16) != 0)
+                return make_error(Error::Json, NOTE_ERR("ping: nonce mismatch"));
+            return Result<void>{};
+        });
     }
 
     /// In-place variant — `buf` is used both to render the request *and* to
@@ -840,15 +875,17 @@ public:
     template<size_t N, typename Fn>
     Result<string_view> transact_raw_inplace(char (&buf)[N], Fn&& build,
                                              uint32_t timeout_ms = 10000) {
-        // Type-erase the lambda via a stateless trampoline so the bulk of
-        // the work (`transact_raw_inplace_impl_`) is one out-of-line copy
-        // shared by every call site.
-        InplaceBuilder trampoline = [](JsonRender& w, const void* ctx) {
-            (*static_cast<const std::remove_reference_t<Fn>*>(ctx))(w);
-        };
-        return transact_raw_inplace_impl_(buf, N, trampoline,
-                                          static_cast<const void*>(&build),
-                                          timeout_ms);
+        return run_operation([&]() -> Result<string_view> {
+            // Type-erase the lambda via a stateless trampoline so the bulk of
+            // the work (`transact_raw_inplace_impl_`) is one out-of-line copy
+            // shared by every call site.
+            InplaceBuilder trampoline = [](JsonRender& w, const void* ctx) {
+                (*static_cast<const std::remove_reference_t<Fn>*>(ctx))(w);
+            };
+            return transact_raw_inplace_impl_(buf, N, trampoline,
+                                              static_cast<const void*>(&build),
+                                              timeout_ms);
+        });
     }
 
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
@@ -919,6 +956,25 @@ public:
         if (!p) return nullptr;
         for (size_t i = 0; i < sv.size(); ++i) p[i] = sv[i];
         return p;
+    }
+
+    /// Re-entrant operation gate. Acquires the operation lock (if any) only
+    /// for the outermost call; nested calls (e.g. execute() from inside
+    /// do_binary_send) detect depth > 0 and skip the acquire. The lock is
+    /// always released by the outermost scope's destructor, even if fn()
+    /// throws.
+    template<typename Fn>
+    auto run_operation(Fn&& fn) -> decltype(fn()) {
+        const bool outermost = (op_depth_++ == 0);
+        if (outermost && request_lock_) request_lock_->lock();
+        struct Exit {
+            Notecard* self; bool outermost;
+            ~Exit() {
+                if (outermost && self->request_lock_) self->request_lock_->unlock();
+                --self->op_depth_;
+            }
+        } exit_guard{this, outermost};
+        return fn();
     }
 
 private:
@@ -1476,6 +1532,9 @@ private:
         }
 #endif
     }
+
+    IBusLock* request_lock_ = nullptr;  ///< Optional operation-level lock.
+    int op_depth_ = 0;                  ///< Nesting depth for re-entrant guard.
 
     JsonBackend* backend_ = nullptr;
     ITransact* transport_ = nullptr;

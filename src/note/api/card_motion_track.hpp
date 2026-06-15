@@ -236,7 +236,7 @@ struct CardMotionTrack {
 
     private:
     friend class ::note::Notecard;
-    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend class ::note::StaticNotecard;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
     template<typename> friend class ::note::Api;
 #else

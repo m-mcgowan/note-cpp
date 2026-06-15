@@ -1075,7 +1075,7 @@ namespace note::api {
 
 {{ indent }}private:
 {{ indent }}friend class ::note::Notecard;
-{{ indent }}template<typename> friend class ::note::StaticNotecard;
+{{ indent }}template<typename, typename> friend class ::note::StaticNotecard;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
 {{ indent }}template<typename> friend class ::note::Api;
 #else

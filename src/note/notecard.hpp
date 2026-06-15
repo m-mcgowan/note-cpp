@@ -69,7 +69,7 @@ inline void* api_nc_singleton_ = nullptr;
 
 // Forward declarations so generated request structs can grant friendship
 // to dispatch infrastructure that lives in other headers.
-template<typename Stack> class StaticNotecard;
+template<typename Stack, typename Lock> class StaticNotecard;
 class Notecard;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
 template<typename NcT> class Api;

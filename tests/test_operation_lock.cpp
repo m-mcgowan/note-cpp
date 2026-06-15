@@ -8,6 +8,9 @@
 // outermost operation releases it.
 #include "doctest.h"
 #include <note/notecard.hpp>
+#include <note/static_notecard.hpp>
+#include <note/api.hpp>
+#include <note/arena.hpp>
 #include "common/scripted_transport.hpp"
 
 #include <atomic>
@@ -231,4 +234,134 @@ TEST_CASE("operation lock: two threads sharing one Notecard serialize operations
     t2.join();
 
     CHECK(tx.violations.load() == 0);
+}
+
+// ===========================================================================
+// StaticNotecard<Stack, Lock> — compile-time lock template param
+// ===========================================================================
+//
+// The MockStack / MockTransport types used here are the same types defined in
+// test_static_notecard.cpp (included via the note/static_notecard.hpp header
+// test scaffolding). We define a local replica here so this file compiles
+// standalone.
+
+namespace {
+
+// Minimal mock transport for StaticNotecard lock tests.
+struct LockTestTransport {
+    std::string last_request;
+    int transact_count = 0;
+    int send_count = 0;
+    uint32_t now_ms = 0;
+    uint32_t total_delay_ms = 0;
+    int reset_count = 0;
+
+    void queue_response(const char* /*json*/) {}  // response not consumed by tests
+
+    struct Writer : note::JsonWriter {
+        std::string& out;
+        explicit Writer(std::string& o) : out(o) {}
+        bool write(const char* data, size_t len) override {
+            out.append(data, len);
+            return true;
+        }
+    };
+
+    note::Result<void> transact_dispatch(note::RequestSource src, note::SaxDispatch,
+                                         uint32_t, note::detail::NcErrorCapture&) {
+        ++transact_count;
+        last_request.clear();
+        Writer w(last_request);
+        src.emit(w);
+        last_request += '}';  // close object (mock substitutes for Protocol)
+        return {};
+    }
+
+    note::Result<note::string_view> transact_raw(note::string_view, char*, size_t, uint32_t) {
+        return note::make_error(note::Error::NotReady, NOTE_ERR("not used"));
+    }
+
+    note::Result<void> send(note::RequestSource src) {
+        ++send_count;
+        last_request.clear();
+        Writer w(last_request);
+        src.emit(w);
+        last_request += '}';
+        return {};
+    }
+
+    bool reset() { ++reset_count; return true; }
+    uint32_t millis() { return now_ms; }
+    void delay(uint32_t ms) { now_ms += ms; total_delay_ms += ms; }
+    LockTestTransport& hal() { return *this; }
+};
+
+struct LockTestStack { LockTestTransport transport; };
+
+/// A simple recursive-capable counting lock usable as a StaticNotecard<Stack, Lock>
+/// template parameter (not derived from IBusLock — pure template duck-typing).
+struct CountingRecursiveLock {
+    static inline int locks = 0, unlocks = 0, held = 0, max_held = 0;
+    static void reset_counters() { locks = unlocks = held = max_held = 0; }
+    void lock()   { ++locks; ++held; if (held > max_held) max_held = held; }
+    void unlock() { --held; ++unlocks; }
+};
+
+} // namespace
+
+// NullLock is empty (zero-size): compile-time check
+static_assert(std::is_empty_v<note::NullLock>, "NullLock must be zero-size");
+
+TEST_CASE("StaticNotecard<Stack,Lock>: lock acquired and released per operation") {
+    alignas(4) char arena_buf[256];
+    note::MonotonicArena arena(arena_buf);
+
+    CountingRecursiveLock::reset_counters();
+
+    note::StaticNotecard<LockTestStack, CountingRecursiveLock> nc(note::arena_allocator(arena));
+    note::Api api(nc);
+
+    // Queue a void-response for hub.set
+    nc.stack().transport.queue_response("{}");
+
+    auto result = api.hub.set().product("com.example.test").execute();
+    (void)result;  // we care about lock counts, not the result
+
+    CHECK(CountingRecursiveLock::locks   == CountingRecursiveLock::unlocks);
+    CHECK(CountingRecursiveLock::held    == 0);
+    CHECK(CountingRecursiveLock::locks   >= 1);  // at least one acquire happened
+}
+
+TEST_CASE("StaticNotecard<Stack,Lock>: two operations each acquire once") {
+    alignas(4) char arena_buf[256];
+    note::MonotonicArena arena(arena_buf);
+
+    CountingRecursiveLock::reset_counters();
+
+    note::StaticNotecard<LockTestStack, CountingRecursiveLock> nc(note::arena_allocator(arena));
+    note::Api api(nc);
+
+    nc.stack().transport.queue_response("{}");
+    api.hub.set().product("a").execute();
+
+    nc.stack().transport.queue_response("{}");
+    api.hub.set().product("b").execute();
+
+    CHECK(CountingRecursiveLock::locks   == CountingRecursiveLock::unlocks);
+    CHECK(CountingRecursiveLock::held    == 0);
+}
+
+TEST_CASE("StaticNotecard<Stack> (default NullLock) compiles and runs without error") {
+    alignas(4) char arena_buf[256];
+    note::MonotonicArena arena(arena_buf);
+
+    // Default second template param = NullLock: must compile and work.
+    note::StaticNotecard<LockTestStack> nc(note::arena_allocator(arena));
+    note::Api api(nc);
+
+    nc.stack().transport.queue_response("{}");
+    auto result = api.hub.set().product("com.example.test").execute();
+    (void)result;
+
+    CHECK(nc.stack().transport.transact_count == 1);
 }

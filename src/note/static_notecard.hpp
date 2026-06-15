@@ -15,6 +15,7 @@
 ///   api.hub.set().product("com.example").execute();
 
 #include "allocator.hpp"
+#include "bus_lock.hpp"
 #include "compiler.hpp"
 #include "generic_sink.hpp"
 #include "json.hpp"
@@ -48,12 +49,46 @@ inline void req_wrap_build(JsonBuilder& b, void* p) {
     if (c.fn) c.fn(b, c.inner);
 }
 
+/// RAII operation-scope lock guard for StaticNotecard entry points.
+///
+/// Primary template: stores a pointer to the Lock, acquires on construction,
+/// releases on destruction. For a real Lockable (std::recursive_mutex etc.),
+/// this gives correct RAII release even on thrown exceptions.
+///
+/// The NullLock specialization below has NO members and trivial ctor/dtor,
+/// so GCC (including 7.3 for AVR) eliminates it entirely when Lock=NullLock.
+/// Contrast with a pointer-carrying struct where GCC 7.3 may keep the
+/// stack slot even when the pointer is never read.
+template<typename Lock>
+struct StaticNcOpGuard {
+    Lock* lock_;
+    explicit StaticNcOpGuard(Lock* l) : lock_(l) { l->lock(); }
+    ~StaticNcOpGuard() { lock_->unlock(); }
+    StaticNcOpGuard(const StaticNcOpGuard&) = delete;
+    StaticNcOpGuard& operator=(const StaticNcOpGuard&) = delete;
+};
+
+/// NullLock specialization: zero members, trivial ctor/dtor.
+/// GCC eliminates this entirely — zero flash, zero RAM, zero instructions.
+template<>
+struct StaticNcOpGuard<NullLock> {
+    explicit StaticNcOpGuard(NullLock*) noexcept {}
+    ~StaticNcOpGuard() noexcept {}
+};
+
 } // namespace detail
 
 /// Notecard implementation with zero virtual dispatch overhead.
+///
 /// Stack must provide a `transport` member with `transact(BuildFn, void*, JsonSink&, uint32_t)`.
-template<typename Stack>
-class StaticNotecard {
+///
+/// @tparam Stack   Transport stack type. Owns the HAL and framing layers.
+/// @tparam Lock    Compile-time operation lock (default: NullLock — zero size and zero cost via
+///                 empty-base optimization). Supply a recursive lock type here for multi-threaded
+///                 or shared-bus use. The lock **must** be recursive: same-thread nested entry
+///                 points re-acquire it on the same thread; a non-recursive lock would deadlock.
+template<typename Stack, typename Lock = NullLock>
+class StaticNotecard : private Lock {
 public:
     /// Construct by forwarding args to the Stack constructor.
     template<typename... Args>
@@ -75,6 +110,7 @@ public:
 
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
+        OpGuard op_{static_cast<Lock*>(this)};
         using Rsp = typename RequestT::Response;
         [[maybe_unused]] constexpr Safety safety = RequestT::safety;
 #if !NOTE_NO_REQUEST_IDS
@@ -100,6 +136,10 @@ public:
 
         if constexpr (std::is_void_v<Rsp>) {
             detail::NcErrorCapture nc_err;
+            // Route through the shared non-template execute_void() to prevent
+            // per-RequestT code duplication. The OpGuard op_ acquired above is
+            // held throughout; execute_void()'s own OpGuard is a recursive
+            // re-acquire (no-op for NullLock, recursive for real locks).
             auto rv = execute_void(RequestT::notecard_request, fields_fn, &fields, nc_err, safety);
             if (!rv) return Unexpected(rv.error());
             if (!nc_err.empty()) {
@@ -176,6 +216,7 @@ public:
 
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
+        OpGuard op_{static_cast<Lock*>(this)};
 #if !NOTE_NO_RETRY
         enforce_timing();
 #endif
@@ -197,6 +238,7 @@ public:
     /// Type-erased send (fire-and-forget). Used by generated command() methods
     /// via send_fn_ — a single shared function pointer for all request types.
     Result<void> send_command(BuildFn build_fn, void* ctx) {
+        OpGuard op_{static_cast<Lock*>(this)};
 #if !NOTE_NO_RETRY
         enforce_timing();
 #endif
@@ -212,6 +254,7 @@ public:
     Result<void> execute_void(string_view req_type, BuildFn fields_fn, void* fields_ctx,
                               detail::NcErrorCapture& nc_err,
                               [[maybe_unused]] Safety safety = Safety::NonIdempotent) {
+        OpGuard op_{static_cast<Lock*>(this)};
         detail::ReqWrapCtx ctx{req_type, fields_fn, fields_ctx};
         NullSink null_sink;
         auto dispatch = make_sax_dispatch(null_sink);
@@ -227,6 +270,7 @@ public:
             detail::NcErrorCapture& nc_err, bool& arena_exhausted,
             void* body_ptr, BodyHandlerFactory body_factory,
             Safety safety = Safety::NonIdempotent) {
+        OpGuard op_{static_cast<Lock*>(this)};
         alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
         BodyHandler body_handler{};
         if (body_factory) {
@@ -234,8 +278,8 @@ public:
             body_handler = body_factory(body_ptr, pool, body_storage);
         }
         return execute_generic_retried(req_type, fields_fn, fields_ctx,
-                                        rsp_storage, rsp_fields, n_fields,
-                                        nc_err, arena_exhausted, safety, body_handler);
+                                       rsp_storage, rsp_fields, n_fields,
+                                       nc_err, arena_exhausted, safety, body_handler);
     }
 
     /// Access the transport stack (e.g. for binary I/O).
@@ -257,6 +301,7 @@ public:
     /// and for response buffers declared as `char rsp[N]` (deduces N).
     Result<string_view> transact_raw(string_view req, char* rsp, size_t n,
                                      uint32_t timeout_ms = 10000) {
+        OpGuard op_{static_cast<Lock*>(this)};
         return stack_.transport.transact_raw(req, rsp, n, timeout_ms);
     }
 
@@ -297,6 +342,7 @@ public:
     template<size_t N, typename Fn>
     Result<string_view> transact_raw_inplace(char (&buf)[N], Fn&& build,
                                              uint32_t timeout_ms = 10000) {
+        OpGuard op_{static_cast<Lock*>(this)};
         // Type-erase the lambda via a stateless trampoline so the bulk of
         // the work (`transact_raw_inplace_impl_`) is one out-of-line copy
         // shared by every call site. The trampoline is per-Fn but tiny
@@ -316,6 +362,7 @@ public:
     /// are deliberately kept in sync so the user-facing surface is the
     /// same on both Notecard variants.
     Result<void> ping(uint32_t timeout_ms = 500, PingSeedFn seed_fn = nullptr) {
+        OpGuard op_{static_cast<Lock*>(this)};
         uint32_t seed = (seed_fn ? seed_fn() : stack_.transport.hal().millis()) ^ 0x2545F491u;
 
         char nonce[16];
@@ -473,6 +520,28 @@ public:
     }
 
 private:
+    /// Operation-scope chokepoint mirroring the polymorphic Notecard path.
+    ///
+    /// Acquires the Lock (via the private base) unconditionally first; a RAII
+    /// Exit guard releases it on any return path, including exceptions.
+    ///
+    /// The Lock template parameter MUST be recursive: same-thread nested
+    /// entry points (e.g. a singleton thunk calling execute_void from within
+    /// a wrapping execute()) re-acquire the lock on the same thread. A
+    /// non-recursive lock would deadlock. For NullLock (the default), both
+    /// lock() and unlock() are empty inline no-ops — the compiler eliminates
+    /// the entire chokepoint for single-threaded / constrained targets.
+    ///
+    /// RAII operation guard. For NullLock (the default), detail::StaticNcOpGuard
+    /// specializes to zero members + trivial ctor/dtor — GCC eliminates it
+    /// entirely even on AVR with GCC 7.3.
+    ///
+    /// The Lock MUST be recursive: nested entry points (e.g. execute_void
+    /// called from execute() through execute_void_body_) re-acquire on the
+    /// same thread; a non-recursive lock would deadlock.
+    using OpGuard = detail::StaticNcOpGuard<Lock>;
+
+
 #if !NOTE_NO_RETRY
     RetryTransportOps transport_ops() {
         return {

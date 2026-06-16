@@ -8,6 +8,7 @@
 #include <note/notecard.hpp>
 #include <note/md5.hpp>
 #include <note/link/cobs.hpp>
+#include <note/link/serial.hpp>
 #include <note/backends/buffer.hpp>
 #include <note/api/card_binary_put.hpp>
 #include <note/api/card_binary_get.hpp>
@@ -512,3 +513,204 @@ TEST_CASE("Binary PUT: verify(false) skips status check") {
     REQUIRE(rsp);
     CHECK(h.transact_count == 1);  // handshake only
 }
+
+// ---------------------------------------------------------------------------
+// Bus-hold tests: the COBS payload stream must hold the bus lock continuously
+// (concern 2 — multi-master bus protection).
+//
+// BusHoldObservingSerialHal — a serial HAL that handles JSON protocol
+// exchanges and records whether the bus lock is held during raw binary
+// transmit calls (Protocol::write path).
+//
+// Phase detection: JSON protocol transmits end with \r\n. Once the JSON
+// response is fully consumed (rx_buf drains after json_armed is set), the
+// HAL auto-transitions to binary phase so subsequent transmit calls are
+// counted as binary payload writes.
+//
+// For binary GET, the COBS bytes arrive via Protocol's lookahead buffer
+// (stored after the JSON \n) rather than through SerialHal::receive. So
+// the GET test checks lock acquire/release counts rather than per-byte
+// observation: expect one extra lock/unlock pair for begin/end_bus_hold
+// beyond the JSON transact's lock/unlock.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+#if NOTE_I2C_BUS_LOCK
+
+struct BusHoldRecordingLock : note::IBusLock {
+    int locks   = 0;
+    int unlocks = 0;
+    int held    = 0;
+    void lock() override   { ++locks; ++held; }
+    void unlock() override { --held; ++unlocks; }
+};
+
+/// SerialHal that scripts JSON exchanges and observes binary payload writes.
+/// Auto-transitions to "binary phase" after the JSON response is fully consumed.
+struct BusHoldObservingSerialHal : public note::link::SerialHal {
+    BusHoldRecordingLock* lock = nullptr;
+
+    // Scripted JSON state
+    std::string rx_buf;
+    std::string queued_response;   // staged into rx_buf on \r\n terminator
+    bool json_armed = false;       // set when \r\n seen; cleared by queue()
+
+    // Binary-phase observation
+    bool   binary_phase               = false;
+    int    binary_write_calls         = 0;
+    int    binary_writes_with_lock    = 0;  // transmit() calls that saw held > 0
+    int    binary_writes_without_lock = 0;  // transmit() calls that saw held == 0
+    bool   lock_gap_between_writes    = false; // held dropped to 0 between two writes
+    int    prev_held                  = -1;  // held count at end of last binary write
+
+    void queue(const std::string& rsp) {
+        queued_response = rsp;
+        json_armed = false;
+        binary_phase = false;
+        binary_write_calls = 0;
+        binary_writes_with_lock = 0;
+        binary_writes_without_lock = 0;
+        lock_gap_between_writes = false;
+        prev_held = -1;
+    }
+
+    bool transmit(const uint8_t* data, size_t len) override {
+        if (binary_phase) {
+            int cur = lock ? lock->held : 0;
+            ++binary_write_calls;
+            if (cur > 0) ++binary_writes_with_lock;
+            else         ++binary_writes_without_lock;
+            if (prev_held == 1 && cur == 0) lock_gap_between_writes = true;
+            prev_held = cur;
+            return true;
+        }
+        // Reset probe (\n)
+        if (len == 1 && data[0] == '\n') { rx_buf += "\r\n"; return true; }
+        // Line terminator (\r\n) — stage JSON response
+        if (len == 2 && data[0] == '\r' && data[1] == '\n') {
+            rx_buf += queued_response;
+            json_armed = true;
+            return true;
+        }
+        return true; // JSON body bytes — ignore
+    }
+
+    size_t receive(uint8_t* buf, size_t max_len) override {
+        size_t n = std::min(max_len, rx_buf.size());
+        for (size_t i = 0; i < n; ++i)
+            buf[i] = static_cast<uint8_t>(rx_buf[i]);
+        rx_buf.erase(0, n);
+        // Transition to binary phase once the JSON response is fully consumed
+        if (json_armed && rx_buf.empty()) binary_phase = true;
+        return n;
+    }
+
+    uint32_t now_ms = 0;
+    uint32_t millis() override { return now_ms; }
+    void     delay(uint32_t ms) override { now_ms += ms; }
+};
+
+#endif // NOTE_I2C_BUS_LOCK
+
+} // namespace (bus hold helpers)
+
+#if NOTE_I2C_BUS_LOCK
+
+/// Concern 2 (PUT): the COBS payload stream must hold the bus lock for every
+/// binary write call, with no gap between consecutive writes.
+///
+/// Without the fix, Protocol::write bypasses the BusLockGuard — every
+/// binary_write call sees held == 0 (bus lock not held).
+/// After the fix, begin_bus_hold acquires the lock before the COBS loop;
+/// end_bus_hold releases it after the EOP byte.
+TEST_CASE("binary PUT: COBS payload holds bus lock continuously [concern 2]") {
+    BusHoldObservingSerialHal hal_impl;
+    BusHoldRecordingLock bus_lock;
+    hal_impl.lock = &bus_lock;
+
+    note::link::SerialFramer<note::link::SerialPolicy> framer{hal_impl};
+    note::Protocol transport{framer};
+    transport.set_bus_lock(bus_lock);
+
+    // Queue JSON handshake response for card.binary.put
+    hal_impl.queue("{}\r\n");
+
+    auto nc = note::test::make_test_notecard_heap(transport, note::Allocator{});
+
+    // Large payload (> one COBS block = 255 bytes) ensures multiple write calls
+    uint8_t payload[300];
+    for (size_t i = 0; i < sizeof(payload); ++i)
+        payload[i] = static_cast<uint8_t>(i);
+
+    note::api::CardBinaryPut req;
+    req.data(payload, sizeof(payload)).verify(false);
+
+    auto result = nc->execute(req);
+    REQUIRE(result);
+
+    // Payload must have produced binary write calls (phase detection worked)
+    CHECK(hal_impl.binary_write_calls > 0);
+    // Every binary write must see the lock held (concern 2 pass)
+    CHECK(hal_impl.binary_writes_without_lock == 0);
+    // The lock must not have been released between consecutive payload writes
+    CHECK(hal_impl.lock_gap_between_writes == false);
+}
+
+/// Concern 2 (GET): begin_bus_hold/end_bus_hold must be called for the receive
+/// payload stream. Verified via lock-count totals: the JSON transact acquires
+/// once; begin_bus_hold adds a second acquire for the COBS read loop.
+///
+/// Without the fix: bus_lock.locks == 1 (transact only).
+/// After the fix:   bus_lock.locks == 2 (transact + begin_bus_hold).
+TEST_CASE("binary GET: bus lock acquired for COBS payload stream [concern 2]") {
+    BusHoldObservingSerialHal hal_impl;
+    BusHoldRecordingLock bus_lock;
+    hal_impl.lock = &bus_lock;
+
+    note::link::SerialFramer<note::link::SerialPolicy> framer{hal_impl};
+    note::Protocol transport{framer};
+    transport.set_bus_lock(bus_lock);
+
+    auto nc = note::test::make_test_notecard_heap(transport, note::Allocator{});
+
+    // Build COBS + EOP for a small payload
+    uint8_t original[] = {10, 20, 30, 0, 40, 50};
+    note::SoftwareMd5 md5;
+    auto md5_hex = md5.compute(original, sizeof(original));
+
+    std::vector<uint8_t> cobs_bytes;
+    note::CobsEncoder encoder;
+    encoder.encode(original, sizeof(original), [&](const uint8_t* b, size_t n) {
+        cobs_bytes.insert(cobs_bytes.end(), b, b + n);
+    });
+    cobs_bytes.push_back(note::cobs_eop);
+
+    // Queue JSON response followed immediately by COBS bytes.
+    // Protocol's receive_dispatch reads the JSON up to \n, stores any remaining
+    // bytes as lookahead. binary_read drains the lookahead first (via read_hal),
+    // so the COBS bytes are available without an additional SerialHal::receive call.
+    std::string json_then_cobs =
+        std::string(R"({"status":")") + std::string(md5_hex) + "\"}";
+    json_then_cobs += "\r\n";
+    for (auto b : cobs_bytes)
+        json_then_cobs += static_cast<char>(b);
+    hal_impl.queue(json_then_cobs);
+
+    uint8_t dst[64] = {};
+    note::api::CardBinaryGet req;
+    req.into(dst, sizeof(dst));
+    req.length = static_cast<int32_t>(sizeof(original));
+
+    auto result = nc->execute(req);
+    REQUIRE(result);
+    REQUIRE(memcmp(dst, original, sizeof(original)) == 0);
+
+    // With the fix: begin_bus_hold adds one extra lock/unlock for the payload stream.
+    // Total: 1 (transact RequestSource for handshake) + 1 (begin_bus_hold) = 2.
+    CHECK(bus_lock.locks   >= 2);
+    // All acquires must be balanced by releases.
+    CHECK(bus_lock.locks   == bus_lock.unlocks);
+}
+
+#endif // NOTE_I2C_BUS_LOCK

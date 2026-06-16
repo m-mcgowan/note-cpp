@@ -275,7 +275,25 @@ public:
     void set_bus_lock(IBusLock& l) { bus_lock_ = &l; }
     /// Remove the bus lock (e.g. for testing).
     void clear_bus_lock() { bus_lock_ = nullptr; }
+
+    /// Acquire the bus lock for a multi-call raw byte sequence (e.g. the
+    /// COBS payload stream in a binary transfer) so no other master can
+    /// interleave between individual write()/read() calls. Paired with
+    /// end_bus_hold(). Call only outside an active transact/send (the
+    /// per-exchange BusLockGuard is not in scope at this point).
+    void begin_bus_hold()
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
+        override
 #endif
+    { if (bus_lock_) bus_lock_->lock(); }
+
+    /// Release the bus lock acquired by begin_bus_hold().
+    void end_bus_hold()
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
+        override
+#endif
+    { if (bus_lock_) bus_lock_->unlock(); }
+#endif // NOTE_I2C_BUS_LOCK
 
 #if NOTE_STATIC_HAL
     HalT& hal() { return hal_; }

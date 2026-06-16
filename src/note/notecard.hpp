@@ -1166,6 +1166,25 @@ private:
                                      span<char>(buf, cap), timeout_ms);
     }
 
+    /// RAII guard that holds the bus lock across a multi-call raw byte sequence
+    /// (e.g. the COBS payload stream in a binary transfer). Calls
+    /// transport_->begin_bus_hold() on construction and end_bus_hold() on
+    /// destruction. The bus lock is non-recursive — only one BusHold may be
+    /// active at a time. No-op when NOTE_I2C_BUS_LOCK is disabled or when
+    /// transport_ is null. BusHold must not be nested inside a transact/send
+    /// call (which holds its own per-exchange BusLockGuard on Protocol).
+#if NOTE_I2C_BUS_LOCK
+    struct BusHold {
+        ITransact* t_;
+        explicit BusHold(ITransact* t) : t_(t) { if (t_) t_->begin_bus_hold(); }
+        ~BusHold() { if (t_) t_->end_bus_hold(); }
+        BusHold(const BusHold&) = delete;
+        BusHold& operator=(const BusHold&) = delete;
+        BusHold(BusHold&&) = delete;
+        BusHold& operator=(BusHold&&) = delete;
+    };
+#endif // NOTE_I2C_BUS_LOCK
+
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
         using Rsp = typename RequestT::Response;
@@ -1204,15 +1223,24 @@ private:
         if (!result) return result;
 
         // Stream COBS-encoded blocks via transport write().
-        CobsEncoder encoder;
+        // Hold the bus lock across the entire payload stream so no other
+        // master can interleave between COBS blocks (releasing between blocks
+        // risks the Notecard's intra-transaction receive timeout).
+        // The guard is a no-op when NOTE_I2C_BUS_LOCK is disabled.
         bool tx_ok = true;
-        encoder.encode(src.data(), src.size(), [&](const uint8_t* block, size_t n) {
-            if (tx_ok) tx_ok = !!binary_write(block, n);
-        });
-        if (tx_ok) {
-            uint8_t eop = cobs_eop;
-            tx_ok = !!binary_write(&eop, 1);
-        }
+        {
+#if NOTE_I2C_BUS_LOCK
+            BusHold bus_hold{transport_};
+#endif
+            CobsEncoder encoder;
+            encoder.encode(src.data(), src.size(), [&](const uint8_t* block, size_t n) {
+                if (tx_ok) tx_ok = !!binary_write(block, n);
+            });
+            if (tx_ok) {
+                uint8_t eop = cobs_eop;
+                tx_ok = !!binary_write(&eop, 1);
+            }
+        } // BusHold released here — before the verify control sub-request
         if (!tx_ok) {
             binary_io_reset();
             return ApiResult<Rsp>(
@@ -1251,22 +1279,35 @@ private:
             decoded += copy;
         };
 
-        uint8_t chunk[64];
-        bool eop_seen = false;
-        while (!eop_seen) {
-            auto r = binary_read(chunk, sizeof(chunk), default_timeout_ms_);
-            if (!r) {
-                binary_io_reset();
-                return ApiResult<Rsp>(
-                    ErrorInfo{Error::ResponseLost, Cause::Timeout, NOTE_ERR("binary receive timeout")});
+        // Hold the bus lock across the entire receive payload stream so no other
+        // master can interleave between COBS chunk reads.
+        // Released before MD5 verification (which does not use the raw bus).
+        bool recv_ok = true;
+        {
+#if NOTE_I2C_BUS_LOCK
+            BusHold bus_hold{transport_};
+#endif
+            uint8_t chunk[64];
+            bool eop_seen = false;
+            while (!eop_seen) {
+                auto r = binary_read(chunk, sizeof(chunk), default_timeout_ms_);
+                if (!r) {
+                    recv_ok = false;
+                    break;
+                }
+                size_t n = *r;
+                for (size_t i = 0; i < n; ++i) {
+                    if (chunk[i] == cobs_eop) { eop_seen = true; n = i + 1; break; }
+                }
+                decoder.feed(chunk, n, decode_sink);
             }
-            size_t n = *r;
-            for (size_t i = 0; i < n; ++i) {
-                if (chunk[i] == cobs_eop) { eop_seen = true; n = i + 1; break; }
-            }
-            decoder.feed(chunk, n, decode_sink);
+            if (recv_ok) decoder.flush(decode_sink);
+        } // BusHold released here
+        if (!recv_ok) {
+            binary_io_reset();
+            return ApiResult<Rsp>(
+                ErrorInfo{Error::ResponseLost, Cause::Timeout, NOTE_ERR("binary receive timeout")});
         }
-        decoder.flush(decode_sink);
 
         // MD5 verify: compare decoded bytes against expected hash from response.
         string_view expected_md5 = result.status;

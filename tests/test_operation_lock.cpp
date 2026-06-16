@@ -14,6 +14,7 @@
 #include <note/txn_handshake.hpp>
 #include <note/protocol.hpp>
 #include <note/link/serial.hpp>
+#include <note/api/card_binary_put.hpp>
 #include "common/scripted_transport.hpp"
 
 #include <atomic>
@@ -667,4 +668,106 @@ TEST_CASE("StaticNotecard::keep_ready(): compiles and runs without error") {
         (void)r;
     }
     CHECK(nc.stack().transport.transact_count == 1);
+}
+
+// ===========================================================================
+// Concern 1: binary transfer atomicity via run_operation (request lock)
+//
+// do_binary_send/do_binary_receive are wrapped in run_operation(), so the
+// recursive request lock is held for the entire binary operation: JSON
+// handshake + COBS payload write (send) / COBS payload read (receive).
+// Two threads each doing a binary PUT via the same Notecard + request lock
+// must never interleave their transact() + write() sequences.
+//
+// BinaryInterleaveTransport — extends ITransact with write() support and an
+// in_flight counter that spans transact() + write(). If any two calls from
+// different threads overlap (in_flight > 1), violations is incremented.
+// ===========================================================================
+
+namespace {
+
+struct BinaryInterleaveTransport : note::ITransact {
+    std::atomic<int> in_flight{0};
+    std::atomic<int> violations{0};
+
+    struct NoopHal : note::Hal {
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t*, size_t, uint32_t) override { return size_t{0}; }
+        bool reset() override { return true; }
+        bool write_line_terminator() override { return true; }
+        uint32_t millis() override { return 0; }
+        void delay(uint32_t) override {}
+    } hal_;
+    note::Hal& hal() override { return hal_; }
+
+    using note::ITransact::transact;
+    using note::ITransact::send;
+
+    // Enter the "in-flight" window: if another thread is already inside, it's
+    // a violation. Linger so concurrent entry is reliably observed.
+    void mark_enter() {
+        if (in_flight.fetch_add(1, std::memory_order_acq_rel) != 0)
+            violations.fetch_add(1, std::memory_order_relaxed);
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+    }
+    void mark_exit() {
+        in_flight.fetch_sub(1, std::memory_order_acq_rel);
+    }
+
+    note::Result<note::string_view> transact(note::string_view, note::span<char> buf,
+                                              uint32_t) override {
+        mark_enter();
+        mark_exit();
+        static constexpr note::string_view rsp{"{}"};
+        if (rsp.size() >= buf.size())
+            return note::make_error(note::Error::Overflow, NOTE_ERR("buffer too small"));
+        std::memcpy(buf.data(), rsp.data(), rsp.size());
+        return note::string_view(buf.data(), rsp.size());
+    }
+
+    note::Result<void> write(const uint8_t*, size_t) override {
+        mark_enter();
+        mark_exit();
+        return {};
+    }
+
+    note::Result<void> send(note::string_view) override { return {}; }
+    void reset() override {}
+    void abort() override {}
+};
+
+constexpr int kBinaryAtomicIters = 100;
+
+void binary_put_worker(note::Notecard& nc, std::barrier<>& bar, int iters) {
+    static const uint8_t kPayload[] = {1, 2, 3, 4, 5};
+    for (int i = 0; i < iters; ++i) {
+        bar.arrive_and_wait();
+        note::api::CardBinaryPut req;
+        req.data(kPayload, sizeof(kPayload)).verify(false);
+        auto result = nc.execute(req);
+        (void)result;
+    }
+}
+
+} // namespace (concern-1 binary helpers)
+
+TEST_CASE("concern 1: binary PUT is atomic vs other threads via run_operation") {
+    BinaryInterleaveTransport tx;
+    note::Notecard nc{tx, note::Allocator{}};
+
+    std::recursive_mutex rm;
+    note::LockAdapter<std::recursive_mutex> op_lock{rm};
+    nc.set_request_lock(op_lock);
+
+    std::barrier<> bar{2};
+
+    std::thread t1{[&] { binary_put_worker(nc, bar, kBinaryAtomicIters); }};
+    std::thread t2{[&] { binary_put_worker(nc, bar, kBinaryAtomicIters); }};
+    t1.join();
+    t2.join();
+
+    // Zero interleaving: the request lock held by run_operation ensures that
+    // the JSON handshake (transact) and COBS payload (write) from one thread
+    // are never interleaved with those from another.
+    CHECK(tx.violations.load() == 0);
 }

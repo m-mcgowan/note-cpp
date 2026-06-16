@@ -144,6 +144,16 @@ struct ITransact {
     /// Install a debug listener for wire/timing/memory events. Default: no-op.
     virtual void set_debug(const DebugListener&) {}
 
+    /// Acquire the bus lock for a multi-call raw byte sequence (e.g. a binary
+    /// COBS payload stream) so the lock is held across the entire stream rather
+    /// than released between individual write()/read() calls. Paired with
+    /// end_bus_hold(). Must be called while no per-exchange lock is already
+    /// held (i.e. outside a transact/send call). Default: no-op.
+    virtual void begin_bus_hold() {}
+
+    /// Release the bus lock acquired by begin_bus_hold(). Default: no-op.
+    virtual void end_bus_hold() {}
+
     /// Write raw bytes (for binary COBS streaming). Default: not supported.
     virtual Result<void> write(const uint8_t*, size_t) {
         return make_error(Error::NotReady, "binary transfer not supported");

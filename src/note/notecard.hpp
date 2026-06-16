@@ -1085,6 +1085,16 @@ public:
     ///
     /// Note: keep_ready() = readiness only. To atomically exclude other threads
     /// as well, combine with exclusive() (the two are independent).
+    ///
+    /// THREADING: ReadySession mutates op_depth_ (a plain int) outside the
+    /// request lock. On a Notecard shared between threads you MUST hold
+    /// exclusive() for the duration — declare it BEFORE keep_ready() so the
+    /// lock is acquired first and released last:
+    ///     auto ex = nc.exclusive();   // acquire the lock first
+    ///     auto kr = nc.keep_ready();  // then open the readiness scope
+    /// Using keep_ready() alone on a multi-threaded Notecard, or declaring it
+    /// before exclusive(), is a data race on op_depth_. Single-threaded use is
+    /// always safe.
     [[nodiscard]] ReadySession keep_ready() {
         return ReadySession{this};
     }
@@ -1096,9 +1106,11 @@ public:
     ///
     /// The lock must be recursive: same-thread nested calls (e.g. execute()
     /// called from within do_binary_send) re-acquire it on the same thread,
-    /// which a recursive lock handles without deadlock. op_depth_ is only
-    /// incremented/decremented while the lock is held (or when no lock is
-    /// configured), so it is race-free.
+    /// which a recursive lock handles without deadlock. Within run_operation,
+    /// op_depth_ is mutated only while the lock is held (or when no lock is
+    /// configured), so it is race-free here. (The public keep_ready() guard
+    /// also touches op_depth_ outside the lock — see its threading note: on a
+    /// shared Notecard it must be paired with exclusive() held first.)
     ///
     /// When NOTE_TXN_HANDSHAKE is enabled, the outermost operation calls
     /// transport_->begin_operation() once at entry and transport_->end_operation()

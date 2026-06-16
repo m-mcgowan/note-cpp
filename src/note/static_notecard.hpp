@@ -78,6 +78,48 @@ struct StaticNcOpGuard<NullLock> {
 
 } // namespace detail
 
+// Forward declaration so TxnOpGuard can reference StaticNotecard.
+template<typename Stack, typename Lock> class StaticNotecard;
+
+namespace detail {
+
+/// Operation-scope RTX/CTX readiness guard for StaticNotecard.
+///
+/// When NOTE_TXN_HANDSHAKE is enabled, this guard tracks nesting depth via
+/// `StaticNotecard::op_depth_` (private — friend access) and calls
+/// `begin_operation()` on the outermost entry and `end_operation()` on the
+/// outermost exit. Paired with the `OpGuard` (which handles locking) in
+/// each public StaticNotecard entry point.
+///
+/// When NOTE_TXN_HANDSHAKE is disabled (the AVR default), the guard has NO
+/// members and trivial ctor/dtor — GCC eliminates it entirely, just like
+/// `StaticNcOpGuard<NullLock>`. Net cost on AVR: zero flash, zero RAM.
+#if NOTE_TXN_HANDSHAKE
+template<typename Stack, typename Lock>
+struct StaticNcTxnOpGuard {
+    StaticNotecard<Stack, Lock>& nc_;
+    bool outermost_;
+    explicit StaticNcTxnOpGuard(StaticNotecard<Stack, Lock>& nc)
+        : nc_(nc), outermost_(nc.op_depth_++ == 0) {
+        if (outermost_) nc_.stack_.transport.begin_operation(nc_.default_timeout_ms_);
+    }
+    ~StaticNcTxnOpGuard() {
+        if (outermost_) nc_.stack_.transport.end_operation();
+        --nc_.op_depth_;
+    }
+    StaticNcTxnOpGuard(const StaticNcTxnOpGuard&) = delete;
+    StaticNcTxnOpGuard& operator=(const StaticNcTxnOpGuard&) = delete;
+};
+#else
+template<typename Stack, typename Lock>
+struct StaticNcTxnOpGuard {
+    explicit StaticNcTxnOpGuard(StaticNotecard<Stack, Lock>&) noexcept {}
+    ~StaticNcTxnOpGuard() noexcept {}
+};
+#endif
+
+} // namespace detail
+
 /// Notecard implementation with zero virtual dispatch overhead.
 ///
 /// Stack must provide a `transport` member with `transact(BuildFn, void*, JsonSink&, uint32_t)`.
@@ -111,6 +153,7 @@ public:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
         using Rsp = typename RequestT::Response;
         [[maybe_unused]] constexpr Safety safety = RequestT::safety;
 #if !NOTE_NO_REQUEST_IDS
@@ -140,6 +183,7 @@ public:
             // per-RequestT code duplication. The OpGuard op_ acquired above is
             // held throughout; execute_void()'s own OpGuard is a recursive
             // re-acquire (no-op for NullLock, recursive for real locks).
+            // TxnOpGuard tracks outermost depth so begin/end_operation fire once.
             auto rv = execute_void(RequestT::notecard_request, fields_fn, &fields, nc_err, safety);
             if (!rv) return Unexpected(rv.error());
             if (!nc_err.empty()) {
@@ -217,6 +261,7 @@ public:
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
 #if !NOTE_NO_RETRY
         enforce_timing();
 #endif
@@ -239,6 +284,7 @@ public:
     /// via send_fn_ — a single shared function pointer for all request types.
     Result<void> send_command(BuildFn build_fn, void* ctx) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
 #if !NOTE_NO_RETRY
         enforce_timing();
 #endif
@@ -255,6 +301,7 @@ public:
                               detail::NcErrorCapture& nc_err,
                               [[maybe_unused]] Safety safety = Safety::NonIdempotent) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
         detail::ReqWrapCtx ctx{req_type, fields_fn, fields_ctx};
         NullSink null_sink;
         auto dispatch = make_sax_dispatch(null_sink);
@@ -271,6 +318,7 @@ public:
             void* body_ptr, BodyHandlerFactory body_factory,
             Safety safety = Safety::NonIdempotent) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
         alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
         BodyHandler body_handler{};
         if (body_factory) {
@@ -302,6 +350,7 @@ public:
     Result<string_view> transact_raw(string_view req, char* rsp, size_t n,
                                      uint32_t timeout_ms = 10000) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
         return stack_.transport.transact_raw(req, rsp, n, timeout_ms);
     }
 
@@ -343,6 +392,7 @@ public:
     Result<string_view> transact_raw_inplace(char (&buf)[N], Fn&& build,
                                              uint32_t timeout_ms = 10000) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
         // Type-erase the lambda via a stateless trampoline so the bulk of
         // the work (`transact_raw_inplace_impl_`) is one out-of-line copy
         // shared by every call site. The trampoline is per-Fn but tiny
@@ -363,6 +413,7 @@ public:
     /// same on both Notecard variants.
     Result<void> ping(uint32_t timeout_ms = 500, PingSeedFn seed_fn = nullptr) {
         OpGuard op_{static_cast<Lock*>(this)};
+        TxnOpGuard txn_op_{*this};
         uint32_t seed = (seed_fn ? seed_fn() : stack_.transport.hal().millis()) ^ 0x2545F491u;
 
         char nonce[16];
@@ -533,6 +584,8 @@ private:
     /// chokepoint — even on AVR with GCC 7.3 (which a pointer-carrying guard
     /// would not fully erase).
     using OpGuard = detail::StaticNcOpGuard<Lock>;
+    using TxnOpGuard = detail::StaticNcTxnOpGuard<Stack, Lock>;
+    friend struct detail::StaticNcTxnOpGuard<Stack, Lock>;
 
 #if !NOTE_NO_RETRY
     RetryTransportOps transport_ops() {
@@ -580,6 +633,9 @@ private:
 #if !NOTE_NO_REQUEST_IDS
     uint32_t next_request_id_ = 1;
     bool request_ids_enabled_ = true;
+#endif
+#if NOTE_TXN_HANDSHAKE
+    int op_depth_ = 0;  ///< Nesting depth for outermost-operation detection (gated so AVR pays nothing).
 #endif
 };
 

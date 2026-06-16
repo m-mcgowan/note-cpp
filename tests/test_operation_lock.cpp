@@ -294,6 +294,11 @@ struct LockTestTransport {
     uint32_t millis() { return now_ms; }
     void delay(uint32_t ms) { now_ms += ms; total_delay_ms += ms; }
     LockTestTransport& hal() { return *this; }
+
+    // begin/end_operation: operation-scope RTX/CTX handshake hook.
+    // No-op on this mock — StaticNotecard calls these once per outermost operation.
+    bool begin_operation(uint32_t /*timeout_ms*/) { return true; }
+    void end_operation() {}
 };
 
 struct LockTestStack { LockTestTransport transport; };

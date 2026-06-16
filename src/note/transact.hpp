@@ -122,6 +122,25 @@ struct ITransact {
     /// and any low-level operations that don't go through the protocol.
     virtual Hal& hal() = 0;
 
+    /// Called once at the start of an outermost operation to assert the
+    /// RTX/CTX readiness gate (if any). Returns true when the transport is
+    /// ready to proceed; returns false on timeout (callers should consider
+    /// the operation not ready, but correctness is maintained — subsequent
+    /// transact() calls will simply time out at the wire level).
+    ///
+    /// Raw `ITransact` users who drive the transport directly (outside
+    /// `Notecard::run_operation`) must bracket their operations explicitly:
+    ///   transport.begin_operation(timeout);
+    ///   transport.transact(...);   // one or more exchanges
+    ///   transport.end_operation();
+    ///
+    /// Default: always returns true (no-op, no readiness wait needed).
+    virtual bool begin_operation(uint32_t /*timeout_ms*/) { return true; }
+
+    /// Called once at the end of an outermost operation to release the RTX
+    /// signal. Default: no-op.
+    virtual void end_operation() {}
+
     /// Install a debug listener for wire/timing/memory events. Default: no-op.
     virtual void set_debug(const DebugListener&) {}
 

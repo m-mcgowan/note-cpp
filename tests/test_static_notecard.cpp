@@ -220,6 +220,13 @@ struct MockTransport {
     uint32_t millis() { return now_ms; }
     void delay(uint32_t ms) { now_ms += ms; total_delay_ms += ms; }
 
+    // begin/end_operation: operation-scope RTX/CTX handshake hook.
+    // Counts calls so tests can verify outermost-only firing.
+    int begin_op_count = 0;
+    int end_op_count = 0;
+    bool begin_operation(uint32_t /*timeout_ms*/) { ++begin_op_count; return true; }
+    void end_operation() { ++end_op_count; }
+
     /// MockTransport doubles as its own Hal — millis/delay/reset already
     /// satisfy the duck-typed StaticNotecard hal() contract.
     MockTransport& hal() { return *this; }
@@ -600,3 +607,64 @@ TEST_CASE("transact_raw_inplace overflow returns Error::Overflow") {
     // No transport call was made (overflow short-circuits).
     CHECK(nc.stack().transport.transact_raw_count == 0);
 }
+
+// ---------------------------------------------------------------------------
+// StaticNcTxnOpGuard integration: begin/end_operation fire once per outermost
+// operation, not once per internal re-entrant entry (execute -> execute_void).
+//
+// The mock transport's begin_op_count / end_op_count counters are incremented
+// by StaticNcTxnOpGuard via nc_.stack_.transport.begin_operation() /
+// end_operation(). This verifies that the outermost-depth guard fires exactly
+// once regardless of internal re-entry (execute calls execute_void internally,
+// which also constructs a TxnOpGuard — the nesting should suppress the inner
+// begin/end calls).
+// ---------------------------------------------------------------------------
+
+#if NOTE_TXN_HANDSHAKE
+
+TEST_CASE("StaticNotecard: begin_operation fires once per execute, not per re-entrant entry") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response("{\"value\":22.5}");
+
+    // execute() -> execute_void() is a re-entrant path through TxnOpGuard.
+    // The outermost guard (from execute()) sets op_depth_ to 1 and calls
+    // begin_operation. The inner guard (from execute_void()) sees op_depth_
+    // already > 0 and skips begin_operation. On the way out, the inner
+    // guard decrements op_depth_ without calling end_operation; the outer
+    // guard decrements to 0 and calls end_operation.
+    auto result = nc.stack().transport.transact_count;  // snapshot before
+    (void)result;
+
+    // Use a typed execute so it goes through execute_void internally.
+    Api api(nc);
+    auto r = api.card.temp().read().execute();
+    REQUIRE(r);
+
+    // Exactly one begin/end_operation pair for the one logical operation.
+    CHECK(nc.stack().transport.begin_op_count == 1);
+    CHECK(nc.stack().transport.end_op_count   == 1);
+}
+
+TEST_CASE("StaticNotecard: two separate executes = two begin/end_operation pairs") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    Api api(nc);
+
+    nc.stack().transport.queue_response("{\"value\":22.5}");
+    nc.stack().transport.queue_response("{\"value\":23.0}");
+
+    auto r1 = api.card.temp().read().execute();
+    auto r2 = api.card.temp().read().execute();
+    REQUIRE(r1);
+    REQUIRE(r2);
+
+    // Two separate top-level operations = two begin/end pairs.
+    CHECK(nc.stack().transport.begin_op_count == 2);
+    CHECK(nc.stack().transport.end_op_count   == 2);
+}
+
+#endif // NOTE_TXN_HANDSHAKE

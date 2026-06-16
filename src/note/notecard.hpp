@@ -974,20 +974,35 @@ public:
     /// incremented/decremented while the lock is held (or when no lock is
     /// configured), so it is race-free.
     ///
-    /// op_depth_ is retained as the outermost-detector for a future
-    /// RTX-once-per-operation step; it has no effect on locking here.
+    /// When NOTE_TXN_HANDSHAKE is enabled, the outermost operation calls
+    /// transport_->begin_operation() once at entry and transport_->end_operation()
+    /// once at exit, so the RTX/CTX readiness gate is held for the whole
+    /// operation (including multi-exchange ops like binary transfers) rather
+    /// than toggled per wire exchange.
+    ///
+    /// If begin_operation() returns false (Notecard not ready within timeout),
+    /// the operation proceeds anyway — the subsequent transact() will fail
+    /// naturally with a transport-level error. Fast-fail on NotReady is a
+    /// future improvement; correctness is maintained because the wire-level
+    /// exchange will time out.
     template<typename Fn>
     auto run_operation(Fn&& fn) -> decltype(fn()) {
         if (request_lock_) request_lock_->lock();  // recursive: same thread re-enters, other threads block
         const bool outermost = (op_depth_++ == 0);
-        (void)outermost;  // reserved for upcoming RTX step
+#if NOTE_TXN_HANDSHAKE
+        if (outermost && transport_) transport_->begin_operation(default_timeout_ms_);
+#endif
         struct Exit {
             Notecard* self;
+            bool outermost;
             ~Exit() {
+#if NOTE_TXN_HANDSHAKE
+                if (outermost && self->transport_) self->transport_->end_operation();
+#endif
                 --self->op_depth_;
                 if (self->request_lock_) self->request_lock_->unlock();
             }
-        } exit_guard{this};
+        } exit_guard{this, outermost};
         return fn();
     }
 

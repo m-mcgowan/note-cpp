@@ -51,29 +51,6 @@ namespace note {
 #if NOTE_TXN_HANDSHAKE
 namespace detail {
 
-/// RAII scope for an optional TxnHandshake. Calls start() on construct and
-/// stop() on destruct. If no TxnHandshake is registered (null pointer) the
-/// scope is a no-op and ok() is true. If start() returns false, ok() is
-/// false and stop() is NOT called on destruct (nothing to release).
-class TxnHandshakeScope {
-public:
-    TxnHandshakeScope(TxnHandshake* h, uint32_t timeout_ms) : handshake_(h) {
-        if (handshake_) started_ = handshake_->start(timeout_ms);
-    }
-    ~TxnHandshakeScope() { if (handshake_ && started_) handshake_->stop(); }
-    TxnHandshakeScope(const TxnHandshakeScope&) = delete;
-    TxnHandshakeScope(TxnHandshakeScope&&) = delete;
-    TxnHandshakeScope& operator=(const TxnHandshakeScope&) = delete;
-    TxnHandshakeScope& operator=(TxnHandshakeScope&&) = delete;
-
-    /// True if no handshake is needed (null handshake_) or start() succeeded.
-    bool ok() const noexcept { return !handshake_ || started_; }
-
-private:
-    TxnHandshake* handshake_;
-    bool started_ = false;
-};
-
 /// Default timeout for transaction-handshake start() when the caller
 /// doesn't supply one (e.g. fire-and-forget send()). Deliberately generous
 /// — the handshake is waiting on a physical wake signal from the Notecard.
@@ -248,13 +225,47 @@ public:
 #endif
 
 #if NOTE_TXN_HANDSHAKE
-    /// Register a transaction-handshake HAL to bracket every request with
+    /// Register a transaction-handshake HAL to bracket every operation with
     /// the SKU's RTX/CTX wake signal. See note/txn_handshake.hpp. Pass a
-    /// TxnHandshake bound to the SKU's transaction pins; the transport
-    /// brackets each transact/send/transact_raw call with start()/stop().
+    /// TxnHandshake bound to the SKU's transaction pins; the transport asserts
+    /// RTX once at begin_operation() and releases it at end_operation(), so a
+    /// multi-exchange operation (e.g. a binary transfer) asserts RTX once for
+    /// the whole operation rather than once per wire exchange.
     void set_handshake(TxnHandshake& h) { handshake_ = &h; }
     /// Remove the transaction handshake (e.g. for testing).
     void clear_handshake() { handshake_ = nullptr; }
+
+    bool begin_operation(uint32_t timeout_ms)
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
+        override
+#endif
+    {
+        if (handshake_) {
+            op_started_ = handshake_->start(timeout_ms);
+            return op_started_;
+        }
+        return true;
+    }
+
+    void end_operation()
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
+        override
+#endif
+    {
+        if (handshake_ && op_started_) {
+            handshake_->stop();
+            op_started_ = false;
+        }
+    }
+#else
+    // When NOTE_TXN_HANDSHAKE is disabled, still override the base virtuals
+    // so that Protocol satisfies ITransact's interface completely (the default
+    // no-op implementations are inherited, but explicit overrides are cleaner
+    // and silence potential -Wsuggest-override warnings).
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
+    bool begin_operation(uint32_t /*timeout_ms*/) override { return true; }
+    void end_operation() override {}
+#endif
 #endif
 
 #if NOTE_I2C_BUS_LOCK
@@ -315,11 +326,6 @@ public:
     /// side, just with the request bytes already materialised.
     Result<void> transact(string_view request, JsonSink& sink,
                           uint32_t timeout_ms) override {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -354,11 +360,6 @@ public:
 
     Result<string_view> transact(RequestSource src, span<char> buf,
                                  uint32_t timeout_ms) override {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -377,11 +378,6 @@ public:
 
     Result<void> transact(RequestSource src, JsonSink& sink,
                           uint32_t timeout_ms) override {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -401,11 +397,6 @@ public:
     }
 
     Result<void> send(RequestSource src) override {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -456,11 +447,6 @@ public:
     Result<void> transact_dispatch(RequestSource src,
                                    SaxDispatch dispatch, uint32_t timeout_ms,
                                    detail::NcErrorCapture& nc_err) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -523,11 +509,6 @@ public:
     /// block above; this is the duplicate body without the virtual dispatch
     /// for AVR / static-HAL targets, which `StaticNotecard` calls directly.
     Result<void> send(RequestSource src) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -548,11 +529,6 @@ public:
     /// read response line into caller's buffer. No SAX parsing — raw bytes.
     Result<string_view> transact_raw(string_view json, char* buf, size_t bufsize,
                                       uint32_t timeout_ms) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -571,11 +547,6 @@ public:
 
     /// Raw passthrough: transmit pre-formatted JSON + line terminator, no response.
     Result<void> send_raw(string_view json) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
 #if NOTE_I2C_BUS_LOCK
         BusLockGuard bus_guard{bus_lock_};
 #endif
@@ -945,6 +916,7 @@ private:
 
 #if NOTE_TXN_HANDSHAKE
     TxnHandshake* handshake_ = nullptr;
+    bool op_started_ = false;  ///< true while an operation's start() is in effect.
 #endif
 
 #if NOTE_I2C_BUS_LOCK

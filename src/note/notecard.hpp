@@ -963,6 +963,132 @@ public:
         return p;
     }
 
+    // ── Operation-session guards ──────────────────────────────────────────
+    //
+    // Two independent RAII guards an app holds across a GROUP of requests.
+    //
+    // exclusive() — holds the recursive request lock for the guard's lifetime
+    //   so a group of requests is atomic against other threads (exclusion only).
+    //   Inner run_operation() calls re-acquire the lock harmlessly (recursive).
+    //   No-op when no request lock is configured.
+    //
+    // keep_ready() — holds the RTX/CTX readiness scope (op_depth_ /
+    //   begin_operation / end_operation) for the guard's lifetime so the card
+    //   is asserted-ready once for the whole group instead of per request
+    //   (readiness only). Inner run_operation() calls see op_depth_ > 0 and
+    //   skip begin_operation. When NOTE_TXN_HANDSHAKE is off, returns a trivial
+    //   empty guard with no op_depth_ touch. No-op when no transport is set.
+    //
+    // Both guards: non-copyable, non-movable. C++17 guaranteed copy elision
+    // (NRVO) makes `auto g = nc.exclusive();` work without any copy or move.
+    //
+    // The two guards are INDEPENDENT — an app may use either, both, or neither.
+    // exclusive() = exclusion; keep_ready() = readiness. They compose correctly:
+    //
+    //     auto ex = nc.exclusive();   // lock the group
+    //     auto kr = nc.keep_ready();  // hold RTX-ready for the group
+    //     nc.execute(req1);
+    //     nc.execute(req2);
+
+    /// RAII guard returned by exclusive(). Holds the recursive request lock
+    /// for its lifetime; non-copyable, non-movable.
+    struct ExclusiveSession {
+        ExclusiveSession(const ExclusiveSession&)            = delete;
+        ExclusiveSession& operator=(const ExclusiveSession&) = delete;
+        ExclusiveSession(ExclusiveSession&&)                 = delete;
+        ExclusiveSession& operator=(ExclusiveSession&&)      = delete;
+
+        ~ExclusiveSession() {
+            if (lock_) lock_->unlock();
+        }
+    private:
+        friend class Notecard;
+        explicit ExclusiveSession(IBusLock* lock) : lock_(lock) {
+            if (lock_) lock_->lock();
+        }
+        IBusLock* lock_;
+    };
+
+    /// RAII guard returned by keep_ready(). Holds the RTX/CTX readiness scope
+    /// (op_depth_ / begin_operation / end_operation) for its lifetime so the
+    /// card is asserted-ready once for the whole group; non-copyable, non-movable.
+    /// When NOTE_TXN_HANDSHAKE is off this is a trivial empty struct.
+    struct ReadySession {
+        ReadySession(const ReadySession&)            = delete;
+        ReadySession& operator=(const ReadySession&) = delete;
+        ReadySession(ReadySession&&)                 = delete;
+        ReadySession& operator=(ReadySession&&)      = delete;
+
+#if NOTE_TXN_HANDSHAKE
+        ~ReadySession() {
+            if (outermost_ && nc_->transport_) nc_->transport_->end_operation();
+            --nc_->op_depth_;
+        }
+#else
+        ~ReadySession() = default;
+#endif
+
+    private:
+        friend class Notecard;
+#if NOTE_TXN_HANDSHAKE
+        explicit ReadySession(Notecard* nc)
+            : nc_(nc)
+            , outermost_(nc_->op_depth_++ == 0)
+        {
+            if (outermost_ && nc_->transport_)
+                nc_->transport_->begin_operation(nc_->default_timeout_ms_);
+        }
+        Notecard* nc_;
+        bool outermost_;
+#else
+        explicit ReadySession(Notecard*) {}
+#endif
+    };
+
+    /// Hold the recursive request lock across a group of requests, making the
+    /// group atomic against other threads (exclusion only — does NOT affect
+    /// the RTX/CTX readiness scope).
+    ///
+    /// The request lock must be set via set_request_lock() and must be
+    /// recursive (see set_request_lock docs). When no lock is configured this
+    /// is a no-op. Inner run_operation() calls within the guard re-acquire the
+    /// lock on the same thread harmlessly (recursive re-entry); other threads
+    /// block on the lock for the lifetime of the guard.
+    ///
+    ///     auto ex = nc.exclusive();   // lock held here
+    ///     nc.execute(req1);           // inner lock re-acquire: no-op (recursive)
+    ///     nc.execute(req2);           // still inside the exclusive group
+    ///                                 // ex destructs → lock released
+    ///
+    /// Note: exclusive() = exclusion only. To hold RTX readiness across the
+    /// group as well, combine with keep_ready() (the two are independent).
+    [[nodiscard]] ExclusiveSession exclusive() {
+        return ExclusiveSession{request_lock_};
+    }
+
+    /// Hold the RTX/CTX readiness scope across a group of requests so the
+    /// card is asserted-ready once for the whole group instead of per request
+    /// (readiness only — does NOT acquire the request lock).
+    ///
+    /// When NOTE_TXN_HANDSHAKE is enabled, the guard calls begin_operation()
+    /// on the outermost entry and end_operation() on destruction. Inner
+    /// run_operation() calls see op_depth_ > 0 and skip begin_operation —
+    /// the card stays asserted-ready for all requests in the group.
+    ///
+    /// When NOTE_TXN_HANDSHAKE is off (the default for AVR/minimal builds)
+    /// this returns a trivial empty guard with no op_depth_ touch.
+    ///
+    ///     auto kr = nc.keep_ready();  // begin_operation once (RTX asserted)
+    ///     nc.execute(req1);           // op_depth_ > 0 → no inner begin_operation
+    ///     nc.execute(req2);           // same
+    ///                                 // kr destructs → end_operation (RTX released)
+    ///
+    /// Note: keep_ready() = readiness only. To atomically exclude other threads
+    /// as well, combine with exclusive() (the two are independent).
+    [[nodiscard]] ReadySession keep_ready() {
+        return ReadySession{this};
+    }
+
     /// Operation gate. Acquires the operation lock (if any) before doing
     /// anything else, so that cross-thread exclusion is immediate: a second
     /// thread entering any operation blocks here until the first thread's

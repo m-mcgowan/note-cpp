@@ -406,6 +406,70 @@ public:
                                           timeout_ms);
     }
 
+    // ── Operation-session guards ──────────────────────────────────────────
+    //
+    // Mirror of Notecard::exclusive() / Notecard::keep_ready().
+    // See the Notecard counterparts for the full usage documentation.
+    //
+    // StaticNotecard differences:
+    //   exclusive(): the lock is the EBO base class `Lock`. A `NullLock`
+    //     base produces a zero-cost no-op guard (no lock/unlock calls and
+    //     no stored pointer — the specialization has no members).
+    //   keep_ready(): gated by NOTE_TXN_HANDSHAKE exactly like the
+    //     polymorphic version; trivial empty guard when the flag is off.
+
+    /// RAII guard returned by exclusive(). Holds the compile-time lock for
+    /// its lifetime; non-copyable, non-movable. Zero-cost when Lock=NullLock
+    /// (the NullLock specialization of StaticNcOpGuard has no members and
+    /// trivial ctor/dtor, so the entire guard is eliminated by the compiler).
+    struct ExclusiveSession {
+        ExclusiveSession(const ExclusiveSession&)            = delete;
+        ExclusiveSession& operator=(const ExclusiveSession&) = delete;
+        ExclusiveSession(ExclusiveSession&&)                 = delete;
+        ExclusiveSession& operator=(ExclusiveSession&&)      = delete;
+        ~ExclusiveSession() = default;
+
+    private:
+        friend class StaticNotecard;
+        using OpGuard = detail::StaticNcOpGuard<Lock>;
+        OpGuard guard_;
+        explicit ExclusiveSession(Lock* lock) : guard_(lock) {}
+    };
+
+    /// RAII guard returned by keep_ready(). Holds the RTX/CTX readiness
+    /// scope for its lifetime; non-copyable, non-movable. Trivial empty
+    /// guard when NOTE_TXN_HANDSHAKE is off.
+    struct ReadySession {
+        ReadySession(const ReadySession&)            = delete;
+        ReadySession& operator=(const ReadySession&) = delete;
+        ReadySession(ReadySession&&)                 = delete;
+        ReadySession& operator=(ReadySession&&)      = delete;
+        ~ReadySession() = default;
+
+    private:
+        friend class StaticNotecard;
+#if NOTE_TXN_HANDSHAKE
+        using TxnGuard = detail::StaticNcTxnOpGuard<Stack, Lock>;
+        TxnGuard guard_;
+        explicit ReadySession(StaticNotecard& nc) : guard_(nc) {}
+#else
+        explicit ReadySession(StaticNotecard&) {}
+#endif
+    };
+
+    /// Hold the compile-time lock across a group of requests (exclusion only).
+    /// Zero-cost no-op when Lock=NullLock. See Notecard::exclusive() for details.
+    [[nodiscard]] ExclusiveSession exclusive() {
+        return ExclusiveSession{static_cast<Lock*>(this)};
+    }
+
+    /// Hold the RTX/CTX readiness scope across a group of requests (readiness
+    /// only). Zero-cost no-op when NOTE_TXN_HANDSHAKE is off. See
+    /// Notecard::keep_ready() for details.
+    [[nodiscard]] ReadySession keep_ready() {
+        return ReadySession{*this};
+    }
+
     /// One-shot `echo` connectivity probe. Mirror of `Notecard::ping()` —
     /// see the description there for the wire shape, timing, error
     /// semantics, and the meaning of `seed_fn`. The two implementations

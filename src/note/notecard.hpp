@@ -1169,19 +1169,25 @@ private:
     /// RAII guard that holds the bus lock across a multi-call raw byte sequence
     /// (e.g. the COBS payload stream in a binary transfer). Calls
     /// transport_->begin_bus_hold() on construction and end_bus_hold() on
-    /// destruction. The bus lock is non-recursive — only one BusHold may be
-    /// active at a time. No-op when NOTE_I2C_BUS_LOCK is disabled or when
-    /// transport_ is null. BusHold must not be nested inside a transact/send
+    /// destruction. The bus lock is non-recursive — only one BusHoldGuard may
+    /// be active at a time. No-op when NOTE_I2C_BUS_LOCK is disabled or when
+    /// transport_ is null. BusHoldGuard must not be nested inside a transact/send
     /// call (which holds its own per-exchange BusLockGuard on Protocol).
+    ///
+    /// This is the Notecard-layer twin of Protocol's BusLockGuard: identical in
+    /// shape but it locks through the ITransact::begin_bus_hold/end_bus_hold
+    /// seam, because Notecard holds only an ITransact* and deliberately cannot
+    /// reach Protocol's private IBusLock* (the transport abstracts away whether
+    /// it even has a bus). Keeping them separate preserves that layer boundary.
 #if NOTE_I2C_BUS_LOCK
-    struct BusHold {
+    struct BusHoldGuard {
         ITransact* t_;
-        explicit BusHold(ITransact* t) : t_(t) { if (t_) t_->begin_bus_hold(); }
-        ~BusHold() { if (t_) t_->end_bus_hold(); }
-        BusHold(const BusHold&) = delete;
-        BusHold& operator=(const BusHold&) = delete;
-        BusHold(BusHold&&) = delete;
-        BusHold& operator=(BusHold&&) = delete;
+        explicit BusHoldGuard(ITransact* t) : t_(t) { if (t_) t_->begin_bus_hold(); }
+        ~BusHoldGuard() { if (t_) t_->end_bus_hold(); }
+        BusHoldGuard(const BusHoldGuard&) = delete;
+        BusHoldGuard& operator=(const BusHoldGuard&) = delete;
+        BusHoldGuard(BusHoldGuard&&) = delete;
+        BusHoldGuard& operator=(BusHoldGuard&&) = delete;
     };
 #endif // NOTE_I2C_BUS_LOCK
 
@@ -1230,7 +1236,7 @@ private:
         bool tx_ok = true;
         {
 #if NOTE_I2C_BUS_LOCK
-            BusHold bus_hold{transport_};
+            BusHoldGuard bus_hold{transport_};
 #endif
             CobsEncoder encoder;
             encoder.encode(src.data(), src.size(), [&](const uint8_t* block, size_t n) {
@@ -1240,7 +1246,7 @@ private:
                 uint8_t eop = cobs_eop;
                 tx_ok = !!binary_write(&eop, 1);
             }
-        } // BusHold released here — before the verify control sub-request
+        } // BusHoldGuard released here — before the verify control sub-request
         if (!tx_ok) {
             binary_io_reset();
             return ApiResult<Rsp>(
@@ -1285,7 +1291,7 @@ private:
         bool recv_ok = true;
         {
 #if NOTE_I2C_BUS_LOCK
-            BusHold bus_hold{transport_};
+            BusHoldGuard bus_hold{transport_};
 #endif
             uint8_t chunk[64];
             bool eop_seen = false;
@@ -1302,7 +1308,7 @@ private:
                 decoder.feed(chunk, n, decode_sink);
             }
             if (recv_ok) decoder.flush(decode_sink);
-        } // BusHold released here
+        } // BusHoldGuard released here
         if (!recv_ok) {
             binary_io_reset();
             return ApiResult<Rsp>(

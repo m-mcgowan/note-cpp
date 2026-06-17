@@ -75,7 +75,7 @@ calls `Wire.begin()` and a transient I2C error triggers `Wire.end()` /
 `Wire.begin()` inside `reset()`. This is fine on devkits where Wire's
 default pins are correct and nothing else shares the bus.
 
-For non-devkit boards or shared buses, pick the right form:
+For non-devkit boards or shared buses, pick an alternative form of `begin`:
 
 | Form | What the HAL does |
 |---|---|
@@ -149,138 +149,115 @@ Platforms with a dynamically-allocated I2C buffer (STM32Duino, most ESP32
 boards) can safely use 253. Override `max_transfer()` in your `I2cHal`
 subclass or pass the size as the 6th argument to `I2cCallbackHal`.
 
-## Sharing the bus / multi-threaded use
+## Sharing the bus and multi-threaded use
 
-The library is **not** internally thread-safe by default. It makes no locking
-assumptions — concurrent calls from different threads, or concurrent I2C
-activity from another driver, will corrupt the wire exchange. For
-single-device, single-threaded applications this is fine and costs nothing.
+By default the library does no locking, and for a single-device,
+single-threaded application that is exactly right: nothing else can touch the
+bus or the Notecard mid-exchange, so there is nothing to guard against and the
+locking machinery costs nothing.
 
-When you need to share the I2C bus — whether with another chip driver, a
-sensor library, or a second task — you register an `IBusLock` with the
-transport. The library acquires the lock for exactly one complete
-request/response wire exchange and releases it between exchanges, so the rest
-of the bus is free in the gaps. Critically, **all drivers on the same bus must
-share the same lock object**. A lock that only the Notecard knows about cannot
-serialize against an opaque third-party driver.
+Two different things can interfere once you leave that simple case, and the
+library has two independent guards for them. You only add the one(s) that match
+your situation:
 
-`IBusLock` is declared in `<note/bus_lock.hpp>`. Register a lock by calling
-`set_bus_lock()` on the `Protocol` object before the first request:
+| What can interfere | When it happens | The guard |
+|---|---|---|
+| **Another driver or master on the same bus** | The Notecard shares SDA/SCL with other chips *and* those chips can be touched **concurrently** — from an interrupt, another RTOS task, or a second bus master | **Bus lock** (`transport.set_bus_lock`) |
+| **Another thread driving the same Notecard** | Two threads or tasks call the **same** `Notecard` object | **Operation lock** (`nc.set_request_lock`) |
 
-```cpp
-transport.set_bus_lock(lock);   // transport is a note::Protocol&
+> **Sequential sharing needs no lock.** A single `loop()` that talks to the
+> Notecard and then to another chip on the same bus — one after the other — has
+> no concurrency: each exchange finishes before the next begins, so nothing can
+> interleave. A bus lock only earns its keep when a *second* agent (an
+> interrupt, a task, another master) can drive the bus *while* a Notecard
+> exchange is already in flight. Likewise the operation lock matters only when
+> more than one thread shares one `Notecard`.
+
+The two locks guard different spans of the same operation:
+
+```mermaid
+flowchart LR
+    subgraph OP["operation lock — held across the whole operation"]
+        direction LR
+        X1["exchange"] --> G1["gap<br/>(bus free)"] --> X2["exchange"] --> G2["gap<br/>(bus free)"] --> X3["exchange"]
+    end
+    classDef held fill:#cfe0f5,stroke:#3366cc,color:#000;
+    classDef gap fill:#f5f5f5,stroke:#bbb,color:#666;
+    class X1,X2,X3 held
+    class G1,G2 gap
 ```
 
-Three adapters cover the common cases:
+The **bus lock** is held only for each shaded exchange and released in the gaps,
+so other bus masters get their turns. The **operation lock** is held across the
+*entire* operation, gaps included, so another thread on the same Notecard cannot
+slip a request into a gap. They are independent: use either, both, or neither.
 
-### `LockAdapter<Lockable>` — any C++ lockable (host, multi-threaded RTOS)
+### Bus lock — protect each exchange from other bus masters
 
-Wraps any type that satisfies the C++ `Lockable` concept — `std::mutex`,
-`std::recursive_mutex`, or your platform's equivalent:
+Register an `IBusLock` (declared in `<note/bus_lock.hpp>`) with the transport.
+The library acquires it for exactly one complete request/response exchange and
+releases it between exchanges. **Every driver on the bus must share the same
+lock object** — a lock only the Notecard knows about cannot serialize against a
+third-party driver, so pass the same underlying mutex to your other drivers too.
+
+Starting from the [basic stack](#implement-i2chal), adding a bus lock is three lines:
 
 ```cpp
-#include <note.hpp>
-#include <note/bus_lock.hpp>
-#include <note/link/i2c.hpp>
-#include <mutex>
-
-MyI2c hal;
-note::link::I2cFramer i2c{hal};
-note::Protocol transport{i2c};
-
-// Shared with every other I2C driver on this bus.
-std::mutex i2c_bus_mutex;
+std::mutex i2c_bus_mutex;                          // shared with every bus driver
 note::LockAdapter<std::mutex> lock{i2c_bus_mutex};
-
-transport.set_bus_lock(lock);
-
-note::backends::CjsonBackend backend;
-note::Notecard nc{backend, transport};
+transport.set_bus_lock(lock);                      // before the first request
 ```
 
-Pass `i2c_bus_mutex` to your other I2C drivers so all of them compete for the
-same mutex. The `LockAdapter` owns only a reference; the mutex must outlive the
+Pick the adapter that matches your platform's mutex; only the lock-construction
+line changes — `set_bus_lock(lock)` is the same in every case. Each adapter
+holds only a reference, so the underlying mutex/semaphore must outlive the
 transport.
 
-### `FreeRtosBusLock` — FreeRTOS (Arduino ESP-IDF, most RTOS-based boards)
+| Adapter | For | Construct it with |
+|---|---|---|
+| `LockAdapter<Lockable>` | any C++ `Lockable` (`std::mutex`, `std::recursive_mutex`, …) | `note::LockAdapter<std::mutex> lock{m};` |
+| `FreeRtosBusLock` | FreeRTOS / Arduino ESP-IDF | `note::FreeRtosBusLock lock{sem};` |
+| `CallbackBusLock` | Zephyr, CMSIS-RTOS, bare-metal | `note::CallbackBusLock lock{acquire, release, &m};` |
 
-Wraps a `SemaphoreHandle_t` created with `xSemaphoreCreateMutex()`. Include
-`<note/arduino/freertos_bus_lock.hpp>` on FreeRTOS targets only — it pulls in
-FreeRTOS headers and must not be included on host builds.
+**`FreeRtosBusLock`** wraps a `SemaphoreHandle_t` from `xSemaphoreCreateMutex()`.
+Include `<note/arduino/freertos_bus_lock.hpp>` on FreeRTOS targets only — it
+pulls in FreeRTOS headers and must not be compiled on host builds:
 
 ```cpp
-#include <note.hpp>
-#include <note/bus_lock.hpp>
-#include <note/arduino/freertos_bus_lock.hpp>
-#include <note/link/i2c.hpp>
-
-MyI2c hal;
-note::link::I2cFramer i2c{hal};
-note::Protocol transport{i2c};
-
-// Create once; share this handle with every other I2C task.
-SemaphoreHandle_t i2c_mutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t i2c_mutex = xSemaphoreCreateMutex();  // share with every task
 note::FreeRtosBusLock lock{i2c_mutex};
-
 transport.set_bus_lock(lock);
 ```
 
-`FreeRtosBusLock` holds only the handle; the semaphore must be created before
-the transport starts and must not be deleted while the transport is in use.
-
-### `CallbackBusLock` — other RTOS or bare-metal mutex APIs
-
-Takes a pair of C function pointers plus a context pointer. Use this to bridge
-any mutex API that exposes a C callback surface — Zephyr's `k_mutex`,
-CMSIS-RTOS, or a hand-written critical-section:
+**`CallbackBusLock`** bridges any mutex API with a C callback surface. It takes
+an acquire callback, a release callback, and a context pointer (either callback
+may be null for a no-op, though normally you provide both):
 
 ```cpp
-#include <note.hpp>
-#include <note/bus_lock.hpp>
-#include <note/link/i2c.hpp>
-
-// Your RTOS mutex, however it is typed.
-static MyRtosMutex i2c_mutex;
-
-MyI2c hal;
-note::link::I2cFramer i2c{hal};
-note::Protocol transport{i2c};
-
 note::CallbackBusLock lock{
     [](void* ctx) { MyRtos_MutexAcquire(static_cast<MyRtosMutex*>(ctx)); },
     [](void* ctx) { MyRtos_MutexRelease(static_cast<MyRtosMutex*>(ctx)); },
     &i2c_mutex
 };
-
 transport.set_bus_lock(lock);
 ```
 
-Both function pointers may be null (treated as a no-op for that direction),
-though in practice both should always be provided.
+#### On the Arduino convenience wrapper
 
-### Arduino `Notecard` wrapper
-
-The `note::arduino::Notecard` convenience type (`nc.begin(Wire)`) constructs
-its `Protocol` object internally and does not currently expose a way to
-register a bus lock on it. Users who need a shared bus lock on Arduino should
-build the transport stack explicitly using the core `note::Notecard` instead
-of the convenience wrapper:
+The `note::arduino::Notecard` type (`nc.begin(Wire)`) builds its `Protocol`
+internally and does not expose `set_bus_lock`. To share a bus lock on Arduino,
+build the stack explicitly with the core `note::Notecard` instead. Construct the
+HAL with `external_bus` so it leaves `Wire.begin()`/`Wire.end()` to you, and use
+`FreeRtosBusLock` (shared-bus concurrency on Arduino almost always means an RTOS
+target such as ESP32 — a single-threaded AVR sketch needs no lock):
 
 ```cpp
-#include <note.hpp>
-#include <note/bus_lock.hpp>
-#include <note/arduino/i2c.hpp>
-#include <note/arduino/freertos_bus_lock.hpp>
-#include <note/link/i2c.hpp>
-
-// Wire must be initialised before constructing the HAL with external_bus.
-Wire.begin(sda, scl);
+Wire.begin(sda, scl);                              // app owns the bus
 
 note::arduino::I2cHal hal{Wire, note::arduino::external_bus};
 note::link::I2cFramer<> i2c{hal};
 note::Protocol transport{i2c};
 
-// Share this same semaphore with the application's other I2C drivers.
 SemaphoreHandle_t i2c_bus_mutex = xSemaphoreCreateMutex();
 note::FreeRtosBusLock lock{i2c_bus_mutex};
 transport.set_bus_lock(lock);
@@ -289,26 +266,90 @@ note::backends::StaticJsonBackend<512, 64> backend;
 note::Notecard nc{backend, transport};
 ```
 
-This uses the Arduino `I2cHal` and `I2cFramer` for the hardware layer but
-wires them into the core `note::Notecard` directly, bypassing the convenience
-wrapper. `external_bus` tells the HAL not to call `Wire.begin()` or
-`Wire.end()` internally — the application controls bus lifetime. The example
-uses `FreeRtosBusLock` because shared-bus concurrency on Arduino almost always
-means an RTOS target (e.g. ESP32); single-threaded AVR sketches need no lock at
-all.
+### Operation lock — make a whole operation atomic from other threads
+
+The bus lock guards a single exchange. Some Notecard operations are *several*
+exchanges — a binary transfer is a command, then the payload, then a verify —
+and a request group you build yourself may be several more. If two threads share
+one `Notecard`, the bus lock alone would let the second thread's request land in
+a gap between the first thread's exchanges. The **operation lock** closes that
+gap: it is held across the whole operation, so one thread's multi-step operation
+completes before another thread's begins. (This is a property of the `Notecard`,
+not the I2C transport — it applies to the serial transport too.)
+
+Register it with `set_request_lock`. **The operation lock must be recursive**
+(`std::recursive_mutex` or a recursive RTOS mutex): the library re-enters itself
+on the same thread — `execute()` is called from inside a binary transfer, for
+example — and a non-recursive lock would deadlock. It is a *different* lock from
+the bus lock, which need not be recursive:
+
+```cpp
+std::recursive_mutex nc_mutex;                     // per-Notecard, recursive
+note::LockAdapter<std::recursive_mutex> op_lock{nc_mutex};
+nc.set_request_lock(op_lock);
+```
+
+With the operation lock set, **binary transfers are atomic out of the box** —
+`card.binary.put`/`get` open the operation scope internally, so their
+command → payload → verify sequence is never interleaved by another thread, and
+the payload stream additionally holds the bus lock continuously (no other master
+can break into the COBS stream). You do not have to wrap binary transfers in
+anything.
+
+### Grouping requests: `exclusive()` and `keep_ready()`
+
+The operation lock makes each *single* operation atomic. To make a group of
+*independent* requests atomic — read a value, decide, then write it back, with
+no other thread acting on the Notecard in between — open an `exclusive()`
+session. It holds the operation lock for the lifetime of the returned guard:
+
+```cpp
+{
+    auto session = nc.exclusive();   // operation lock held for this scope
+    auto cfg = nc.execute(read_req);
+    // ... no other thread can touch nc here ...
+    nc.execute(write_req);
+}                                    // lock released here
+```
+
+`exclusive()` is exclusion only. On SKUs with RTX/CTX transaction pins you can
+*also* hold the Notecard **ready** across the group with `keep_ready()`, so it
+cannot drop into low-power sleep mid-group (see [readiness](#readiness-rtxctx-pins)
+below). The two are independent — declare `exclusive()` **first** so the lock is
+held before the readiness scope opens:
+
+```cpp
+auto ex = nc.exclusive();    // 1. acquire the operation lock
+auto kr = nc.keep_ready();   // 2. then hold the Notecard ready
+```
+
+On a multi-threaded Notecard, `keep_ready()` must be paired with `exclusive()`
+in that order; using it alone, or before `exclusive()`, races on the shared
+readiness state. Single-threaded use needs neither.
+
+### Readiness (RTX/CTX pins)
+
+Some Notecard SKUs expose RTX/CTX handshake pins that let the host signal "I am
+about to transact, stay awake" and wait for the Notecard to confirm it is ready,
+so the card does not sleep between the steps of an operation. This is **readiness
+signaling**, separate from both locks. Attach a `TxnHandshake` to the transport,
+and the library asserts readiness once per operation:
+
+```cpp
+transport.set_handshake(handshake);   // your TxnHandshake, bound to the pins
+```
+
+Readiness is compiled in only when `NOTE_TXN_HANDSHAKE` is enabled; with it off,
+`set_handshake` and `keep_ready()` are no-ops with no code cost.
 
 ### Zero cost on constrained devices
 
-On AVR and other single-threaded platforms where a mutex would never be needed,
-no lock is registered and no lock-related code runs. The static and
-compile-time `NullLock` type provides an empty `lock()`/`unlock()` with no
-vtable; it is used internally by the template-specialised path and contributes
-zero code to the final binary.
+On AVR and other single-threaded platforms no lock is registered and no
+lock-related code runs. The compile-time `NullLock` type provides an empty
+`lock()`/`unlock()` with no vtable; the template-specialised (static) path uses
+it via empty-base optimization and contributes zero bytes to the final binary.
 
-To remove the lock hook entirely from the default vtable-dispatched transport
-(saving one pointer and one null check per exchange), set `NOTE_I2C_BUS_LOCK=0`
-— or use `NOTE_MINIMAL`, which sets it to `0` automatically.
-
-Note: the low-level binary transfer primitives (used by `card.binary` put/get)
-are not yet covered by the bus lock; bus-lock coverage for binary transfers is
-planned.
+To remove the bus-lock hook entirely from the default vtable-dispatched
+transport (saving one pointer and one null check per exchange), set
+`NOTE_I2C_BUS_LOCK=0` — or use `NOTE_MINIMAL`, which sets it to `0`
+automatically.

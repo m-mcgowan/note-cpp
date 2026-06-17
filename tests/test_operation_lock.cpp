@@ -612,6 +612,30 @@ TEST_CASE("keep_ready(): guard releases readiness on destruction (op_depth_ back
     CHECK(handshake.stops  == 2);
 }
 
+TEST_CASE("keep_ready(): nested guards open the readiness scope only once") {
+    KrSerialHal hal;
+    note::link::SerialFramer<note::link::SerialPolicy> framer{hal};
+    note::Protocol transport{framer};
+    KrCountingHandshake handshake;
+    transport.set_handshake(handshake);
+
+    note::Notecard nc{transport, note::Allocator{}};
+    char buf[64];
+
+    {
+        auto outer = nc.keep_ready();          // outermost: begin_operation
+        {
+            auto inner = nc.keep_ready();      // nested: op_depth_ > 0, no extra begin
+            nc.transact(R"({"req":"card.status"})", note::span<char>(buf, sizeof(buf)));
+        }                                      // inner destroyed: still inside outer scope
+        nc.transact(R"({"req":"card.temp"})", note::span<char>(buf, sizeof(buf)));
+    }                                          // outer destroyed: end_operation
+
+    // The nested guard must NOT open or close a second readiness scope.
+    CHECK(handshake.starts == 1);
+    CHECK(handshake.stops  == 1);
+}
+
 #endif // NOTE_TXN_HANDSHAKE
 
 // ===========================================================================

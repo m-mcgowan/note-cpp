@@ -515,6 +515,69 @@ TEST_CASE("Binary PUT: verify(false) skips status check") {
 }
 
 // ---------------------------------------------------------------------------
+// Error / edge paths in do_binary_send / do_binary_receive
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Binary PUT: payload transmit failure surfaces SendFailed") {
+    // A transport whose raw write() fails mid-payload must abort the transfer
+    // with SendFailed/HalError (do_binary_send tx_ok path).
+    BinaryTestHarness h;
+    h.transport.set_write([](const uint8_t*, size_t) -> note::Result<void> {
+        return note::make_error(note::Error::SendFailed, "simulated bus write failure");
+    });
+
+    uint8_t data[] = {1, 2, 3, 4, 5};
+    note::api::CardBinaryPut req;
+    req.data(data, sizeof(data)).verify(false);  // skip status checks; go straight to payload
+
+    auto rsp = h.nc.execute(req);
+    REQUIRE(!rsp);
+    CHECK(rsp.error().code == note::Error::SendFailed);
+    CHECK(rsp.error().cause == note::Cause::HalError);
+}
+
+TEST_CASE("Binary PUT: non-zero offset skips the delete/reset sub-request") {
+    // A segmented PUT (offset > 0) must NOT issue the card.binary delete; it
+    // still runs the pre-flight status query and post-transmit verify.
+    uint8_t data[] = {7, 8, 9};
+    note::SoftwareMd5 md5;
+    auto expected_md5 = md5.compute(data, sizeof(data));
+
+    VerifyTestHarness h({
+        "{\"max\":1024}",                                           // pre-flight status (no reset first)
+        "{}",                                                       // PUT handshake
+        std::string("{\"status\":\"") + expected_md5.data() + "\"}"  // post-verify status
+    });
+
+    note::api::CardBinaryPut req;
+    req.data(data, sizeof(data)).verify();
+    req.offset = 100;  // resuming a segmented transfer
+
+    auto rsp = h.nc.execute(req);
+    REQUIRE(rsp);
+    CHECK(h.transact_count == 3);  // status + handshake + post-status (NO delete/reset)
+}
+
+TEST_CASE("Binary GET: payload larger than destination is truncated to capacity") {
+    // do_binary_receive's decode sink must clamp to dst.size() when the
+    // payload exceeds the caller's buffer (the truncation branch).
+    BinaryGetHarness h;
+    uint8_t original[40];
+    for (size_t i = 0; i < sizeof(original); ++i) original[i] = static_cast<uint8_t>(i + 1);
+    h.prepare_cobs_read(original, sizeof(original));
+    h.set_get_response("");  // empty MD5 → verification skipped, so truncation is observable
+
+    uint8_t dst[8] = {};  // smaller than the 40-byte payload
+    note::api::CardBinaryGet req;
+    req.into(dst, sizeof(dst)).length(static_cast<int32_t>(sizeof(original)));
+
+    auto rsp = h.nc.execute(req);
+    REQUIRE(rsp);
+    // Only the first dst.size() bytes are kept; the rest of the payload is dropped.
+    CHECK(memcmp(dst, original, sizeof(dst)) == 0);
+}
+
+// ---------------------------------------------------------------------------
 // Bus-hold tests: the COBS payload stream must hold the bus lock continuously
 // (concern 2 — multi-master bus protection).
 //

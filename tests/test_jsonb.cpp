@@ -735,6 +735,71 @@ TEST_CASE("jsonb parser: small chunk reads") {
     CHECK(sink.events[2].i == 5);
 }
 
+TEST_CASE("jsonb parser: real Notecard card.version response (nested body + int64)") {
+    // Regression guard: the EXACT 370 decoded JSONB bytes captured from a real
+    // Notecard's card.version response over I2C (firmware notecard-10.1.1).
+    // This response has a flat top-level object plus a nested `body` object that
+    // itself carries kInt64 (0x68) fields (ver_major/minor/patch/build) and a
+    // nested string `version`. The on-device integration test that parses this
+    // is blocked by a pre-existing test-harness heap-corruption crash unrelated
+    // to the parser (see ISSUE-jsonb-streaming-parse-crash-esp32.md); this host
+    // test verifies note-cpp's streaming parser handles the real bytes cleanly.
+    static const uint8_t kReal[] = {
+        0x10, 0x30,'v','e','r','s','i','o','n',0x00, 0x40,'n','o','t','e','c','a','r','d','-','1','0','.','1','.','1','.','1','7','5','9','1',0x00,
+        0x30,'d','e','v','i','c','e',0x00, 0x40,'d','e','v',':','8','6','0','3','2','2','0','6','8','0','9','7','0','6','9',0x00,
+        0x30,'n','a','m','e',0x00, 0x40,'B','l','u','e','s',' ','W','i','r','e','l','e','s','s',' ','N','o','t','e','c','a','r','d',0x00,
+        0x30,'s','k','u',0x00, 0x40,'N','O','T','E','-','W','B','N','A','W',0x00,
+        0x30,'o','r','d','e','r','i','n','g','_','c','o','d','e',0x00, 0x40,'F','A','0','Y','T','1','N','5','A','C','A','M',0x00,
+        0x30,'b','o','a','r','d',0x00, 0x40,'5','.','1','3',0x00,
+        0x30,'w','i','f','i',0x00, 0x21,
+        0x30,'c','e','l','l',0x00, 0x21,
+        0x30,'g','p','s',0x00, 0x21,
+        0x30,'b','o','d','y',0x00, 0x10,
+            0x30,'o','r','g',0x00, 0x40,'B','l','u','e','s',' ','W','i','r','e','l','e','s','s',0x00,
+            0x30,'p','r','o','d','u','c','t',0x00, 0x40,'N','o','t','e','c','a','r','d',0x00,
+            0x30,'t','a','r','g','e','t',0x00, 0x40,'u','5',0x00,
+            0x30,'v','e','r','s','i','o','n',0x00, 0x40,'n','o','t','e','c','a','r','d','-','u','5','-','1','0','.','1','.','1',0x00,
+            0x30,'v','e','r','_','m','a','j','o','r',0x00, 0x68,0x0a,0,0,0,0,0,0,0,
+            0x30,'v','e','r','_','m','i','n','o','r',0x00, 0x68,0x01,0,0,0,0,0,0,0,
+            0x30,'v','e','r','_','p','a','t','c','h',0x00, 0x68,0x01,0,0,0,0,0,0,0,
+            0x30,'v','e','r','_','b','u','i','l','d',0x00, 0x68,0xb7,0x44,0,0,0,0,0,0,
+            0x30,'b','u','i','l','t',0x00, 0x40,'M','a','r',' ','3',' ','2','0','2','6',' ','1','6',':','5','8',':','4','4',0x00,
+        0x11,
+        0x11,
+    };
+
+    std::vector<uint8_t> bytes(kReal, kReal + sizeof(kReal));
+    RecordingSink sink;
+    VectorReader reader{bytes};
+    char storage[512];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+
+    // Top-level string fields parse correctly.
+    auto find_string = [&](const char* key) -> std::string {
+        for (auto& e : sink.events)
+            if (e.type == RecordingSink::String && e.key == key) return e.s;
+        return "<missing>";
+    };
+    CHECK(find_string("device") == "dev:860322068097069");
+    CHECK(find_string("sku") == "NOTE-WBNAW");
+    // Nested body object opens/closes and its int64 fields dispatch as ints.
+    bool body_begin = false, body_end_after_begin = false;
+    int int_fields = 0;
+    int depth = 0;
+    for (auto& e : sink.events) {
+        if (e.type == RecordingSink::ObjBegin && e.key == "body") body_begin = true;
+        if (e.type == RecordingSink::ObjBegin) ++depth;
+        if (e.type == RecordingSink::ObjEnd)   { --depth; if (body_begin && depth == 0) body_end_after_begin = true; }
+        if (e.type == RecordingSink::Int) ++int_fields;
+    }
+    CHECK(body_begin);
+    CHECK(body_end_after_begin);
+    CHECK(int_fields == 4);  // ver_major/minor/patch/build
+}
+
 // ---------------------------------------------------------------------------
 // CobsStreamWriter
 // ---------------------------------------------------------------------------

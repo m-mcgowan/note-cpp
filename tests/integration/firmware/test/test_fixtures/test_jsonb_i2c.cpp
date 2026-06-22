@@ -191,6 +191,11 @@ struct CrcProbeSink : note::JsonSink {
 
 TEST_CASE("JSONB: card.version over I2C") {
     auto& wire = notecardWire();
+    // i2c_recv requests up to 2 + 250 = 252 bytes per read. The ESP32 Arduino
+    // Wire RX buffer defaults to 128 bytes, so an un-enlarged requestFrom()
+    // overflows it into the adjacent heap block — corrupting a TLSF header that
+    // only trips a later heap walk (guru-meditation). Size the buffer to fit.
+    wire.setBufferSize(256);
 
     // First, verify normal JSON works (sanity check)
     SUBCASE("sanity: JSON card.version works") {
@@ -298,6 +303,7 @@ TEST_CASE("JSONB: card.version over I2C") {
 // "crc" field.
 TEST_CASE("JSONB CRC investigation: does Notecard include crc in JSONB responses?") {
     auto& wire = notecardWire();
+    wire.setBufferSize(256);  // see note in the card.version test case above
 
     // Step 1: probe JSON response.
     const char* json_req = "{\"req\":\"card.version\"}\n";

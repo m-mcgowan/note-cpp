@@ -21,11 +21,14 @@
 
 #include <algorithm>
 
-// I2C bus — must not be a file-scope static (FreeRTOS timing).
-static TwoWire& notecardWire() {
-    static TwoWire wire(0);
-    return wire;
-}
+// I2C bus — defined once in main.cpp (a function-local static, so it is
+// lazily constructed after the FreeRTOS scheduler is up). Sharing the single
+// instance is mandatory: two `TwoWire(0)` objects both calling begin()/end()
+// on hardware port 0 install/tear down the same I2C driver behind each
+// other's back, corrupting the driver's RX ring buffers and the heap. That
+// corruption only surfaces on a later heap walk (guru-meditation in the test
+// runner's post-test mem report). test_jsonb_i2c.cpp shares it the same way.
+extern TwoWire& notecardWire();
 
 namespace {
 

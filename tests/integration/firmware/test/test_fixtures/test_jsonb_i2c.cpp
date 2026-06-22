@@ -7,11 +7,16 @@
 /// + CobsStreamWriter and parses responses with jsonb_parse_streaming.
 ///
 /// Large work buffers (response, wire, COBS-decoded payload, SAX parser
-/// storage) live at file scope rather than on the test function's stack.
-/// At the HIL loop-task stack sizes practical for ESP32-S3, stack-allocated
-/// 512 B buffers compound across SUBCASE iterations and corrupt doctest's
-/// internal state — manifesting as a guru-meditation panic at the
-/// transition into the next TEST_CASE.
+/// storage) live at file scope rather than on the test function's stack, to
+/// keep the loop-task stack shallow on ESP32-S3.
+///
+/// I/O goes through the production HAL (note::arduino::I2cHal) rather than raw
+/// Wire calls: its transmit/receive primitives cap each read at the I2C MTU,
+/// so a single requestFrom can never exceed the Wire RX buffer. An earlier
+/// hand-rolled receive issued requestFrom(addr, 2 + 250) into the 128-byte
+/// default buffer, overflowing the heap and corrupting an adjacent TLSF block
+/// header — a guru-meditation that only surfaced on a later heap walk. See
+/// ISSUE-jsonb-streaming-parse-crash-esp32.md.
 
 #include "../include/hal_i2c.hpp"
 #ifdef NOTECARD_TEST_I2C
@@ -36,8 +41,6 @@ extern TwoWire& notecardWire();
 
 namespace {
 
-constexpr uint8_t NOTECARD_I2C_ADDR = 0x17;
-
 // File-scope work buffers — single allocation in BSS, reused across tests.
 // Keeping these off the stack prevents doctest's cross-SUBCASE state from
 // being clipped when the loop task's stack tightens.
@@ -46,60 +49,52 @@ char    s_wire_buf[256];
 uint8_t s_decoded[512];
 char    s_storage[512];
 
-// Send a newline-terminated buffer using the Notecard I2C protocol.
-// The protocol: write [length_byte][payload_chunk] in chunks up to 250 bytes,
-// with the first byte of each I2C write being the chunk length.
-bool i2c_send(TwoWire& wire, uint8_t addr, const uint8_t* buf, size_t len) {
-    constexpr size_t MAX_CHUNK = 250;
+// Production-HAL view of the shared Wire bus. These tests deliberately bypass
+// the note-cpp request pipeline (they exercise raw JSONB on the wire), but they
+// still go through the HAL's transmit/receive primitives rather than touching
+// Wire directly. Hand-rolling raw `Wire.requestFrom(addr, 2 + N)` with N up to
+// 250 once overflowed the 128-byte Wire RX buffer and corrupted the heap; the
+// HAL caps every read at kI2cDefaultMtu (30) + 2 bytes, so the overflow class
+// cannot occur. test_i2c.cpp drives binary transfers exactly the same way.
+NotecardI2cHal& notecardHal() {
+    static NotecardI2cHal hal{notecardWire(), NOTECARD_I2C_SDA, NOTECARD_I2C_SCL};
+    return hal;
+}
+
+// Send a buffer to the Notecard, chunked at the HAL MTU (SoI2C [size][data]).
+bool i2c_send(const uint8_t* buf, size_t len) {
+    NotecardI2cHal& hal = notecardHal();
+    const size_t mtu = hal.max_transfer();
     size_t offset = 0;
     while (offset < len) {
-        size_t chunk = len - offset;
-        if (chunk > MAX_CHUNK) chunk = MAX_CHUNK;
-        wire.beginTransmission(addr);
-        wire.write(static_cast<uint8_t>(chunk));
-        wire.write(buf + offset, chunk);
-        if (wire.endTransmission() != 0) return false;
+        size_t chunk = (len - offset < mtu) ? (len - offset) : mtu;
+        if (!hal.transmit(buf + offset, chunk)) return false;
         offset += chunk;
-        if (offset < len) delay(1);
     }
     return true;
 }
 
-// Receive a newline-terminated response using the Notecard I2C protocol.
-size_t i2c_recv(TwoWire& wire, uint8_t addr, uint8_t* buf, size_t buf_size, uint32_t timeout_ms) {
-    constexpr size_t MAX_CHUNK = 250;
+// Receive a newline-terminated response, polling available bytes and reading
+// at most one MTU per HAL receive() (which caps requestFrom at MTU + 2).
+size_t i2c_recv(uint8_t* buf, size_t buf_size, uint32_t timeout_ms) {
+    NotecardI2cHal& hal = notecardHal();
+    const size_t mtu = hal.max_transfer();
     size_t received = 0;
-    uint32_t deadline = millis() + timeout_ms;
-    size_t read_len = 0;
-
-    while (millis() < deadline) {
-        wire.beginTransmission(addr);
-        wire.write((uint8_t)0);
-        wire.write((uint8_t)read_len);
-        wire.endTransmission();
-
-        size_t response_size = 2 + read_len;
-        size_t got = wire.requestFrom(addr, response_size);
-        if (got < 2) { delay(50); read_len = 0; continue; }
-
-        uint8_t available = wire.read();
-        uint8_t returned = wire.read();
-
-        for (uint8_t i = 0; i < returned && received < buf_size; i++) {
-            if ((size_t)(i + 2) < got) {
-                buf[received++] = wire.read();
-            }
+    uint32_t avail = 0;
+    uint32_t deadline = hal.millis() + timeout_ms;
+    bool found_eop = false;
+    hal.receive(buf, 0, avail);                       // priming query
+    while (hal.millis() < deadline) {
+        size_t want = avail;
+        if (want > mtu) want = mtu;
+        if (received + want > buf_size) want = buf_size - received;
+        if (want > 0) {
+            if (!hal.receive(buf + received, want, avail)) { hal.delay(10); continue; }
+            received += want;
+            if (received > 0 && buf[received - 1] == '\n') found_eop = true;
         }
-
-        if (received > 0 && buf[received - 1] == '\n') break;
-
-        if (available > 0) {
-            read_len = available;
-            if (read_len > MAX_CHUNK) read_len = MAX_CHUNK;
-        } else {
-            read_len = 0;
-            delay(50);
-        }
+        if (found_eop && avail == 0) break;
+        if (avail == 0) { hal.delay(50); hal.receive(buf + received, 0, avail); }
     }
     return received;
 }
@@ -190,21 +185,14 @@ struct CrcProbeSink : note::JsonSink {
 }  // namespace
 
 TEST_CASE("JSONB: card.version over I2C") {
-    auto& wire = notecardWire();
-    // i2c_recv requests up to 2 + 250 = 252 bytes per read. The ESP32 Arduino
-    // Wire RX buffer defaults to 128 bytes, so an un-enlarged requestFrom()
-    // overflows it into the adjacent heap block — corrupting a TLSF header that
-    // only trips a later heap walk (guru-meditation). Size the buffer to fit.
-    wire.setBufferSize(256);
-
     // First, verify normal JSON works (sanity check)
     SUBCASE("sanity: JSON card.version works") {
         const char* json_req = "{\"req\":\"card.version\"}\n";
 
-        bool sent = i2c_send(wire, NOTECARD_I2C_ADDR, (const uint8_t*)json_req, strlen(json_req));
+        bool sent = i2c_send((const uint8_t*)json_req, strlen(json_req));
         REQUIRE(sent);
 
-        size_t resp_len = i2c_recv(wire, NOTECARD_I2C_ADDR, s_resp, sizeof(s_resp), 5000);
+        size_t resp_len = i2c_recv(s_resp, sizeof(s_resp), 5000);
         REQUIRE(resp_len > 0);
         s_resp[resp_len < sizeof(s_resp) ? resp_len : sizeof(s_resp) - 1] = '\0';
 
@@ -227,10 +215,10 @@ TEST_CASE("JSONB: card.version over I2C") {
         for (uint32_t i = 0; i < len; i++) printf(" %02x", s_decoded[i]);
         printf("\n");
 
-        bool sent = i2c_send(wire, NOTECARD_I2C_ADDR, s_decoded, len);
+        bool sent = i2c_send(s_decoded, len);
         REQUIRE(sent);
 
-        size_t resp_len = i2c_recv(wire, NOTECARD_I2C_ADDR, s_resp, sizeof(s_resp), 5000);
+        size_t resp_len = i2c_recv(s_resp, sizeof(s_resp), 5000);
 
         printf("  Response (%zu bytes):", resp_len);
         if (resp_len > 0) {
@@ -262,11 +250,10 @@ TEST_CASE("JSONB: card.version over I2C") {
         for (size_t i = 0; i < req_len; i++) printf(" %02x", (uint8_t)s_wire_buf[i]);
         printf("\n");
 
-        bool sent = i2c_send(wire, NOTECARD_I2C_ADDR,
-            reinterpret_cast<const uint8_t*>(s_wire_buf), req_len);
+        bool sent = i2c_send(reinterpret_cast<const uint8_t*>(s_wire_buf), req_len);
         REQUIRE(sent);
 
-        size_t resp_len = i2c_recv(wire, NOTECARD_I2C_ADDR, s_resp, sizeof(s_resp), 5000);
+        size_t resp_len = i2c_recv(s_resp, sizeof(s_resp), 5000);
         REQUIRE(resp_len > 2);
 
         printf("  Response (%zu bytes):", resp_len);
@@ -302,13 +289,10 @@ TEST_CASE("JSONB: card.version over I2C") {
 // by probing both wire formats and reporting which (if any) carry a
 // "crc" field.
 TEST_CASE("JSONB CRC investigation: does Notecard include crc in JSONB responses?") {
-    auto& wire = notecardWire();
-    wire.setBufferSize(256);  // see note in the card.version test case above
-
     // Step 1: probe JSON response.
     const char* json_req = "{\"req\":\"card.version\"}\n";
-    REQUIRE(i2c_send(wire, NOTECARD_I2C_ADDR, (const uint8_t*)json_req, strlen(json_req)));
-    size_t json_len = i2c_recv(wire, NOTECARD_I2C_ADDR, s_resp, sizeof(s_resp), 5000);
+    REQUIRE(i2c_send((const uint8_t*)json_req, strlen(json_req)));
+    size_t json_len = i2c_recv(s_resp, sizeof(s_resp), 5000);
     REQUIRE(json_len > 0);
     s_resp[json_len < sizeof(s_resp) ? json_len : sizeof(s_resp) - 1] = '\0';
 
@@ -319,9 +303,8 @@ TEST_CASE("JSONB CRC investigation: does Notecard include crc in JSONB responses
 
     // Step 2: probe JSONB response.
     size_t req_len = build_jsonb_card_version();
-    REQUIRE(i2c_send(wire, NOTECARD_I2C_ADDR,
-        reinterpret_cast<const uint8_t*>(s_wire_buf), req_len));
-    size_t jsonb_resp_len = i2c_recv(wire, NOTECARD_I2C_ADDR, s_resp, sizeof(s_resp), 5000);
+    REQUIRE(i2c_send(reinterpret_cast<const uint8_t*>(s_wire_buf), req_len));
+    size_t jsonb_resp_len = i2c_recv(s_resp, sizeof(s_resp), 5000);
     REQUIRE(jsonb_resp_len > 4);
 
     size_t decoded_len = decode_jsonb_resp(jsonb_resp_len);

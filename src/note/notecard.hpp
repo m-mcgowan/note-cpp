@@ -319,45 +319,38 @@ public:
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         return run_operation([&]() -> ApiResult<typename RequestT::Response> {
             using Rsp = typename RequestT::Response;
+            constexpr bool can_stream =
+                std::is_void_v<Rsp> || detail::has_sink<Rsp>::value;
 
-            debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
+            // Type-independent prologue (timing + path selection) — see
+            // begin_execute(). Only the type-dependent calls below stay here.
+            ExecDecision d = begin_execute(can_stream, RequestT::notecard_request);
 
-            if (!transport_) {
-                debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
-            }
-
-            // Streaming path: SAX-stream the response straight into the
-            // typed Rsp::Sink, no intermediate tree. Parallel to
-            // execute_tree below — the two are siblings, picked at this
-            // call site by (a) whether the response type has a sink and
-            // (b) whether an allocator is configured.
-            if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
-                if (alloc_.has_value()) {
-                    auto result = execute_streaming(req);
-                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                    return result;
+            ApiResult<Rsp> result = [&]() -> ApiResult<Rsp> {
+                // Streaming path: SAX-stream the response straight into the
+                // typed Rsp::Sink, no intermediate tree.
+                if constexpr (can_stream) {
+                    if (d.path == ExecPath::Streaming) {
+                        return execute_streaming(req);
+                    }
                 }
-            }
-
-            // Buffered fallback: requires a JsonBackend + buffered transport.
+                // Buffered fallback: JsonBackend + buffered transport, retried.
 #if !NOTE_NO_JSON_TREE
-            if (backend_) {
-                const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
-                auto attempt = [&]() -> ApiResult<Rsp> {
-                    return execute_tree(req, req_id);
-                };
-                auto reset = [&]() { transport_->reset(); };
-
-                auto result = retry_transaction<ApiResult<Rsp>>(
-                    hal(), timing_, RequestT::safety, retry_policy_,
-                    attempt, reset);
-                debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                return result;
-            }
+                if (d.path == ExecPath::Buffered) {
+                    auto attempt = [&]() -> ApiResult<Rsp> {
+                        return execute_tree(req, d.req_id);
+                    };
+                    auto reset = [&]() { transport_->reset(); };
+                    return retry_transaction<ApiResult<Rsp>>(
+                        hal(), timing_, RequestT::safety, retry_policy_,
+                        attempt, reset);
+                }
 #endif
-            debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-            return Unexpected(make_error(Error::NotReady, NOTE_ERR("no backend or streaming transport configured")));
+                return *d.error;
+            }();
+
+            end_execute(RequestT::notecard_request);
+            return result;
         });
     }
 
@@ -938,6 +931,50 @@ public:
     /// with `id_wrap_build` and passes the id alongside.
     uint32_t next_request_id_or_zero() {
         return request_ids_enabled_ ? next_request_id_++ : 0;
+    }
+
+    // ── Type-independent execute() core ─────────────────────────────────────
+    // execute<RequestT>() is instantiated once per request type, so any branch
+    // in its body is counted (and code-generated) once per type. The config
+    // checks below (transport/streaming/buffered selection, the debug-timing
+    // null checks) are identical across every RequestT, so they live here in
+    // non-template members: emitted and measured once, not per instantiation.
+    // Only the genuinely type-dependent calls (execute_streaming/execute_tree)
+    // stay in the template. See DESIGN-branch-coverage-floor.md.
+    enum class ExecPath : uint8_t { Streaming, Buffered, Error };
+    struct ExecDecision {
+        ExecPath               path = ExecPath::Error;
+        uint32_t               req_id = 0;
+        std::optional<Unexpected> error;   // set iff path == Error
+    };
+
+    // Prologue: emit begin-timing, validate config, choose the dispatch path.
+    // `can_stream` is the compile-time streamability of the response type.
+    ExecDecision begin_execute(bool can_stream, string_view req_name) {
+        debug_timing(debug_, TimingEvent::TransactionBegin, req_name);
+        ExecDecision d;
+        if (!transport_) {
+            d.error = make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            return d;
+        }
+        if (can_stream && alloc_.has_value()) {
+            d.path = ExecPath::Streaming;
+            return d;
+        }
+#if !NOTE_NO_JSON_TREE
+        if (backend_) {
+            d.path = ExecPath::Buffered;
+            d.req_id = next_request_id_or_zero();
+            return d;
+        }
+#endif
+        d.error = make_error(Error::NotReady, NOTE_ERR("no backend or streaming transport configured"));
+        return d;
+    }
+
+    // Epilogue: emit end-timing. Called once per execute(), regardless of path.
+    void end_execute(string_view req_name) {
+        debug_timing(debug_, TimingEvent::TransactionEnd, req_name);
     }
 
     /// Allocator-backed durable copy of a Notecard error message — used

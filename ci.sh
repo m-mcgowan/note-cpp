@@ -488,17 +488,31 @@ MIN_FUNC_COV=90
 # Line (96.3%) and function (97.7%) — the logic-level signals — stay well above
 # their floors.
 #
-# EXPLORATION (design session pending — see DESIGN-branch-coverage-floor.md):
-# reaching 93 again is NOT a small fix. The gap from ~89.6 to 93 is ~430 branch
-# records; the known collapse refactors (body_handler_factory type-erasure ~18,
-# struct_sink make_body_handler switch ~18) recover far less. The session should
-# decide between: (a) an instantiation-stable branch metric (de-inflate BRDA to
-# source branches, mirroring the function check's per-file FNF/FNH), (b) broader
-# template-collapse refactors, (c) a library-wide pass of targeted error-path
-# branch tests, or (d) accepting a lower floor as the honest reality for a
-# heavily-templated header lib and documenting why. Until then, 89 holds the
-# line at the measured value so the gate stays meaningful, not green-by-default.
-MIN_BRANCH_COV=89
+# RESOLVED (2026-06, see DESIGN-branch-coverage-floor.md): the investigation
+# concluded that the raw BRDA metric is fundamentally instantiation-noisy on this
+# header-template library — it counts (instantiation x branch) tuples, so the
+# number moves unpredictably as GCC regenerates instantiations. Proven three ways:
+# collapsing retry_transaction LOWERED it (-2.7, type-erasure adds uncovered
+# per-instantiation trampolines); adding generated per-op retry tests LOWERED it
+# (-0.6) EVEN with retries correctly enabled — retry_transaction is inlined into
+# each execute<T>, so extra test call sites multiply the inlined branch copies
+# (notecard.hpp L339) faster than the tests cover them (retry.hpp itself hit
+# 94%, but the inlined copies dominate); and adding the lock tests lowered it
+# earlier (-1.4). The de-inflated source-level metric (~90%) is the only stable
+# measure.
+#
+# What worked: collapsing Notecard::execute()'s type-independent prologue
+# (timing + transport/alloc/backend selection) into the non-template
+# begin_execute()/end_execute() — those branches are now emitted and measured
+# ONCE instead of per request-type, lifting raw branch 89.6% -> 92.1%.
+#
+# Floor set to 92 on the raw metric (the post-collapse value). Reproducible for
+# the current tree; the documented risk is that FUTURE test/code additions can
+# shift instantiations and dip it below 92 (the metric's noise, not a real
+# regression). If that becomes a recurring annoyance, switch to the
+# instantiation-stable de-inflated metric (gcov --json fold; prototype validated
+# at ~90%) and floor there — it is immune to the pathology.
+MIN_BRANCH_COV=92
 
 check_coverage_thresholds() {
     local lcov_file="$1"

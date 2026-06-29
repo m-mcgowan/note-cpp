@@ -110,9 +110,10 @@ run_coverage_partition() {
     local partition="$2"
     local env_name
     case "$backend" in
-        gcov)    env_name="serial-coverage" ;;
-        tracepc) env_name="serial-coverage-tracepc" ;;
-        *)       echo "FAIL: unknown coverage backend: $backend"; failed=$((failed+1)); return ;;
+        gcov)        env_name="serial-coverage" ;;
+        tracepc)     env_name="serial-coverage-tracepc" ;;
+        tracepc-i2c) env_name="i2c-coverage-tracepc" ;;
+        *)           echo "FAIL: unknown coverage backend: $backend"; failed=$((failed+1)); return ;;
     esac
 
     echo "=== $env_name:$partition ($backend) ==="
@@ -160,7 +161,10 @@ decode_and_merge_coverage() {
         local env_name="${rest%%|*}"
         local partition="${rest#*|}"
         local cov_path=".pio/build/$env_name/$partition.cov"
-        local info_path="$out_dir/$partition.info"
+        # Name the .info by env+partition so partitions that share a name across
+        # envs (e.g. test_fixtures under serial-coverage and i2c-coverage-tracepc)
+        # don't clobber each other.
+        local info_path="$out_dir/$env_name.$partition.info"
 
         if [ ! -f "$cov_path" ]; then
             echo "WARN: $cov_path missing — skipping decode for $partition"
@@ -207,6 +211,10 @@ if [ "$COVERAGE_MODE" = "1" ]; then
     run_coverage_partition tracepc test_units_a
     run_coverage_partition tracepc test_units_b
     run_coverage_partition tracepc test_units_c
+    # I2C interface: covers the I2C-only fixtures (test_jsonb_i2c, test_i2c
+    # binary/md5) and the I2C HAL/link + binary-transfer paths, which the
+    # serial-only envs above never build.
+    run_coverage_partition tracepc-i2c test_fixtures
 
     decode_and_merge_coverage
 else

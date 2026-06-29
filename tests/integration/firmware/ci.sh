@@ -216,6 +216,16 @@ if [ "$COVERAGE_MODE" = "1" ]; then
     # serial-only envs above never build.
     run_coverage_partition tracepc-i2c test_fixtures
 
+    # NOTE on reading the report: the trace-pc partitions under-report heavily
+    # templated / consteval / inlined code — it instruments basic-block PCs, so
+    # lines without a distinct runtime PC (consteval has none at all) never
+    # appear, and the denominator collapses. e.g. jsonb.hpp reads ~41% here but
+    # is 98% on the host gcov build running the SAME test_jsonb.cpp. For those
+    # files the HOST gcov coverage is authoritative; a low device % is a
+    # measurement limit, not a missing test. Accurate device line coverage for
+    # them needs a streaming-gcov backend in pio-cov (plain gcov OOMs on a
+    # per-file ~65 KB dump alloc, which is why test_units uses trace-pc).
+
     decode_and_merge_coverage
 else
     # Build each interface environment

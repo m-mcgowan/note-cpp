@@ -42,7 +42,7 @@ jobs:
             sudo cp -r ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
           fi
           sudo apt-get update
-          sudo apt-get install -y g++-13 lcov doxygen jq
+          sudo apt-get install -y g++-13 clang lcov doxygen jq
           mkdir -p ~/apt-cache
           cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
 
@@ -90,6 +90,9 @@ jobs:
 
       - name: "Step: coverage"
         run: ./validate-release.sh ${{ inputs.version }} --step coverage
+
+      - name: "Step: fuzz"
+        run: ./validate-release.sh ${{ inputs.version }} --step fuzz
 
       - name: "Step: docs"
         run: ./validate-release.sh ${{ inputs.version }} --step docs

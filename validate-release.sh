@@ -89,6 +89,10 @@ step_integrations() {
     "$ROOT/ci.sh" --integrations
 }
 
+step_fuzz() {
+    "$ROOT/ci.sh" --fuzz
+}
+
 step_coverage() {
     "$ROOT/ci.sh" --coverage
 }
@@ -182,6 +186,7 @@ STEPS=(
     "full-checks|host|Headers, examples, version gating, target filtering|step_full_checks"
     "integrations|host|cjson / nlohmann / buffer backend tests|step_integrations"
     "coverage|host|Coverage thresholds enforced|step_coverage"
+    "fuzz|host|JSON/JSONB parser fuzzing under ASan/UBSan|step_fuzz"
     "docs|host|Doxygen build + link validation|step_docs"
     "pio-build|host|PlatformIO firmware builds (no hardware)|step_pio_build"
     "arduino-build|host|Arduino sketch compilation (no upload)|step_arduino_build"

@@ -15,6 +15,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 #   ./ci.sh --all-compilers  Full CI with all available compilers
 #   ./ci.sh --coverage       Build with coverage instrumentation and generate report
 #   ./ci.sh --integrations   Build and run JSON backend integration tests (host)
+#   ./ci.sh --fuzz           Fuzz the JSON/JSONB parsers under ASan/UBSan
 #   ./ci.sh --hil            Hardware-in-the-loop sweep — upload + run all
 #                            test groups on $PIO_LABGRID_DEVICE for the
 #                            `serial` and `i2c` envs in tests/integration/firmware
@@ -1193,6 +1194,51 @@ run_and_log() {
     return $rc
 }
 
+# ── Parser fuzzing ────────────────────────────────────────────────────────
+# Bounded, deterministic fuzzing of the JSON SAX lexer + JSONB streaming parser
+# under ASan/UBSan — catches memory/UB bugs on malformed input and keeps the
+# parser error paths exercised. Uses the portable driver (ASan/UBSan only, no
+# -fsanitize=fuzzer), so it runs under any clang; the harness also exposes the
+# libFuzzer entry point for coverage-guided runs where that runtime exists.
+# Self-skips when no clang is available (e.g. GCC-only hosts).
+run_fuzz() {
+    ci_stage "Parser fuzzing (ASan/UBSan)"
+    local CLANG=""
+    for c in clang++-18 clang++ clang++-17; do
+        if command -v "$c" >/dev/null 2>&1; then CLANG="$c"; break; fi
+    done
+    if [ -z "$CLANG" ]; then
+        echo "  no clang++ found — skipping parser fuzzing."
+        return 0
+    fi
+    local BIN="/tmp/note-cpp-fuzz-parsers"
+    if ! nice "$CLANG" -std=c++20 -g -O1 -fsanitize=address,undefined \
+        -fno-sanitize-recover=undefined -I "$ROOT/include" \
+        -o "$BIN" "$ROOT/tests/fuzz/fuzz_parsers.cpp"; then
+        echo "  fuzz harness build FAILED."
+        return 1
+    fi
+    # Regression: replay the committed corpus (seeds + any past crash inputs).
+    if ls "$ROOT"/tests/fuzz/corpus/* >/dev/null 2>&1; then
+        if ! ASAN_OPTIONS=abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 \
+            "$BIN" "$ROOT"/tests/fuzz/corpus/*; then
+            echo "  corpus replay FAILED — a committed input now crashes."
+            return 1
+        fi
+    fi
+    # Bounded deterministic campaign across a few seeds.
+    local iters="${FUZZ_ITERS:-200000}"
+    for seed in 1 7 42; do
+        if ! FUZZ_ITERS="$iters" FUZZ_SEED="$seed" \
+            ASAN_OPTIONS=abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 "$BIN"; then
+            echo "  FUZZ FOUND A CRASH (seed=$seed). Reproduce with that seed,"
+            echo "  minimize the input, and commit it under tests/fuzz/corpus/."
+            return 1
+        fi
+    done
+    echo "Parser fuzzing passed (corpus + ${iters}x3 iterations)."
+}
+
 run_full() {
     # Host CI + hardware sweep. The hardware step is self-skipping when
     # $PIO_LABGRID_DEVICE isn't set, so this stays safe in headless
@@ -1205,6 +1251,7 @@ run_full() {
     # skips its own codegen invocation.
     run_quick "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
     run_ci    "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+    run_fuzz
     run_integration_hardware
 }
 
@@ -1220,6 +1267,9 @@ case "${1:-}" in
         ;;
     --integrations)
         run_and_log run_integrations
+        ;;
+    --fuzz)
+        run_and_log run_fuzz
         ;;
     --hil)
         run_and_log run_integration_hardware

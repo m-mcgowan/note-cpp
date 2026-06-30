@@ -68,7 +68,17 @@ TEST_CASE("jsonb: opcode constants match note-c-zero") {
     CHECK(jsonb::kFalse       == 0x22);
     CHECK(jsonb::kItem        == 0x30);
     CHECK(jsonb::kString      == 0x40);
+    // Every scalar width is a wire contract with the Notecard — pin them all,
+    // not just int32/double. The low nibble encodes the byte width.
+    CHECK(jsonb::kInt8        == 0x61);
+    CHECK(jsonb::kInt16       == 0x62);
     CHECK(jsonb::kInt32       == 0x64);
+    CHECK(jsonb::kInt64       == 0x68);
+    CHECK(jsonb::kUint8       == 0x71);
+    CHECK(jsonb::kUint16      == 0x72);
+    CHECK(jsonb::kUint32      == 0x74);
+    CHECK(jsonb::kUint64      == 0x78);
+    CHECK(jsonb::kFloat       == 0x84);
     CHECK(jsonb::kDouble      == 0x88);
     CHECK(jsonb::kCobsXor     == '\n');
 }
@@ -145,6 +155,26 @@ TEST_CASE("jsonb builder: negative int32") {
     CHECK(bytes[i++] == 0xFF);
     CHECK(bytes[i++] == 0xFF);
     CHECK(bytes[i++] == 0xFF);
+}
+
+TEST_CASE("jsonb builder: int32 little-endian byte order (distinct bytes)") {
+    // 0x12345678 has four distinct bytes, so this pins the per-byte shift
+    // amounts in emit_le32 (the 42 / -1 cases elsewhere don't distinguish
+    // lanes: 42 sets only the low byte, -1 sets every byte to 0xFF).
+    auto bytes = jsonb_build([](JsonBuilder& b) {
+        b.add("n", int32_t{0x12345678});
+    });
+    size_t i = 0;
+    REQUIRE(bytes[i++] == jsonb::kBeginObject);
+    REQUIRE(bytes[i++] == jsonb::kItem);
+    REQUIRE(bytes[i++] == 'n');
+    REQUIRE(bytes[i++] == '\0');
+    REQUIRE(bytes[i++] == jsonb::kInt32);
+    CHECK(bytes[i++] == 0x78);   // little-endian: low byte first
+    CHECK(bytes[i++] == 0x56);
+    CHECK(bytes[i++] == 0x34);
+    CHECK(bytes[i++] == 0x12);
+    CHECK(bytes[i++] == jsonb::kEndObject);
 }
 
 TEST_CASE("jsonb builder: double field") {
@@ -713,6 +743,96 @@ TEST_CASE("jsonb parser: null field") {
     REQUIRE(sink.events.size() == 3);
     CHECK(sink.events[1].type == RecordingSink::Null);
     CHECK(sink.events[1].key == "x");
+}
+
+TEST_CASE("jsonb parser: decodes every scalar width across all byte lanes") {
+    // The round-trip tests above only decode int32/double with values whose
+    // bytes don't differ across lanes (42, -100, 22.5), and never exercise
+    // int8/int16/int64/uint*/float at all. That leaves the little-endian
+    // reconstruction (shift amount + byte index) and the per-width read length
+    // unconstrained. Feed crafted wire bytes with DISTINCT bytes per lane and
+    // assert the exact decoded value.
+    auto decode_scalar = [](std::vector<uint8_t> payload) -> RecordingSink::Event {
+        std::vector<uint8_t> opcodes = {jsonb::kBeginObject, jsonb::kItem, 'v', '\0'};
+        opcodes.insert(opcodes.end(), payload.begin(), payload.end());
+        opcodes.push_back(jsonb::kEndObject);
+        RecordingSink sink;
+        VectorReader reader{opcodes};
+        char storage[384];
+        SaxStreamBuf buf(storage);
+        auto dispatch = make_sax_dispatch(sink);
+        auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+        REQUIRE(err.empty());
+        REQUIRE(sink.events.size() == 3);
+        CHECK(sink.events[1].key == "v");
+        return sink.events[1];
+    };
+
+    // Signed — distinct bytes + sign-extension boundaries.
+    CHECK(decode_scalar({jsonb::kInt8, 0x80}).i == -128);
+    CHECK(decode_scalar({jsonb::kInt8, 0x7F}).i == 127);
+    CHECK(decode_scalar({jsonb::kInt16, 0x34, 0x12}).i == 0x1234);
+    CHECK(decode_scalar({jsonb::kInt16, 0x00, 0x80}).i == -32768);
+    CHECK(decode_scalar({jsonb::kInt32, 0x78, 0x56, 0x34, 0x12}).i == 0x12345678);
+    CHECK(decode_scalar({jsonb::kInt32, 0xFF, 0xFF, 0xFF, 0xFF}).i == -1);
+    // int64 is truncated to the low 32 bits (SaxEvent carries int32).
+    CHECK(decode_scalar({jsonb::kInt64, 0x78, 0x56, 0x34, 0x12, 0xAA, 0xBB, 0xCC, 0xDD}).i
+          == 0x12345678);
+
+    // Unsigned — distinct bytes; cast to int32.
+    CHECK(decode_scalar({jsonb::kUint8, 0xFF}).i == 255);
+    CHECK(decode_scalar({jsonb::kUint16, 0xCD, 0xAB}).i == 0xABCD);
+    CHECK(decode_scalar({jsonb::kUint32, 0x78, 0x56, 0x34, 0x12}).i == 0x12345678);
+    CHECK(decode_scalar({jsonb::kUint64, 0x78, 0x56, 0x34, 0x12, 0xAA, 0xBB, 0xCC, 0xDD}).i
+          == 0x12345678);
+
+    // Floats — distinct mantissa bytes.
+    {
+        float f = 6.25f;
+        uint8_t b[4];
+        memcpy(b, &f, 4);
+        auto e = decode_scalar({jsonb::kFloat, b[0], b[1], b[2], b[3]});
+        CHECK(e.type == RecordingSink::Float);
+        CHECK(e.f == doctest::Approx(6.25));
+    }
+    {
+        double d = -1234.5;
+        uint8_t b[8];
+        memcpy(b, &d, 8);
+        auto e = decode_scalar({jsonb::kDouble, b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]});
+        CHECK(e.type == RecordingSink::Float);
+        CHECK(e.f == doctest::Approx(-1234.5));
+    }
+}
+
+TEST_CASE("jsonb parser: deep nesting saves and restores keys per level") {
+    // Exercises push_key/pop_key beyond one level: each level's key must be
+    // saved on descent and restored on ascent, with distinct keys so a
+    // mis-indexed save/restore is observable.
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("a", string_view("A"));
+        b.begin_object("lvl1");
+        b.add("b", string_view("B"));
+        b.begin_object("lvl2");
+        b.add("c", string_view("C"));
+        b.end_object();
+        b.add("d", string_view("D"));   // key restored to lvl1 scope after lvl2 closes
+        b.end_object();
+        b.add("e", string_view("E"));   // key restored to root scope after lvl1 closes
+    });
+    // obj(""), str(a), obj(lvl1), str(b), obj(lvl2), str(c),
+    // objEnd(lvl2), str(d), objEnd(lvl1), str(e), objEnd("")
+    REQUIRE(events.size() == 11);
+    CHECK(events[2].type == RecordingSink::ObjBegin);
+    CHECK(events[2].key == "lvl1");
+    CHECK(events[4].key == "lvl2");
+    CHECK(events[5].key == "c");
+    CHECK(events[6].type == RecordingSink::ObjEnd);
+    CHECK(events[6].key == "lvl2");      // restored
+    CHECK(events[7].key == "d");
+    CHECK(events[8].type == RecordingSink::ObjEnd);
+    CHECK(events[8].key == "lvl1");      // restored
+    CHECK(events[9].key == "e");
 }
 
 TEST_CASE("jsonb parser: small chunk reads") {

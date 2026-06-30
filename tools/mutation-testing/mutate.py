@@ -65,6 +65,11 @@ class Target:
     header: str           # path relative to ROOT, must live under include/
     tests: list[str]      # test TU paths relative to ROOT
     poc: bool = False     # part of the fast default set wired into ci.sh --mutate
+    # Optional inclusive 1-based line ranges to restrict mutation to. Use for a
+    # large header where only a specific function is the target (e.g. the
+    # execute/begin_execute dispatch in notecard.hpp), so the audit stays fast
+    # and survivors aren't scattered across unrelated methods. None = whole file.
+    regions: list[tuple[int, int]] | None = None
 
 TARGETS: dict[str, Target] = {t.name: t for t in [
     # PoC pair — smallest + highest stakes (wire correctness + retry safety).
@@ -82,9 +87,17 @@ TARGETS: dict[str, Target] = {t.name: t for t in [
     Target("json_lexer", "include/note/lexer/json_lexer.hpp",
            ["tests/test_json_lexer.cpp", "tests/test_json_sax.cpp"]),
     Target("jsonb", "include/note/jsonb.hpp",
-           ["tests/test_jsonb.cpp", "tests/test_json_sax_streaming.cpp"]),
+           ["tests/test_jsonb.cpp", "tests/test_json_sax_streaming.cpp",
+            "tests/test_wire_format_jsonb.cpp", "tests/test_sax_to_text.cpp"]),
+    # notecard.hpp is ~2000 lines; the dispatch target is specifically the
+    # execute()/begin_execute() path-selection core (timing + transport/alloc/
+    # backend choice) the coverage work collapsed. Restrict to those regions so
+    # the audit stays focused; widen/remove `regions` to sweep the whole class.
     Target("dispatch", "include/note/notecard.hpp",
-           ["tests/test_notecard.cpp", "tests/test_endpoint_coverage.cpp"]),
+           ["tests/test_notecard.cpp", "tests/test_endpoint_coverage.cpp",
+            "tests/test_binary_execute.cpp", "tests/test_debug.cpp",
+            "tests/test_notecard_streaming.cpp"],
+           regions=[(318, 355), (953, 978)]),
 ]}
 
 # ---------------------------------------------------------------------------
@@ -249,7 +262,14 @@ def discover_mutants(cindex, target: Target, parse_args: list[str]) -> list[Muta
 
     mutants: dict[tuple, Mutant] = {}
 
+    def in_region(line):
+        if not target.regions:
+            return True
+        return any(lo <= line <= hi for lo, hi in target.regions)
+
     def add(offset, length, original, replacement, line, col, label):
+        if not in_region(line):
+            return
         m = Mutant(target.name, target.header, offset, length,
                    original, replacement, line, col, label)
         mutants.setdefault(m.key(), m)

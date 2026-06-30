@@ -315,6 +315,36 @@ TEST_CASE("Notecard::execute() returns Notecard error when response has err fiel
     REQUIRE(r.error().message == "bad firmware");
 }
 
+TEST_CASE("Notecard::execute() resets the transport between buffered retries") {
+    // The buffered execute() path wires retry's reset callback to
+    // transport_->reset(). A transient SendFailed must reset the transport
+    // before the retry attempt — the retry-engine unit tests cover the loop,
+    // but only this pins the Notecard-level wiring of that callback.
+    struct ResetCountingTransport : note::test::CallbackTransport {
+        int resets = 0;
+        using CallbackTransport::CallbackTransport;
+        void reset() override { ++resets; }
+    };
+    note::test::TestJsonBackend backend;
+    int calls = 0;
+    ResetCountingTransport transport(
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            if (++calls == 1)
+                return note::Unexpected(
+                    note::ErrorInfo{note::Error::SendFailed, {}, "transient"});
+            return note::string_view("{}");
+        });
+    auto nc_ptr = note::test::make_test_notecard_heap(backend, transport);
+    auto& nc = *nc_ptr;
+    nc.set_retry_policy({.max_retries = 2, .retry_delay_ms = 0, .timeout_ms = 0});
+
+    note::api::CardVersion req;
+    auto r = nc.execute(req);
+    REQUIRE(r.has_value());          // retry succeeded after the transient failure
+    CHECK(calls == 2);               // initial failure + one retry
+    CHECK(transport.resets >= 1);    // transport was reset before the retry
+}
+
 TEST_CASE("Default-constructed Notecard returns NotReady error") {
     note::Notecard nc;
     note::api::CardVersion req;

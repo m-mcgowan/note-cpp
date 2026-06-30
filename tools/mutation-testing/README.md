@@ -78,6 +78,12 @@ behaviour, not just the obvious unit test — a mutant is only killed if a
 survivors.) Verify a new target's mapping against host coverage
 (`./ci.sh --coverage`).
 
+For a large header where only one function is the target, set `regions` (a list
+of inclusive 1-based line ranges) so mutation is restricted to it — the
+`dispatch` target uses this to focus on `notecard.hpp`'s execute/begin_execute
+path-selection core instead of mutating all ~2000 lines. Omit `regions` to
+sweep the whole file.
+
 ## Triage
 
 For each survivor, decide:

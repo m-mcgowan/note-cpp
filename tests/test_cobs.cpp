@@ -212,3 +212,72 @@ TEST_CASE("COBS: encoder does not modify source") {
 
     REQUIRE(memcmp(data, copy, sizeof(data)) == 0);
 }
+
+// ---------------------------------------------------------------------------
+// Strength tests surfaced by mutation testing (tools/mutation-testing).
+// ---------------------------------------------------------------------------
+
+TEST_CASE("COBS: cobs_encoded_length equals actual encoded length (sweep)") {
+    // cobs_encoded_length feeds the JSON handshake `cobs` field, so it must
+    // equal the number of bytes the encoder actually emits (excluding EOP) for
+    // every length and zero pattern — especially the block-boundary code
+    // accounting around multiples of 254. A coarse spot-check leaves the
+    // code-reset arithmetic unconstrained; this sweep pins it.
+    auto check = [](const std::vector<uint8_t>& d) {
+        size_t predicted = note::cobs_encoded_length(d.data(), d.size());
+        size_t actual = stream_encode(d.data(), d.size()).size();
+        CAPTURE(d.size());
+        CHECK(predicted == actual);
+    };
+    for (size_t len = 0; len <= 600; ++len) {
+        std::vector<uint8_t> d(len);
+        // Dense non-zero data — forces 254-byte block splits (code reaches 0xFF).
+        for (size_t i = 0; i < len; ++i) d[i] = static_cast<uint8_t>((i % 255) + 1);
+        check(d);
+        // Periodic zeros — forces zero-driven block boundaries.
+        for (size_t i = 0; i < len; ++i)
+            d[i] = static_cast<uint8_t>((i % 7 == 0) ? 0 : (i % 251) + 1);
+        check(d);
+    }
+}
+
+TEST_CASE("COBS: scratch-buffer encode overload matches the stack-buffer overload") {
+    // The encode(src, len, scratch, flush) overload (caller-provided buffer) is
+    // a separate code path from the stack-buffer encode(); it must produce the
+    // identical encoding and still round-trip.
+    std::vector<uint8_t> data(600);
+    for (size_t i = 0; i < data.size(); ++i)
+        data[i] = static_cast<uint8_t>((i % 5 == 0) ? 0 : (i * 7 + 3) % 256);
+
+    note::CobsEncoder enc;
+    uint8_t scratch[NOTE_COBS_BLOCK_SIZE];
+    std::vector<uint8_t> via_scratch;
+    enc.encode(data.data(), data.size(), note::byte_span(scratch, sizeof(scratch)),
+               [&](const uint8_t* b, size_t n) { via_scratch.insert(via_scratch.end(), b, b + n); });
+
+    CHECK(via_scratch == stream_encode(data.data(), data.size()));
+
+    auto decoded = stream_decode(via_scratch.data(), via_scratch.size());
+    REQUIRE(decoded.size() == data.size());
+    CHECK(memcmp(decoded.data(), data.data(), data.size()) == 0);
+}
+
+TEST_CASE("COBS: decoder emits incrementally for large payloads") {
+    // The decoder bounds its fixed working buffer by flushing as blocks fill,
+    // rather than buffering the whole payload before emitting once.
+    std::vector<uint8_t> data(2000);
+    for (size_t i = 0; i < data.size(); ++i) data[i] = static_cast<uint8_t>((i * 5 + 1) % 256);
+    auto encoded = ref_encode(data.data(), data.size());
+
+    note::CobsDecoder decoder;
+    int sink_calls = 0;
+    std::vector<uint8_t> decoded;
+    auto sink = [&](const uint8_t* b, size_t n) { ++sink_calls; decoded.insert(decoded.end(), b, b + n); };
+    decoder.feed(encoded.data(), encoded.size(), sink);
+    uint8_t term = note::cobs_eop;
+    decoder.feed(&term, 1, sink);
+
+    CHECK(sink_calls > 1);
+    REQUIRE(decoded.size() == data.size());
+    CHECK(memcmp(decoded.data(), data.data(), data.size()) == 0);
+}

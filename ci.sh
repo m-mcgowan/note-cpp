@@ -16,6 +16,10 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 #   ./ci.sh --coverage       Build with coverage instrumentation and generate report
 #   ./ci.sh --integrations   Build and run JSON backend integration tests (host)
 #   ./ci.sh --fuzz           Fuzz the JSON/JSONB parsers under ASan/UBSan
+#   ./ci.sh --mutate         Mutation-test the correctness-critical headers
+#                            (test-strength audit; on-demand, NOT a gate).
+#                            Extra args pass through, e.g. --mutate --all or
+#                            --mutate --target jsonb
 #   ./ci.sh --hil            Hardware-in-the-loop sweep — upload + run all
 #                            test groups on $PIO_LABGRID_DEVICE for the
 #                            `serial` and `i2c` envs in tests/integration/firmware
@@ -1239,6 +1243,32 @@ run_fuzz() {
     echo "Parser fuzzing passed (corpus + ${iters}x3 iterations)."
 }
 
+# ── Mutation testing ──────────────────────────────────────────────────────
+# Deliberately corrupt one operator/literal at a time in the correctness-
+# critical headers, rebuild the covering host tests, and check a test fails
+# ("kills" the mutant). A surviving mutant = a weak/missing assertion (or a
+# legitimate equivalent mutant). This measures test *strength*, complementing
+# coverage (reach) and fuzzing (memory/UB on bad input).
+#
+# On-demand audit, NOT a per-commit gate: it is minutes long and scores are
+# noisy (equivalent mutants survive and need human triage). It exits 0 even
+# with survivors; the durable output is the assertions the audit drives into
+# the suite. Self-skips when python3 / clang.cindex / a compiler is absent.
+# Pass-through args ($@) reach the harness (e.g. --all, --target NAME).
+run_mutate() {
+    ci_stage "Mutation testing (test strength)"
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "  no python3 found — skipping mutation testing."
+        return 0
+    fi
+    if ! python3 -c "import clang.cindex" >/dev/null 2>&1; then
+        echo "  clang.cindex not installed — skipping mutation testing."
+        echo "  enable with:  python3 -m pip install libclang"
+        return 0
+    fi
+    python3 "$ROOT/tools/mutation-testing/mutate.py" "$@"
+}
+
 run_full() {
     # Host CI + hardware sweep. The hardware step is self-skipping when
     # $PIO_LABGRID_DEVICE isn't set, so this stays safe in headless
@@ -1270,6 +1300,10 @@ case "${1:-}" in
         ;;
     --fuzz)
         run_and_log run_fuzz
+        ;;
+    --mutate)
+        shift
+        run_and_log run_mutate "$@"
         ;;
     --hil)
         run_and_log run_integration_hardware

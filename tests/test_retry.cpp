@@ -543,6 +543,125 @@ TEST_CASE("retry_loop: records timing on failure") {
 }
 
 // ---------------------------------------------------------------------------
+// Timing defaults and timeout-boundary edges
+//
+// These pin behaviour that the matrix above leaves unconstrained — surfaced by
+// mutation testing (tools/mutation-testing): the default gap, the in-loop
+// early-return timing record, the relative-to-start timeout math, and the
+// inclusive timeout boundary all survived mutation without a covering assert.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("retry: TransactionTiming has the documented defaults") {
+    TransactionTiming t;
+    CHECK(t.min_gap_ms == 2);              // default minimum inter-transaction gap
+    CHECK(t.last_transaction_end_ms == 0);
+    CHECK_FALSE(t.has_previous);
+}
+
+TEST_CASE("retry_loop: records timing on in-loop early returns") {
+    // Distinct from the max_retries==0 fall-through: with retries available the
+    // success and non-retryable branches return from *inside* the loop, and
+    // must still record timing so the next transaction's gap is enforced.
+    SUBCASE("first attempt already succeeded") {
+        LoopTestOps ops; ops.now_ms = 77;
+        auto t = ops.ops();
+        TransactionTiming timing;
+        RetryPolicy policy{.max_retries = 5};
+        AttemptTracker tracker;
+        bool ok = retry_loop(true, Error{}, AttemptTracker::attempt, &tracker,
+                             t, timing, Safety::ReadOnly, policy);
+        CHECK(ok);
+        CHECK(timing.has_previous);
+        CHECK(timing.last_transaction_end_ms == 77);
+    }
+    SUBCASE("first attempt failed non-retryably") {
+        LoopTestOps ops; ops.now_ms = 88;
+        auto t = ops.ops();
+        TransactionTiming timing;
+        RetryPolicy policy{.max_retries = 5};
+        AttemptTracker tracker;
+        bool ok = retry_loop(false, Error::Notecard, AttemptTracker::attempt, &tracker,
+                             t, timing, Safety::ReadOnly, policy);
+        CHECK_FALSE(ok);
+        CHECK(timing.has_previous);
+        CHECK(timing.last_transaction_end_ms == 88);
+    }
+}
+
+TEST_CASE("retry_loop: timeout budget is measured relative to start (non-zero clock)") {
+    LoopTestOps ops; ops.now_ms = 1000;   // non-zero start: catches millis()+start vs millis()-start
+    auto t = ops.ops();
+    TransactionTiming timing;
+    RetryPolicy policy{.max_retries = 100, .retry_delay_ms = 100, .timeout_ms = 250};
+    AttemptTracker tracker;
+    retry_loop(false, Error::SendFailed, AttemptTracker::attempt, &tracker,
+               t, timing, Safety::ReadOnly, policy);
+    CHECK(tracker.calls == 3);             // same budget math as the zero-start case
+}
+
+TEST_CASE("retry_loop: timeout boundary is inclusive (elapsed == timeout stops)") {
+    LoopTestOps ops;
+    auto t = ops.ops();
+    TransactionTiming timing;
+    RetryPolicy policy{.max_retries = 100, .retry_delay_ms = 100, .timeout_ms = 300};
+    AttemptTracker tracker;
+    retry_loop(false, Error::SendFailed, AttemptTracker::attempt, &tracker,
+               t, timing, Safety::ReadOnly, policy);
+    // 100ms steps, budget exactly 300: stop when elapsed first REACHES 300 (>=),
+    // not only when it exceeds (>). 3 retries, not 4.
+    CHECK(tracker.calls == 3);
+}
+
+TEST_CASE("retry_loop: timeout_ms == 1 still enforces the budget (boundary)") {
+    LoopTestOps ops;
+    auto t = ops.ops();
+    TransactionTiming timing;
+    RetryPolicy policy{.max_retries = 5, .retry_delay_ms = 100, .timeout_ms = 1};
+    AttemptTracker tracker;
+    retry_loop(false, Error::SendFailed, AttemptTracker::attempt, &tracker,
+               t, timing, Safety::ReadOnly, policy);
+    // timeout_ms==1 (the > 0 guard, not > 1): after one 100ms delay the budget
+    // is blown, so only one retry attempt runs.
+    CHECK(tracker.calls == 1);
+}
+
+TEST_CASE("retry: timeout budget is measured relative to start (non-zero clock)") {
+    MockClock clock; clock.now_ms = 1000;
+    TransactionTiming timing;
+    RetryPolicy policy{.max_retries = 100, .retry_delay_ms = 100, .timeout_ms = 250};
+    int attempts = 0;
+    retry_transaction<TestResult>(
+        clock, timing, Safety::ReadOnly, policy,
+        [&]() -> TestResult { ++attempts; return send_failed(); },
+        [&]() { clock.reset(); });
+    CHECK(attempts == 4);                  // 1 initial + 3 retries within budget
+}
+
+TEST_CASE("retry: timeout boundary is inclusive (elapsed == timeout stops)") {
+    MockClock clock;
+    TransactionTiming timing;
+    RetryPolicy policy{.max_retries = 100, .retry_delay_ms = 100, .timeout_ms = 300};
+    int attempts = 0;
+    retry_transaction<TestResult>(
+        clock, timing, Safety::ReadOnly, policy,
+        [&]() -> TestResult { ++attempts; return send_failed(); },
+        [&]() { clock.reset(); });
+    CHECK(attempts == 4);                  // 4th retry blocked at elapsed == 300
+}
+
+TEST_CASE("retry: timeout_ms == 1 still enforces the budget (boundary)") {
+    MockClock clock;
+    TransactionTiming timing;
+    RetryPolicy policy{.max_retries = 5, .retry_delay_ms = 100, .timeout_ms = 1};
+    int attempts = 0;
+    retry_transaction<TestResult>(
+        clock, timing, Safety::ReadOnly, policy,
+        [&]() -> TestResult { ++attempts; return send_failed(); },
+        [&]() { clock.reset(); });
+    CHECK(attempts == 2);                  // initial + one retry, then 1ms budget blown
+}
+
+// ---------------------------------------------------------------------------
 // Error to_string coverage
 // ---------------------------------------------------------------------------
 

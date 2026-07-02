@@ -34,7 +34,7 @@ Via arduino-cli (matches what CI runs):
 ```bash
 for fqbn in \
     esp32:esp32:esp32s3:CDCOnBoot=cdc \
-    STMicroelectronics:stm32:BluesW:pnum=SWAN_R5 ; do
+    STMicroelectronics:stm32:Blues:pnum=SWAN_R5 ; do
     arduino-cli compile --fqbn "$fqbn" --library "$PWD" \
         examples/arduino/quickstart
 done

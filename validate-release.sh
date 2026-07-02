@@ -116,7 +116,7 @@ step_pio_build() {
 
 step_arduino_build() {
     local esp32_fqbn="esp32:esp32:esp32s3:CDCOnBoot=cdc"
-    local swan_fqbn="STMicroelectronics:stm32:BluesW:pnum=SWAN_R5"
+    local swan_fqbn="STMicroelectronics:stm32:Blues:pnum=SWAN_R5"
 
     for sketch in quickstart readme_snippets serial_basic i2c_basic; do
         echo "--- $sketch (ESP32-S3) ---"
@@ -176,7 +176,7 @@ step_hw_esp32_arduino_i2c() {
 step_hw_swan_arduino_serial() {
     local port
     port=$(usb-device port "$SWAN_DEVICE")
-    arduino-cli compile --fqbn STMicroelectronics:stm32:BluesW:pnum=SWAN_R5 \
+    arduino-cli compile --fqbn STMicroelectronics:stm32:Blues:pnum=SWAN_R5 \
         --upload --port "$port" \
         "$ROOT/examples/arduino/serial_basic"
     echo "  Uploaded. Verifying serial output..."

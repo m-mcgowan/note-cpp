@@ -93,6 +93,15 @@ step_fuzz() {
     "$ROOT/ci.sh" --fuzz
 }
 
+step_mutate() {
+    # Test-strength audit (mutation testing) of the correctness-critical
+    # headers. Runs the PoC target set; exits 0 even with surviving mutants
+    # (they need human triage, not a hard fail), so this gates on the harness
+    # running and every target's baseline tests being green. Self-skips when
+    # clang.cindex / a compiler is unavailable.
+    "$ROOT/ci.sh" --mutate
+}
+
 step_coverage() {
     "$ROOT/ci.sh" --coverage
 }
@@ -187,6 +196,7 @@ STEPS=(
     "integrations|host|cjson / nlohmann / buffer backend tests|step_integrations"
     "coverage|host|Coverage thresholds enforced|step_coverage"
     "fuzz|host|JSON/JSONB parser fuzzing under ASan/UBSan|step_fuzz"
+    "mutate|host|Mutation testing — test-strength audit|step_mutate"
     "docs|host|Doxygen build + link validation|step_docs"
     "pio-build|host|PlatformIO firmware builds (no hardware)|step_pio_build"
     "arduino-build|host|Arduino sketch compilation (no upload)|step_arduino_build"

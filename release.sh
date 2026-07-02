@@ -69,7 +69,13 @@ fi
 
 # ── Extract changelog for tag message ───────────────────────────────────────
 
-changelog_body=$(sed -n "/^## \[$VERSION\]/,/^## \[/{/^## \[$VERSION\]/d;/^## \[/d;p}" "$ROOT/CHANGELOG.md")
+# Extract the section body between "## [VERSION]" and the next "## [" heading.
+# awk (not a GNU-only sed block) so this is portable to BSD/macOS sed hosts.
+changelog_body=$(awk -v hdr="## [$VERSION]" '
+    index($0, hdr) == 1 { inside = 1; next }
+    inside && /^## \[/ { exit }
+    inside { print }
+' "$ROOT/CHANGELOG.md")
 
 # ── Confirm ─────────────────────────────────────────────────────────────────
 

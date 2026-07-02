@@ -1,6 +1,6 @@
 {
     "name": "note-cpp",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Typed C++ SDK for the Blues Notecard. Type-safe, compile-time checked API for all Notecard endpoints. Header-only.",
     "keywords": "notecard, blues, iot, cellular, lora, satellite",
     "repository": {

@@ -10,8 +10,25 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-02
+
 ### Added
-- `nc.ping()` — a one-shot connectivity probe that sends a nonce-bearing `echo` request and confirms the Notecard echoes the same nonce back. The call is deliberately stripped down: a single attempt, a short fixed default timeout (500 ms), and no retry, CRC, or transport reset on failure. The probe is safe to call at any point in the lifecycle, including before any other transaction has run. Available on both `note::Notecard` (polymorphic) and `note::StaticNotecard` (singleton / AVR). See [troubleshooting.md](docs/troubleshooting.md#im-getting-no-response-from-the-notecard) for guidance on using it as a triage step.
+- [I2C shared-bus & multi-threaded safety](docs/transport-i2c.md) — opt-in `NOTE_I2C_BUS_LOCK` with an `IBusLock` seam and a ready-made `FreeRtosBusLock` adapter. `exclusive()` and `keep_ready()` group several exchanges into one atomic operation (with optional RTX/CTX readiness signalling), so a shared I²C bus can be driven safely from multiple tasks. ([`429458b`](https://github.com/m-mcgowan/note-cpp/commit/429458b), [`ae53234`](https://github.com/m-mcgowan/note-cpp/commit/ae53234))
+- [`nc.ping()`](docs/troubleshooting.md#im-getting-no-response-from-the-notecard) — one-shot echo connectivity probe (single attempt, short timeout, no retry/CRC/reset); safe before any other transaction. Also on `StaticNotecard`. ([`65217f8`](https://github.com/m-mcgowan/note-cpp/commit/65217f8))
+- [Compile-time `body_template`](docs/body-values.md) — build request bodies (nested objects and arrays) at compile time, emitted as either JSON text or JSONB. ([`b8be3dc`](https://github.com/m-mcgowan/note-cpp/commit/b8be3dc))
+- Raw JSON body literals now work under `NOTE_JSONB`, re-encoded to binary opcodes via SAX replay. ([`cd94afa`](https://github.com/m-mcgowan/note-cpp/commit/cd94afa))
+- [First-class memory control](docs/memory.md) — `HeapResetPool` and the `NOTE_NO_RESPONSE_RAII` opt-out for arena-only builds. ([`72a5d12`](https://github.com/m-mcgowan/note-cpp/commit/72a5d12), [`420094e`](https://github.com/m-mcgowan/note-cpp/commit/420094e))
+
+### Changed
+- [Streaming is now the primary presentation](docs/streaming-and-tree.md): responses SAX-stream into typed sinks by default, with the buffered JSON-tree path as the fallback. The `NOTE_NO_BUFFERED` flag was renamed to [`NOTE_NO_JSON_TREE`](docs/feature-flags.md); the old spelling is honoured as a deprecated alias. ([`92bb655`](https://github.com/m-mcgowan/note-cpp/commit/92bb655))
+- [Wire format and parse strategy are now orthogonal](docs/jsonb.md) — JSONB (binary) vs JSON (text) is chosen independently of streaming vs tree parsing. ([`e1d3c72`](https://github.com/m-mcgowan/note-cpp/commit/e1d3c72))
+
+### Fixed
+- Singleton (`NOTE_SINGLETON`) correctness: the streaming-parse flag is set on the singleton path, Notecard error messages get allocator-backed lifetime (no longer dangle past `execute()`), and safety / request IDs / array fields are plumbed through the singleton thunks. ([`7b7664b`](https://github.com/m-mcgowan/note-cpp/commit/7b7664b), [`d8006d4`](https://github.com/m-mcgowan/note-cpp/commit/d8006d4), [`9985116`](https://github.com/m-mcgowan/note-cpp/commit/9985116))
+
+### Internal
+- Testing: JSON/JSONB parser fuzzing under ASan/UBSan added to the release gate ([`b69854f`](https://github.com/m-mcgowan/note-cpp/commit/b69854f)); an on-demand [mutation-testing harness](tools/mutation-testing/README.md) (`ci.sh --mutate`) that drove new assertions into the COBS, retry, JSONB, and dispatch tests ([`cb20035`](https://github.com/m-mcgowan/note-cpp/commit/cb20035), [`6dee91a`](https://github.com/m-mcgowan/note-cpp/commit/6dee91a)); a hardware-in-the-loop sweep over ESP32-S3 serial + I²C ([`17f95a2`](https://github.com/m-mcgowan/note-cpp/commit/17f95a2)); device coverage extended to the I²C interface ([`b5abf7b`](https://github.com/m-mcgowan/note-cpp/commit/b5abf7b)).
+- Refactoring: `Notecard::execute()`'s type-independent prologue collapsed into a non-template core ([`525dd4b`](https://github.com/m-mcgowan/note-cpp/commit/525dd4b)); a re-entrant `run_operation` chokepoint underpins the operation lock ([`73d1b45`](https://github.com/m-mcgowan/note-cpp/commit/73d1b45)).
 
 ## [0.2.0] - 2026-04-21
 

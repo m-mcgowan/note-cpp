@@ -16,12 +16,10 @@
 // code does not change.
 //
 // Build & run:
-//   c++ -std=c++20 -I include examples/stdcpp/wire-format-and-presentation.cpp \
-//       && ./a.out
+//   c++ -std=c++20 -I include examples/stdcpp/wire-format-and-presentation.cpp && ./a.out
 //
 // JSONB build:
-//   c++ -std=c++20 -DNOTE_JSONB=1 -I include \
-//       examples/stdcpp/wire-format-and-presentation.cpp && ./a.out
+//   c++ -std=c++20 -DNOTE_JSONB=1 -I include examples/stdcpp/wire-format-and-presentation.cpp && ./a.out
 //
 // The transport's request/response bytes are printed in hex so you can
 // see the format difference on the wire.

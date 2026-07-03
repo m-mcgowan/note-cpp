@@ -406,6 +406,26 @@ run_gcc_matrix() {
             }
         "$build_dir/note-cpp-tests" >/dev/null
         echo "  $base -std=c++${std}: OK"
+
+        # Also compile the stdcpp examples under this GCC with the strict
+        # warning set. run_ci's Examples step only compiles under the default
+        # compiler (Apple Clang on macOS), which is forgiving of GCC-only
+        # diagnostics like -Wcomment (backslash-continued // comment). On GH,
+        # each matrix job runs run_ci with its own compiler, so examples get
+        # per-compiler coverage there; locally that only happens here. Without
+        # this, GCC-only, example-only warning-as-error rot slips past
+        # `ci.sh --full` and fails only on GitHub.
+        local ex_flags="-std=c++${std} -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror"
+        for ex in $(find "$ROOT/examples/stdcpp" -name '*.cpp' -not -path '*/build/*' | sort); do
+            local ex_name=${ex#$ROOT/examples/stdcpp/}
+            nice "$gxx" $ex_flags -I "$ROOT/include" -fsyntax-only "$ex" \
+                >/tmp/gcc-matrix-${base}-ex.log 2>&1 || {
+                    echo "  $base example FAILED: $ex_name — see /tmp/gcc-matrix-${base}-ex.log"
+                    tail -30 "/tmp/gcc-matrix-${base}-ex.log"
+                    exit 1
+                }
+        done
+        echo "  $base examples (-std=c++${std}): OK"
         found=$((found+1))
     done
     if [ "$found" -eq 0 ]; then

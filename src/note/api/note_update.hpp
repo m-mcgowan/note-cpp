@@ -44,6 +44,7 @@ struct NoteUpdate {
         static constexpr char file[] NOTE_FLASH_ATTR = "file";
         static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
         static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
     };
 
@@ -90,6 +91,15 @@ struct NoteUpdate {
         /// `payload`, and can have both.
         NoteUpdate& operator()(note::string_view v);
     } payload{};
+    /// Set to `true` to sync the Notefile immediately after updating the Note.
+    /// Only the specified Notefile is guaranteed to sync.
+    struct sync_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        /// Set to `true` to sync the Notefile immediately after updating the
+        /// Note. Only the specified Notefile is guaranteed to sync.
+        NoteUpdate& operator()(bool v);
+    } sync{};
     /// If set to `true` and using a templated Notefile, the Notefile will be
     /// written to flash immediately, rather than being cached in RAM and
     /// written to flash later.
@@ -125,6 +135,7 @@ struct NoteUpdate {
         if (k_ == "file") return note::dyn_field_for(file);
         if (k_ == "note") return note::dyn_field_for(noteId);
         if (k_ == "payload") return note::dyn_field_for(payload);
+        if (k_ == "sync") return note::dyn_field_for(sync);
         if (k_ == "verify") return note::dyn_field_for(verify);
         if (extras_count_ < NOTE_EXTRAS_MAX) {
             auto& slot = extras_[extras_count_++];
@@ -188,6 +199,10 @@ struct NoteUpdate {
             n += p.print(",\"payload\":");
             n += note::detail::print_json_value(p, *payload);
         }
+        if (sync) {
+            n += p.print(",\"sync\":");
+            n += note::detail::print_json_value(p, *sync);
+        }
         if (verify) {
             n += p.print(",\"verify\":");
             n += note::detail::print_json_value(p, *verify);
@@ -237,6 +252,11 @@ inline NoteUpdate& NoteUpdate::payload_t::operator()(note::string_view v) {
     return *reinterpret_cast<NoteUpdate*>(
         reinterpret_cast<char*>(this) - offsetof(NoteUpdate, payload));
 }
+inline NoteUpdate& NoteUpdate::sync_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, sync));
+}
 inline NoteUpdate& NoteUpdate::verify_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<NoteUpdate*>(
@@ -254,6 +274,7 @@ struct request_traits<::note::api::NoteUpdate> {
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {::note::api::NoteUpdate::keys_::body, static_cast<uint16_t>(offsetof(::note::api::NoteUpdate, body)), ::note::ReqFieldType::Body},
             {::note::api::NoteUpdate::keys_::payload, static_cast<uint16_t>(offsetof(::note::api::NoteUpdate, payload)), ::note::ReqFieldType::String},
+            {::note::api::NoteUpdate::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::NoteUpdate, sync)), ::note::ReqFieldType::Bool},
             {::note::api::NoteUpdate::keys_::verify, static_cast<uint16_t>(offsetof(::note::api::NoteUpdate, verify)), ::note::ReqFieldType::Bool},
         };
 #pragma GCC diagnostic pop

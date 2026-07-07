@@ -13,7 +13,7 @@
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
     },
     "x-schema-source": {
-      "commit": "8345898"
+      "commit": "fa30210"
     }
   },
   "paths": {
@@ -292,7 +292,6 @@
                     "x-min-api-version": "3.2.1"
                   }
                 },
-                "additionalProperties": false,
                 "allOf": [
                   {
                     "if": {
@@ -440,11 +439,23 @@
                       },
                       "x-sub-descriptions": [
                         {
+                          "const": "auxgpio",
+                          "description": "Indicates that the ATTN pin fired due to an AUX GPIO input change.",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "LORA",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
                           "const": "connected",
                           "description": "Indicates that the ATTN pin fired due to the Notecard connecting to the network.",
                           "x-skus": [
                             "CELL",
                             "CELL+WIFI",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -455,6 +466,7 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -465,6 +477,17 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
+                          "const": "journey",
+                          "description": "Indicates that the ATTN pin fired due to the start or end of a journey (a period of sustained motion).",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -474,6 +497,18 @@
                           "x-skus": [
                             "CELL",
                             "CELL+WIFI",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
+                          "const": "modified",
+                          "description": "Indicates that the ATTN pin fired because one or more monitored Notefiles were modified. This keyword accompanies the names of the files that changed.",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -483,6 +518,27 @@
                           "x-skus": [
                             "CELL",
                             "CELL+WIFI",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
+                          "const": "motionchange",
+                          "description": "Indicates that the ATTN pin fired due to a transition between \"moving\" and \"stopped\" detected by `card.motion.mode`.",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
+                          "const": "signal",
+                          "description": "Indicates that the ATTN pin fired due to the Notecard receiving an inbound [signal](/api-reference/glossary/#signal).",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -493,6 +549,18 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
+                          "const": "usb",
+                          "description": "Indicates that the ATTN pin fired due to a USB power state change.",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -502,6 +570,17 @@
                           "x-skus": [
                             "CELL",
                             "CELL+WIFI",
+                            "SKYLO",
+                            "WIFI"
+                          ]
+                        },
+                        {
+                          "const": "wireless",
+                          "description": "Indicates that the ATTN pin fired due to a change in the `card.wireless` status.",
+                          "x-skus": [
+                            "CELL",
+                            "CELL+WIFI",
+                            "SKYLO",
                             "WIFI"
                           ]
                         }
@@ -520,6 +599,7 @@
                       "x-skus": [
                         "CELL",
                         "CELL+WIFI",
+                        "SKYLO",
                         "WIFI"
                       ]
                     },
@@ -533,11 +613,11 @@
                       "x-skus": [
                         "CELL",
                         "CELL+WIFI",
+                        "SKYLO",
                         "WIFI"
                       ]
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -552,6 +632,7 @@
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -1176,8 +1257,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -1289,7 +1369,7 @@
                             }
                           }
                         },
-                        "additionalProperties": false
+                        "unevaluatedProperties": false
                       },
                       "x-sub-descriptions": [
                         {
@@ -1401,7 +1481,7 @@
                 "type": "object",
                 "properties": {
                   "duration": {
-                    "description": "If using `\"mode\": \"accel\"`, specify a sampling duration for the Notecard accelerometer.",
+                    "description": "If using `\"mode\": \"notify,accel\"`, specify a sampling duration (in milliseconds) for the Notecard accelerometer.",
                     "type": "integer"
                   },
                   "limit": {
@@ -1409,7 +1489,7 @@
                     "type": "boolean"
                   },
                   "max": {
-                    "description": "The maximum amount of data, in bytes, that can be sent in a single transmission before the Notecard pauses to allow the host to process incoming data. This value should be set to the size of the host's serial receive buffer minus `1`, which represents the number of bytes the host can absorb before the sender must delay due to the absence of flow control. For example, `note-arduino`` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.",
+                    "description": "The maximum amount of data, in bytes, that can be sent in a single transmission before the Notecard pauses to allow the host to process incoming data. This value should be set to the size of the host's serial receive buffer minus `1`, which represents the number of bytes the host can absorb before the sender must delay due to the absence of flow control. For example, `note-arduino` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.",
                     "type": "integer"
                   },
                   "minutes": {
@@ -1461,8 +1541,7 @@
                     "type": "integer",
                     "x-min-api-version": "4.1.1"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -1512,9 +1591,17 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "max": {
+                      "description": "The currently configured `max` transmission size, in bytes. Returned only when a non-zero value has been configured.",
+                      "type": "integer"
+                    },
                     "mode": {
                       "description": "The current AUX `mode`.",
                       "type": "string"
+                    },
+                    "ms": {
+                      "description": "The currently configured `ms` delay between transmissions, in milliseconds. Returned only when a non-zero value has been configured.",
+                      "type": "integer"
                     },
                     "rate": {
                       "description": "The baud rate or speed at which information is transmitted over AUX serial.",
@@ -1671,8 +1758,7 @@
                     "description": "Clear the COBS area on the Notecard and reset all related arguments previously set by a card.binary request.",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -1794,8 +1880,7 @@
                     "type": "integer",
                     "minimum": -1
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -1889,8 +1974,7 @@
                     "description": "The MD5 checksum of the data, before it has been encoded.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -1981,8 +2065,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -2096,6 +2179,11 @@
             "title": "Set Contact Information",
             "description": "Set contact information for the Notecard maintainer.",
             "json": "{\"req\": \"card.contact\", \"name\": \"Tom Turkey\", \"org\": \"Blues\", \"role\": \"Head of Security\", \"email\": \"tom@blues.com\"}"
+          },
+          {
+            "title": "Retrieve Contact Information",
+            "description": "Retrieve the currently stored contact information by issuing the request with no arguments.",
+            "json": "{\"req\": \"card.contact\"}"
           }
         ],
         "responses": {
@@ -2191,8 +2279,7 @@
                     "description": "Set the role of the Notecard maintainer.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -2202,6 +2289,11 @@
             "title": "Set Contact Information",
             "description": "Set contact information for the Notecard maintainer.",
             "json": "{\"req\": \"card.contact\", \"name\": \"Tom Turkey\", \"org\": \"Blues\", \"role\": \"Head of Security\", \"email\": \"tom@blues.com\"}"
+          },
+          {
+            "title": "Retrieve Contact Information",
+            "description": "Retrieve the currently stored contact information by issuing the request with no arguments.",
+            "json": "{\"req\": \"card.contact\"}"
           }
         ],
         "responses": {
@@ -2369,8 +2461,7 @@
                       "method": "disableHostReset"
                     }
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -2583,8 +2674,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -2721,8 +2811,7 @@
                       "combined": "turnOn"
                     }
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -2847,8 +2936,7 @@
                   },
                   "required": [
                     "mode"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -3040,6 +3128,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "journey": {
+                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "type": "boolean"
+                    },
                     "lat": {
                       "description": "If geofence is enabled, the geofence center latitude in degrees.",
                       "type": "number"
@@ -3234,8 +3326,7 @@
                     "description": "In `periodic` mode, overrides `seconds` with a voltage-variable value.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -3270,6 +3361,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "journey": {
+                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "type": "boolean"
+                    },
                     "lat": {
                       "description": "If geofence is enabled, the geofence center latitude in degrees.",
                       "type": "number"
@@ -3521,8 +3616,7 @@
                     "description": "In `periodic` mode, overrides `seconds` with a voltage-variable value.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -3557,6 +3651,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "journey": {
+                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "type": "boolean"
+                    },
                     "lat": {
                       "description": "If geofence is enabled, the geofence center latitude in degrees.",
                       "type": "number"
@@ -3678,11 +3776,11 @@
                     "default": "_track.qo"
                   },
                   "heartbeat": {
-                    "description": "When `start` is `true`, set to `true` to enable tracking even when motion is not detected. If using `heartbeat`, also set the `hours` below.",
+                    "description": "When `start` is `true`, set to `true` to capture a tracking Note on a fixed interval even when no motion has been detected. The interval is configured with the `hours` field below.",
                     "type": "boolean"
                   },
                   "hours": {
-                    "description": "If `heartbeat` is true, add a heartbeat entry at this hourly interval. Use a negative integer to specify a heartbeat in minutes instead of hours.",
+                    "description": "When `heartbeat` is `true`, the interval at which to capture a heartbeat tracking Note. A positive value sets the interval in hours (e.g. `2` captures a Note every two hours). To configure an interval shorter than one hour, pass a negative integer whose absolute value is the number of minutes (e.g. `-30` captures a Note every 30 minutes).",
                     "type": "integer"
                   },
                   "payload": {
@@ -3712,8 +3810,7 @@
                     "description": "Set to `true` to perform an immediate sync to the Notehub each time a new Note is added.",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -3751,12 +3848,20 @@
                       "description": "`true` if heartbeat is enabled.",
                       "type": "boolean"
                     },
+                    "hours": {
+                      "description": "The configured heartbeat interval in hours. Only returned when the heartbeat interval is a whole number of hours; otherwise, the interval is returned in `minutes` instead. `hours` and `minutes` are never returned together.",
+                      "type": "integer"
+                    },
+                    "journey": {
+                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `card.location.mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "type": "boolean"
+                    },
                     "minutes": {
-                      "description": "The `heartbeat` interval in minutes, if provided.",
+                      "description": "The configured heartbeat interval in minutes. Only returned when the heartbeat interval is not a whole number of hours; when the interval is a whole number of hours, it is returned in `hours` instead. `hours` and `minutes` are never returned together.",
                       "type": "integer"
                     },
                     "seconds": {
-                      "description": "If tracking is enabled and a heartbeat `hours` value is not set, the tracking interval set in `card.location.mode`.",
+                      "description": "If tracking is enabled and no heartbeat interval is configured, the periodic tracking interval set via `card.location.mode`.",
                       "type": "integer"
                     },
                     "start": {
@@ -3775,8 +3880,8 @@
             "x-samples": [
               {
                 "title": "Location Track Response",
-                "description": "Example response showing tracking configuration with heartbeat enabled.",
-                "json": "{\"start\": true, \"heartbeat\": true, \"file\": \"locations.qo\", \"minutes\": 120}"
+                "description": "Example response showing tracking configuration with a 2-hour heartbeat enabled. When the configured heartbeat interval is a whole number of hours, the interval is returned in `hours`; for sub-hour intervals it is returned in `minutes` instead.",
+                "json": "{\"start\": true, \"heartbeat\": true, \"file\": \"locations.qo\", \"hours\": 2}"
               }
             ],
             "x-skus": [
@@ -3845,8 +3950,7 @@
                     "type": "boolean",
                     "default": false
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4057,8 +4161,7 @@
                       "method": "disable"
                     }
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4087,8 +4190,45 @@
         ],
         "responses": {
           "200": {
-            "description": "Response from configuring accelerometer motion monitoring parameters.",
+            "description": "Response from configuring accelerometer motion monitoring parameters. The response reflects the Notecard's current accelerometer configuration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "motion": {
+                      "description": "The motion threshold (number of motion events in a single bucket) above which the Notecard state is considered `moving` and below which the state is considered `stopped`.",
+                      "type": "integer"
+                    },
+                    "seconds": {
+                      "description": "The period (in seconds) of each bucket of movements being accumulated when `minutes` is used with `card.motion`.",
+                      "type": "integer"
+                    },
+                    "start": {
+                      "description": "`true` if the Notecard accelerometer is enabled and motion tracking is active.",
+                      "type": "boolean"
+                    },
+                    "stop": {
+                      "description": "`true` if the Notecard accelerometer is disabled and motion tracking is stopped.",
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
             "x-title": "card.motion.mode Response Application Programming Interface (API) Schema",
+            "x-samples": [
+              {
+                "title": "Motion Tracking Enabled Response",
+                "description": "Response showing motion tracking is enabled with the active bucket period.",
+                "json": "{\"start\": true, \"seconds\": 5}"
+              },
+              {
+                "title": "Motion Tracking Stopped Response",
+                "description": "Response showing motion tracking has been disabled.",
+                "json": "{\"stop\": true}"
+              }
+            ],
             "x-skus": [
               "CELL",
               "CELL+WIFI",
@@ -4151,8 +4291,7 @@
                     "description": "The number of buckets that must indicate motion in order to trigger a sync. If set to `0`, the Notecard will only perform a sync when its orientation changes.",
                     "type": "integer"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4254,8 +4393,7 @@
                     "description": "The number of buckets that must indicate motion in order to capture.",
                     "type": "integer"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4371,8 +4509,7 @@
                       "description": "The current voltage.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -4433,8 +4570,7 @@
                     "type": "boolean",
                     "x-action": "resetCounters"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4476,8 +4612,7 @@
                       "description": "The current voltage.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -4538,8 +4673,7 @@
                     "type": "boolean",
                     "x-action": "resetCounters"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4581,8 +4715,7 @@
                       "description": "The current voltage.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -4681,8 +4814,7 @@
                       "type": "string",
                       "contentEncoding": "base64"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -4781,8 +4913,7 @@
                     "description": "Set to `true` to reset most Notecard configuration settings. Note that this does not reset stored WiFi credentials or the [alternate I2C address](/notecard/notecard-walkthrough/advanced-notecard-configuration/#change-the-notecard-i2c-address) (if previously set) so the Notecard can still contact the network after a reset.\n\n*The Notecard will be unable to sync with Notehub until the `ProductUID` is set again.*",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4881,8 +5012,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -4933,8 +5063,7 @@
                       "description": "The number of seconds the Notecard will wait before entering sleep mode (only included if default settings are overridden).",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -5037,8 +5166,7 @@
                   "required": [
                     "status",
                     "usb"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -5145,7 +5273,7 @@
                   "type": "object",
                   "properties": {
                     "calibration": {
-                      "description": "The calibration differential of the Notecard's onboard sensor.",
+                      "description": "The calibration differential, in degrees centigrade, applied to the Notecard's onboard temperature sensor. This per-device offset is added to the raw sensor reading to produce `value`.",
                       "type": "number"
                     },
                     "humidity": {
@@ -5172,8 +5300,7 @@
                       "description": "The current voltage.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -5248,8 +5375,7 @@
                     "description": "If set to `true`, the Notecard will immediately sync any pending `_temp.qo` Notes created with the `minutes` parameter (see above).",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -5285,7 +5411,7 @@
                   "type": "object",
                   "properties": {
                     "calibration": {
-                      "description": "The calibration differential of the Notecard's onboard sensor.",
+                      "description": "The calibration differential, in degrees centigrade, applied to the Notecard's onboard temperature sensor. This per-device offset is added to the raw sensor reading to produce `value`.",
                       "type": "number"
                     },
                     "humidity": {
@@ -5312,8 +5438,7 @@
                       "description": "The current voltage.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -5386,8 +5511,7 @@
                     "description": "If set to `true`, the Notecard will immediately sync any pending `_temp.qo` Notes created with the `minutes` parameter (see above).",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -5423,7 +5547,7 @@
                   "type": "object",
                   "properties": {
                     "calibration": {
-                      "description": "The calibration differential of the Notecard's onboard sensor.",
+                      "description": "The calibration differential, in degrees centigrade, applied to the Notecard's onboard temperature sensor. This per-device offset is added to the raw sensor reading to produce `value`.",
                       "type": "number"
                     },
                     "humidity": {
@@ -5450,8 +5574,7 @@
                       "description": "The current voltage.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -5554,8 +5677,7 @@
                   },
                   "required": [
                     "zone"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -5624,8 +5746,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -5785,7 +5906,7 @@
                     ]
                   },
                   "seconds": {
-                    "description": "The amount of time a Notecard will spend on any fallback transport before retrying the first transport specified in the `method`. The default is `3600` or 60 minutes.",
+                    "description": "The amount of time (in seconds) a Notecard will spend on any fallback transport before retrying the first transport specified in the `method`. The default is `3600` or 60 minutes.",
                     "type": "integer",
                     "minimum": -1,
                     "default": 3600,
@@ -5797,8 +5918,7 @@
                     "default": false,
                     "x-min-api-version": "9.1.1"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -5843,6 +5963,11 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "allow": {
+                      "description": "When `true`, the Notecard is configured to allow adding Notes to non-compact Notefiles while connected over a non-terrestrial network. See [Define NTN vs non-NTN Templates](https://dev.blues.io/starnote/satellite-best-practices/#define-ntn-vs-non-ntn-templates).",
+                      "type": "boolean",
+                      "x-min-api-version": "7.2.1"
+                    },
                     "method": {
                       "description": "The connectivity method currently enabled on the device.",
                       "type": "string",
@@ -5931,12 +6056,22 @@
                           ]
                         }
                       ]
+                    },
+                    "seconds": {
+                      "description": "The amount of time (in seconds) the Notecard will spend on any fallback transport before retrying the first transport specified in the `method`. The default is `3600` (60 minutes).",
+                      "type": "integer",
+                      "minimum": 0,
+                      "x-min-api-version": "5.3.1"
+                    },
+                    "umin": {
+                      "description": "When `true`, the Notecard is configured to force a longer network transport timeout when using Wideband Notecards.",
+                      "type": "boolean",
+                      "x-min-api-version": "9.1.1"
                     }
                   },
                   "required": [
                     "method"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -6043,8 +6178,7 @@
                     "type": "boolean",
                     "default": false
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -6106,8 +6240,7 @@
                       "description": "`true` if triangulation scans will be performed only when the device is USB-powered.",
                       "type": "boolean"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -6256,8 +6389,7 @@
                       "description": "Start time of the analyzed period or, if `mode=\"total\"`, the time of activation.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -6398,8 +6530,7 @@
                       "description": "Time of device activation.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -6504,7 +6635,7 @@
                           "type": "string"
                         }
                       },
-                      "additionalProperties": false
+                      "unevaluatedProperties": false
                     },
                     "cell": {
                       "description": "If `true`, indicates the Notecard supports cellular connectivity.",
@@ -6538,8 +6669,7 @@
                   },
                   "required": [
                     "version"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -6588,7 +6718,7 @@
               "type": "boolean",
               "default": false
             },
-            "description": "When enabled and the `usb` argument is set to `true`, the Notecard will add an entry to the `health.qo` Notefile when USB power is connected or disconnected."
+            "description": "When enabled and the `usb` argument is set to `true`, the Notecard will add an entry to the `_health.qo` Notefile when USB power is connected or disconnected."
           },
           {
             "name": "calibration",
@@ -6615,14 +6745,21 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "default",
-                "lipo",
-                "l91",
-                "alkaline",
-                "tad",
-                "lic",
-                "?"
+              "anyOf": [
+                {
+                  "enum": [
+                    "default",
+                    "lipo",
+                    "l91",
+                    "alkaline",
+                    "tad",
+                    "lic",
+                    "?"
+                  ]
+                },
+                {
+                  "pattern": "^(usb|high|normal|low|dead):\\d+(\\.\\d+)?(;(usb|high|normal|low|dead):\\d+(\\.\\d+)?)*$"
+                }
               ],
               "default": "default",
               "x-sub-descriptions": [
@@ -6656,7 +6793,7 @@
                 }
               ]
             },
-            "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-firmware-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP."
+            "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-firmware-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\nIn addition to the named presets below, a custom semicolon-separated shorthand string may be provided using any combination of the `usb`, `high`, `normal`, `low`, and `dead` states (e.g. `\"usb:4.6;high:4.2;normal:3.6;low:0\"`).\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP."
           },
           {
             "name": "name",
@@ -6764,6 +6901,11 @@
             "json": "{\"req\": \"card.voltage\", \"mode\": \"?\"}"
           },
           {
+            "title": "Set Custom Voltage Thresholds",
+            "description": "Configure voltage thresholds using a custom semicolon-separated shorthand string.",
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"usb:4.6;high:4.2;normal:3.6;low:0\"}"
+          },
+          {
             "title": "Enable USB Power Monitoring",
             "description": "Enable USB power state monitoring with alerts and sync.",
             "json": "{\"req\": \"card.voltage\", \"usb\": true, \"alert\": true, \"sync\": true}"
@@ -6782,16 +6924,24 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "alert": {
+                      "description": "`true` if the Notecard is configured to add an entry to the `_health.qo` Notefile on USB connect/disconnect (enabled by sending `card.voltage` with `\"usb\": true, \"alert\": true`).",
+                      "type": "boolean"
+                    },
+                    "calibration": {
+                      "description": "If a user calibration value has been saved (via `\"set\": true`), this is that value; otherwise it is the hardware-supplied default.",
+                      "type": "number"
+                    },
                     "daily": {
-                      "description": "Change of moving average in the last 24 hours, if relevant to the time period analyzed.",
+                      "description": "Change in the 24-hour moving average over the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true` and the analyzed window includes at least 24 hours of history.",
                       "type": "number"
                     },
                     "hours": {
-                      "description": "The number of hours used for trend analysis.",
+                      "description": "The number of hours of voltage history actually used in the analysis. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "integer"
                     },
                     "minutes": {
-                      "description": "Represents the Notecard's uptime in minutes. This field is not present when the device is powered via USB.",
+                      "description": "The number of minutes since the Notecard was last on USB power. Not present when the Notecard is currently connected to USB power.",
                       "type": "integer"
                     },
                     "mode": {
@@ -6799,8 +6949,16 @@
                       "type": "string"
                     },
                     "monthly": {
-                      "description": "Change of moving average in the last 30 days, if relevant to the time period analyzed.",
+                      "description": "Change in the 30-day moving average over the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true` and the analyzed window includes at least 30 days of history.",
                       "type": "number"
+                    },
+                    "on": {
+                      "description": "`true` if the request that produced this response set `\"on\": true`.",
+                      "type": "boolean"
+                    },
+                    "sync": {
+                      "description": "`true` if the Notecard is configured to perform a sync on USB connect/disconnect (enabled by sending `card.voltage` with `\"usb\": true, \"sync\": true`).",
+                      "type": "boolean"
                     },
                     "usb": {
                       "description": "`true` if the Notecard is connected to USB power.",
@@ -6812,43 +6970,53 @@
                       "type": "number"
                     },
                     "vavg": {
-                      "description": "The average voltage value during the measured period.",
+                      "description": "The average voltage during the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "number"
                     },
                     "vmax": {
-                      "description": "The highest voltage value captured during the measurement period.",
+                      "description": "The highest voltage during the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "number"
                     },
                     "vmin": {
-                      "description": "The lowest voltage value captured during the measurement period.",
+                      "description": "The lowest voltage during the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "number"
                     },
                     "weekly": {
-                      "description": "Change of moving average in the last 7 days, if relevant to the time period analyzed.",
+                      "description": "Change in the 7-day moving average over the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true` and the analyzed window includes at least 7 days of history.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
             "x-title": "card.voltage Response Application Programming Interface (API) Schema",
             "x-samples": [
               {
-                "title": "USB-Powered Voltage Response",
-                "description": "Example response when Notecard is powered via USB.",
+                "title": "Bare Request (USB-Powered, History Disabled)",
+                "description": "Minimal response from a bare `card.voltage` request on a USB-powered Notecard. No historical fields are present because trend analysis has not been enabled with `\"on\": true`.",
+                "json": "{\"usb\": true, \"mode\": \"usb\", \"value\": 5.112190219747135}"
+              },
+              {
+                "title": "USB-Powered with Trends",
+                "description": "Response when Notecard is powered via USB and historic voltage trend calculations have been enabled with `\"on\": true`.",
                 "json": "{\"usb\": true, \"hours\": 120, \"mode\": \"usb\", \"value\": 5.112190219747135, \"vmin\": 4, \"vmax\": 4, \"vavg\": 4}"
               },
               {
                 "title": "Battery-Powered with Trends",
-                "description": "Example response showing battery voltage with trend analysis.",
+                "description": "Response when Notecard is on battery and historic voltage trend calculations have been enabled with `\"on\": true`.",
                 "json": "{\"mode\": \"normal\", \"value\": 3.85, \"hours\": 720, \"vmin\": 3.2, \"vmax\": 4.1, \"vavg\": 3.75, \"daily\": -0.05, \"weekly\": -0.3, \"monthly\": -0.8, \"minutes\": 43200}"
+              },
+              {
+                "title": "Query Current Thresholds",
+                "description": "Response to a `card.voltage` request that includes `\"mode\": \"?\"`. The `mode` field carries the configured threshold definition string, not a bucket label.",
+                "json": "{\"usb\": true, \"mode\": \"usb:4.6;high:4.0;normal:3.5;low:3.2;dead:0\", \"value\": 5.112190219747135}"
               }
             ],
             "x-skus": [
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -6893,7 +7061,7 @@
                 "type": "object",
                 "properties": {
                   "alert": {
-                    "description": "When enabled and the `usb` argument is set to `true`, the Notecard will add an entry to the `health.qo` Notefile when USB power is connected or disconnected.",
+                    "description": "When enabled and the `usb` argument is set to `true`, the Notecard will add an entry to the `_health.qo` Notefile when USB power is connected or disconnected.",
                     "type": "boolean",
                     "default": false
                   },
@@ -6910,16 +7078,23 @@
                     "maximum": 720
                   },
                   "mode": {
-                    "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-firmware-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP.",
+                    "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-firmware-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\nIn addition to the named presets below, a custom semicolon-separated shorthand string may be provided using any combination of the `usb`, `high`, `normal`, `low`, and `dead` states (e.g. `\"usb:4.6;high:4.2;normal:3.6;low:0\"`).\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP.",
                     "type": "string",
-                    "enum": [
-                      "default",
-                      "lipo",
-                      "l91",
-                      "alkaline",
-                      "tad",
-                      "lic",
-                      "?"
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "default",
+                          "lipo",
+                          "l91",
+                          "alkaline",
+                          "tad",
+                          "lic",
+                          "?"
+                        ]
+                      },
+                      {
+                        "pattern": "^(usb|high|normal|low|dead):\\d+(\\.\\d+)?(;(usb|high|normal|low|dead):\\d+(\\.\\d+)?)*$"
+                      }
                     ],
                     "default": "default",
                     "x-sub-descriptions": [
@@ -7005,8 +7180,7 @@
                     "type": "number",
                     "default": 2.5
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -7028,6 +7202,11 @@
             "json": "{\"req\": \"card.voltage\", \"mode\": \"?\"}"
           },
           {
+            "title": "Set Custom Voltage Thresholds",
+            "description": "Configure voltage thresholds using a custom semicolon-separated shorthand string.",
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"usb:4.6;high:4.2;normal:3.6;low:0\"}"
+          },
+          {
             "title": "Enable USB Power Monitoring",
             "description": "Enable USB power state monitoring with alerts and sync.",
             "json": "{\"req\": \"card.voltage\", \"usb\": true, \"alert\": true, \"sync\": true}"
@@ -7046,16 +7225,24 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "alert": {
+                      "description": "`true` if the Notecard is configured to add an entry to the `_health.qo` Notefile on USB connect/disconnect (enabled by sending `card.voltage` with `\"usb\": true, \"alert\": true`).",
+                      "type": "boolean"
+                    },
+                    "calibration": {
+                      "description": "If a user calibration value has been saved (via `\"set\": true`), this is that value; otherwise it is the hardware-supplied default.",
+                      "type": "number"
+                    },
                     "daily": {
-                      "description": "Change of moving average in the last 24 hours, if relevant to the time period analyzed.",
+                      "description": "Change in the 24-hour moving average over the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true` and the analyzed window includes at least 24 hours of history.",
                       "type": "number"
                     },
                     "hours": {
-                      "description": "The number of hours used for trend analysis.",
+                      "description": "The number of hours of voltage history actually used in the analysis. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "integer"
                     },
                     "minutes": {
-                      "description": "Represents the Notecard's uptime in minutes. This field is not present when the device is powered via USB.",
+                      "description": "The number of minutes since the Notecard was last on USB power. Not present when the Notecard is currently connected to USB power.",
                       "type": "integer"
                     },
                     "mode": {
@@ -7063,8 +7250,16 @@
                       "type": "string"
                     },
                     "monthly": {
-                      "description": "Change of moving average in the last 30 days, if relevant to the time period analyzed.",
+                      "description": "Change in the 30-day moving average over the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true` and the analyzed window includes at least 30 days of history.",
                       "type": "number"
+                    },
+                    "on": {
+                      "description": "`true` if the request that produced this response set `\"on\": true`.",
+                      "type": "boolean"
+                    },
+                    "sync": {
+                      "description": "`true` if the Notecard is configured to perform a sync on USB connect/disconnect (enabled by sending `card.voltage` with `\"usb\": true, \"sync\": true`).",
+                      "type": "boolean"
                     },
                     "usb": {
                       "description": "`true` if the Notecard is connected to USB power.",
@@ -7076,43 +7271,53 @@
                       "type": "number"
                     },
                     "vavg": {
-                      "description": "The average voltage value during the measured period.",
+                      "description": "The average voltage during the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "number"
                     },
                     "vmax": {
-                      "description": "The highest voltage value captured during the measurement period.",
+                      "description": "The highest voltage during the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "number"
                     },
                     "vmin": {
-                      "description": "The lowest voltage value captured during the measurement period.",
+                      "description": "The lowest voltage during the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true`.",
                       "type": "number"
                     },
                     "weekly": {
-                      "description": "Change of moving average in the last 7 days, if relevant to the time period analyzed.",
+                      "description": "Change in the 7-day moving average over the analyzed window. Only present when historic voltage trend calculations have been enabled with `\"on\": true` and the analyzed window includes at least 7 days of history.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
             "x-title": "card.voltage Response Application Programming Interface (API) Schema",
             "x-samples": [
               {
-                "title": "USB-Powered Voltage Response",
-                "description": "Example response when Notecard is powered via USB.",
+                "title": "Bare Request (USB-Powered, History Disabled)",
+                "description": "Minimal response from a bare `card.voltage` request on a USB-powered Notecard. No historical fields are present because trend analysis has not been enabled with `\"on\": true`.",
+                "json": "{\"usb\": true, \"mode\": \"usb\", \"value\": 5.112190219747135}"
+              },
+              {
+                "title": "USB-Powered with Trends",
+                "description": "Response when Notecard is powered via USB and historic voltage trend calculations have been enabled with `\"on\": true`.",
                 "json": "{\"usb\": true, \"hours\": 120, \"mode\": \"usb\", \"value\": 5.112190219747135, \"vmin\": 4, \"vmax\": 4, \"vavg\": 4}"
               },
               {
                 "title": "Battery-Powered with Trends",
-                "description": "Example response showing battery voltage with trend analysis.",
+                "description": "Response when Notecard is on battery and historic voltage trend calculations have been enabled with `\"on\": true`.",
                 "json": "{\"mode\": \"normal\", \"value\": 3.85, \"hours\": 720, \"vmin\": 3.2, \"vmax\": 4.1, \"vavg\": 3.75, \"daily\": -0.05, \"weekly\": -0.3, \"monthly\": -0.8, \"minutes\": 43200}"
+              },
+              {
+                "title": "Query Current Thresholds",
+                "description": "Response to a `card.voltage` request that includes `\"mode\": \"?\"`. The `mode` field carries the configured threshold definition string, not a bucket label.",
+                "json": "{\"usb\": true, \"mode\": \"usb:4.6;high:4.0;normal:3.5;low:3.2;dead:0\", \"value\": 5.112190219747135}"
               }
             ],
             "x-skus": [
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -7131,7 +7336,7 @@
     "/card/wifi": {
       "put": {
         "operationId": "card_wifi",
-        "summary": "Sets up a Notecard WiFi to connect to a WiFi access point.",
+        "summary": "Sets up a Notecard's connection to a WiFi access point.",
         "x-safety": "idempotent",
         "x-notecard-request": "card.wifi",
         "x-supports-cmd": true,
@@ -7175,8 +7380,7 @@
                     "type": "string",
                     "x-min-api-version": "7.5.1"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -7232,8 +7436,7 @@
                       "description": "The Silicon Labs WF200 WiFi Transceiver binary version.",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -7362,8 +7565,7 @@
                       }
                     ]
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -7480,14 +7682,13 @@
                           "type": "integer"
                         }
                       },
-                      "additionalProperties": false
+                      "unevaluatedProperties": false
                     },
                     "status": {
                       "description": "The current status of the wireless connection and modem.",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -7633,8 +7834,7 @@
                       "description": "If the Notecard is in a [Penalty Box](/support/understanding-notecard-penalty-boxes/), this field provides the associated [Error and Status Codes](/support/notecard-error-and-status-codes/).",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -7722,8 +7922,7 @@
                     "description": "Set to `true` to override the default settings of the [Network Registration Failure Penalty Box](/support/understanding-notecard-penalty-boxes/#network-registration-failure).",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -7770,8 +7969,7 @@
                       "description": "If the Notecard is in a [Penalty Box](/support/understanding-notecard-penalty-boxes/), this field provides the associated [Error and Status Codes](/support/notecard-error-and-status-codes/).",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -7859,8 +8057,7 @@
                     "description": "Set to `true` to override the default settings of the [Network Registration Failure Penalty Box](/support/understanding-notecard-penalty-boxes/#network-registration-failure).",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -7907,8 +8104,7 @@
                       "description": "If the Notecard is in a [Penalty Box](/support/understanding-notecard-penalty-boxes/), this field provides the associated [Error and Status Codes](/support/notecard-error-and-status-codes/).",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -8040,8 +8236,7 @@
                       "description": "When `binary` is `true` in the request, this field contains a 32-character hex-encoded MD5 hash of the firmware data. Useful for the host to verify data integrity.",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -8166,8 +8361,7 @@
                     "description": "A voltage-variable string that controls, by Notecard voltage, whether or not DFU is enabled. Use a boolean `1` (on) or `0` (off) for each source/voltage level: `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -8274,8 +8468,7 @@
                   "required": [
                     "mode",
                     "on"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -8362,8 +8555,7 @@
                 },
                 "required": [
                   "name"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -8455,8 +8647,7 @@
                 },
                 "required": [
                   "name"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -8707,8 +8898,7 @@
                   },
                   "required": [
                     "time"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -8765,8 +8955,7 @@
                 },
                 "required": [
                   "name"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -8804,8 +8993,7 @@
                   },
                   "required": [
                     "time"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -8855,8 +9043,7 @@
                     "description": "A sample JSON body that specifies environment variables names and values as \"hints\" for the data type. Possible data types are: boolean, integer, float, and string. See [Understanding Template Data Types](/notecard/notecard-walkthrough/low-bandwidth-design#understanding-template-data-types) for a full explanation of type hints.",
                     "type": "object"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -8893,8 +9080,7 @@
                   },
                   "required": [
                     "bytes"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -9022,8 +9208,7 @@
                       "description": "The total of local Notes across all Notefiles. This includes Inbound Notes that have not been deleted, as well as outbound Notes that have yet to sync.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -9109,8 +9294,7 @@
                       "description": "The total of unsynced notes across all Notefiles.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -9171,8 +9355,7 @@
                     "description": "The name of the Notefile whose Notes you wish to delete.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -9235,8 +9418,7 @@
                       "type": "string"
                     }
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -9341,8 +9523,7 @@
                       "description": "The total number of Notes across all Notefiles.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -9475,8 +9656,7 @@
                   },
                   "required": [
                     "mode"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -9534,8 +9714,7 @@
                     "description": "Text to log.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -9630,7 +9809,7 @@
                           "appeui",
                           "appkey"
                         ],
-                        "additionalProperties": false
+                        "unevaluatedProperties": false
                       }
                     ]
                   },
@@ -9800,7 +9979,7 @@
                             "type": "string"
                           }
                         },
-                        "additionalProperties": false
+                        "unevaluatedProperties": false
                       }
                     ],
                     "x-min-api-version": "7.3.1"
@@ -9827,8 +10006,7 @@
                     "type": "string",
                     "x-format": "voltage-variable"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -9928,8 +10106,7 @@
                     "type": "integer",
                     "x-min-api-version": "5.1.1"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -9966,8 +10143,7 @@
                       "description": "The number of queued signals remaining.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -10036,15 +10212,73 @@
                       "description": "`true` if the Notecard is connected to Notehub.",
                       "type": "boolean"
                     },
+                    "err": {
+                      "description": "If present, a string describing a connection or authentication error, e.g. `{\"err\":\"unable to connect to notehub {notehub-open-failure}\"}`.",
+                      "type": "string",
+                      "codeRef": [
+                        "notecard.codes.json#/$defs/auth",
+                        "notecard.codes.json#/$defs/auth-retry",
+                        "notecard.codes.json#/$defs/connect-aborted",
+                        "notecard.codes.json#/$defs/device-delay-5",
+                        "notecard.codes.json#/$defs/device-disabled",
+                        "notecard.codes.json#/$defs/extended-network-failure",
+                        "notecard.codes.json#/$defs/extended-service-failure",
+                        "notecard.codes.json#/$defs/host-unreachable",
+                        "notecard.codes.json#/$defs/hub-not-connected",
+                        "notecard.codes.json#/$defs/network",
+                        "notecard.codes.json#/$defs/network-timeout",
+                        "notecard.codes.json#/$defs/notehub-open-failure",
+                        "notecard.codes.json#/$defs/product-noexist",
+                        "notecard.codes.json#/$defs/request-failure",
+                        "notecard.codes.json#/$defs/service",
+                        "notecard.codes.json#/$defs/session-closed",
+                        "notecard.codes.json#/$defs/ticket",
+                        "notecard.codes.json#/$defs/transport-unreachable",
+                        "notecard.codes.json#/$defs/web-payload"
+                      ]
+                    },
                     "status": {
                       "description": "Details about the Notecard's transport (e.g. cellular, WiFi, LoRa) connection status.\n\nUse `connected` to check if the Notecard is connected to Notehub.",
-                      "type": "string"
+                      "type": "string",
+                      "codeRef": [
+                        "notecard.codes.json#/$defs/auth",
+                        "notecard.codes.json#/$defs/auth-retry",
+                        "notecard.codes.json#/$defs/connect-aborted",
+                        "notecard.codes.json#/$defs/connected",
+                        "notecard.codes.json#/$defs/device-delay-5",
+                        "notecard.codes.json#/$defs/device-disabled",
+                        "notecard.codes.json#/$defs/disconnected",
+                        "notecard.codes.json#/$defs/extended-network-failure",
+                        "notecard.codes.json#/$defs/extended-service-failure",
+                        "notecard.codes.json#/$defs/host-retry",
+                        "notecard.codes.json#/$defs/host-unreachable",
+                        "notecard.codes.json#/$defs/hub-not-connected",
+                        "notecard.codes.json#/$defs/net-init",
+                        "notecard.codes.json#/$defs/network",
+                        "notecard.codes.json#/$defs/network-timeout",
+                        "notecard.codes.json#/$defs/no-changes",
+                        "notecard.codes.json#/$defs/not-connected",
+                        "notecard.codes.json#/$defs/notehub-connected",
+                        "notecard.codes.json#/$defs/notehub-disconnected",
+                        "notecard.codes.json#/$defs/notehub-open-failure",
+                        "notecard.codes.json#/$defs/product-noexist",
+                        "notecard.codes.json#/$defs/request-failure",
+                        "notecard.codes.json#/$defs/service",
+                        "notecard.codes.json#/$defs/session-closed",
+                        "notecard.codes.json#/$defs/socket-ip-init",
+                        "notecard.codes.json#/$defs/socket-ip-term",
+                        "notecard.codes.json#/$defs/ticket",
+                        "notecard.codes.json#/$defs/transport-unreachable",
+                        "notecard.codes.json#/$defs/wait-data",
+                        "notecard.codes.json#/$defs/wait-gateway",
+                        "notecard.codes.json#/$defs/wait-service",
+                        "notecard.codes.json#/$defs/web-payload"
+                      ]
                     }
                   },
                   "required": [
                     "status"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -10109,8 +10343,7 @@
                     "type": "boolean",
                     "x-min-api-version": "7.2.1"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -10208,6 +10441,75 @@
                       "description": "Number of seconds since the last sync completion.",
                       "type": "integer"
                     },
+                    "err": {
+                      "description": "If present, a string describing the error that occurred during sync, e.g. `{\"err\":\"sync error {sync-error}\"}`.",
+                      "type": "string",
+                      "codeRef": [
+                        "notecard.codes.json#/$defs/auth",
+                        "notecard.codes.json#/$defs/auth-retry",
+                        "notecard.codes.json#/$defs/connect-aborted",
+                        "notecard.codes.json#/$defs/connect-failure",
+                        "notecard.codes.json#/$defs/connect-ll-failure",
+                        "notecard.codes.json#/$defs/device-delay-5",
+                        "notecard.codes.json#/$defs/device-disabled",
+                        "notecard.codes.json#/$defs/dfu-bad-target",
+                        "notecard.codes.json#/$defs/dfu-config-backup",
+                        "notecard.codes.json#/$defs/dfu-dl",
+                        "notecard.codes.json#/$defs/dfu-dl-chunk-length",
+                        "notecard.codes.json#/$defs/dfu-ext-chunk",
+                        "notecard.codes.json#/$defs/dfu-ext-get-length",
+                        "notecard.codes.json#/$defs/dfu-ext-length",
+                        "notecard.codes.json#/$defs/dfu-ext-written",
+                        "notecard.codes.json#/$defs/dfu-int-append",
+                        "notecard.codes.json#/$defs/dfu-int-chunk",
+                        "notecard.codes.json#/$defs/dfu-int-chunk-length",
+                        "notecard.codes.json#/$defs/dfu-modem-fs",
+                        "notecard.codes.json#/$defs/dfu-not-ready",
+                        "notecard.codes.json#/$defs/dfu-post-md5",
+                        "notecard.codes.json#/$defs/dfu-pre-md5",
+                        "notecard.codes.json#/$defs/dfu-sig",
+                        "notecard.codes.json#/$defs/dfu-superseded",
+                        "notecard.codes.json#/$defs/dfu-total-length",
+                        "notecard.codes.json#/$defs/dfu-watchdog",
+                        "notecard.codes.json#/$defs/extended-network-failure",
+                        "notecard.codes.json#/$defs/extended-service-failure",
+                        "notecard.codes.json#/$defs/file-open",
+                        "notecard.codes.json#/$defs/host-unreachable",
+                        "notecard.codes.json#/$defs/hub-not-connected",
+                        "notecard.codes.json#/$defs/incompatible",
+                        "notecard.codes.json#/$defs/modem-power-failure",
+                        "notecard.codes.json#/$defs/network",
+                        "notecard.codes.json#/$defs/network-timeout",
+                        "notecard.codes.json#/$defs/no-address",
+                        "notecard.codes.json#/$defs/no-handler",
+                        "notecard.codes.json#/$defs/no-session",
+                        "notecard.codes.json#/$defs/notefile-noexist",
+                        "notecard.codes.json#/$defs/notehub-open-failure",
+                        "notecard.codes.json#/$defs/odfu-aux-mode",
+                        "notecard.codes.json#/$defs/odfu-fail",
+                        "notecard.codes.json#/$defs/product-noexist",
+                        "notecard.codes.json#/$defs/receive-timeout",
+                        "notecard.codes.json#/$defs/registration-failure",
+                        "notecard.codes.json#/$defs/request-failure",
+                        "notecard.codes.json#/$defs/service",
+                        "notecard.codes.json#/$defs/session-closed",
+                        "notecard.codes.json#/$defs/socket-connect-error",
+                        "notecard.codes.json#/$defs/socket-dns-failure",
+                        "notecard.codes.json#/$defs/socket-invalid-cert",
+                        "notecard.codes.json#/$defs/socket-tls-error",
+                        "notecard.codes.json#/$defs/sync-error",
+                        "notecard.codes.json#/$defs/sync-local-error",
+                        "notecard.codes.json#/$defs/sync-remote-error",
+                        "notecard.codes.json#/$defs/ticket",
+                        "notecard.codes.json#/$defs/transport-unreachable",
+                        "notecard.codes.json#/$defs/web-payload",
+                        "notecard.codes.json#/$defs/wifi-ap",
+                        "notecard.codes.json#/$defs/wifi-auth",
+                        "notecard.codes.json#/$defs/wifi-config",
+                        "notecard.codes.json#/$defs/wifi-error",
+                        "notecard.codes.json#/$defs/wifi-fatal"
+                      ]
+                    },
                     "mode": {
                       "description": "The current state of the wireless connectivity module in use.",
                       "type": "string"
@@ -10227,8 +10529,131 @@
                       "x-min-api-version": "4.1.1"
                     },
                     "status": {
-                      "description": "The status of the current or previous sync. Refer to [this listing](/support/notecard-error-and-status-codes/) for the meaning of the various status codes returned (e.g. `{sync-end}`).",
-                      "type": "string"
+                      "description": "The status of the current or previous sync.",
+                      "type": "string",
+                      "codeRef": [
+                        "notecard.codes.json#/$defs/address-assigned",
+                        "notecard.codes.json#/$defs/auth",
+                        "notecard.codes.json#/$defs/auth-retry",
+                        "notecard.codes.json#/$defs/cell-disconnect-begin",
+                        "notecard.codes.json#/$defs/cell-disconnected",
+                        "notecard.codes.json#/$defs/cell-registered",
+                        "notecard.codes.json#/$defs/cell-registration-wait",
+                        "notecard.codes.json#/$defs/cell-scan",
+                        "notecard.codes.json#/$defs/cell-scan-wait",
+                        "notecard.codes.json#/$defs/connect-aborted",
+                        "notecard.codes.json#/$defs/connect-failure",
+                        "notecard.codes.json#/$defs/connect-ll-failure",
+                        "notecard.codes.json#/$defs/connected",
+                        "notecard.codes.json#/$defs/connecting",
+                        "notecard.codes.json#/$defs/device-delay-5",
+                        "notecard.codes.json#/$defs/device-disabled",
+                        "notecard.codes.json#/$defs/dfu-bad-target",
+                        "notecard.codes.json#/$defs/dfu-config-backup",
+                        "notecard.codes.json#/$defs/dfu-dl",
+                        "notecard.codes.json#/$defs/dfu-dl-chunk-length",
+                        "notecard.codes.json#/$defs/dfu-ext-chunk",
+                        "notecard.codes.json#/$defs/dfu-ext-get-length",
+                        "notecard.codes.json#/$defs/dfu-ext-length",
+                        "notecard.codes.json#/$defs/dfu-ext-written",
+                        "notecard.codes.json#/$defs/dfu-int-append",
+                        "notecard.codes.json#/$defs/dfu-int-chunk",
+                        "notecard.codes.json#/$defs/dfu-int-chunk-length",
+                        "notecard.codes.json#/$defs/dfu-modem-fs",
+                        "notecard.codes.json#/$defs/dfu-not-ready",
+                        "notecard.codes.json#/$defs/dfu-post-md5",
+                        "notecard.codes.json#/$defs/dfu-pre-md5",
+                        "notecard.codes.json#/$defs/dfu-sig",
+                        "notecard.codes.json#/$defs/dfu-superseded",
+                        "notecard.codes.json#/$defs/dfu-total-length",
+                        "notecard.codes.json#/$defs/dfu-watchdog",
+                        "notecard.codes.json#/$defs/disconnected",
+                        "notecard.codes.json#/$defs/disconnecting",
+                        "notecard.codes.json#/$defs/extended-network-failure",
+                        "notecard.codes.json#/$defs/extended-service-failure",
+                        "notecard.codes.json#/$defs/file-open",
+                        "notecard.codes.json#/$defs/host-retry",
+                        "notecard.codes.json#/$defs/host-unreachable",
+                        "notecard.codes.json#/$defs/hub-not-connected",
+                        "notecard.codes.json#/$defs/idle",
+                        "notecard.codes.json#/$defs/incompatible",
+                        "notecard.codes.json#/$defs/joining-network",
+                        "notecard.codes.json#/$defs/modem-off",
+                        "notecard.codes.json#/$defs/modem-on",
+                        "notecard.codes.json#/$defs/modem-power-failure",
+                        "notecard.codes.json#/$defs/net-init",
+                        "notecard.codes.json#/$defs/network",
+                        "notecard.codes.json#/$defs/network-error-wait",
+                        "notecard.codes.json#/$defs/network-timeout",
+                        "notecard.codes.json#/$defs/network-up",
+                        "notecard.codes.json#/$defs/no-address",
+                        "notecard.codes.json#/$defs/no-changes",
+                        "notecard.codes.json#/$defs/no-handler",
+                        "notecard.codes.json#/$defs/no-session",
+                        "notecard.codes.json#/$defs/not-connected",
+                        "notecard.codes.json#/$defs/notefile-noexist",
+                        "notecard.codes.json#/$defs/notehub-connected",
+                        "notecard.codes.json#/$defs/notehub-disconnected",
+                        "notecard.codes.json#/$defs/notehub-open-failure",
+                        "notecard.codes.json#/$defs/ntn-connected",
+                        "notecard.codes.json#/$defs/ntn-connecting",
+                        "notecard.codes.json#/$defs/ntn-disconnecting",
+                        "notecard.codes.json#/$defs/ntn-idle",
+                        "notecard.codes.json#/$defs/ntn-initializing",
+                        "notecard.codes.json#/$defs/ntn-power",
+                        "notecard.codes.json#/$defs/odfu-aux-mode",
+                        "notecard.codes.json#/$defs/odfu-fail",
+                        "notecard.codes.json#/$defs/product-noexist",
+                        "notecard.codes.json#/$defs/receive-timeout",
+                        "notecard.codes.json#/$defs/registration-failure",
+                        "notecard.codes.json#/$defs/request-failure",
+                        "notecard.codes.json#/$defs/service",
+                        "notecard.codes.json#/$defs/session-closed",
+                        "notecard.codes.json#/$defs/socket-closed-session",
+                        "notecard.codes.json#/$defs/socket-connect-error",
+                        "notecard.codes.json#/$defs/socket-connected",
+                        "notecard.codes.json#/$defs/socket-connecting",
+                        "notecard.codes.json#/$defs/socket-disconnected",
+                        "notecard.codes.json#/$defs/socket-dns-failure",
+                        "notecard.codes.json#/$defs/socket-dns-success",
+                        "notecard.codes.json#/$defs/socket-invalid-cert",
+                        "notecard.codes.json#/$defs/socket-ip-init",
+                        "notecard.codes.json#/$defs/socket-ip-term",
+                        "notecard.codes.json#/$defs/socket-open-session",
+                        "notecard.codes.json#/$defs/socket-opened-notification-session",
+                        "notecard.codes.json#/$defs/socket-opened-session",
+                        "notecard.codes.json#/$defs/socket-tls",
+                        "notecard.codes.json#/$defs/socket-tls-connected",
+                        "notecard.codes.json#/$defs/socket-tls-connecting",
+                        "notecard.codes.json#/$defs/socket-tls-error",
+                        "notecard.codes.json#/$defs/sync",
+                        "notecard.codes.json#/$defs/sync-begin",
+                        "notecard.codes.json#/$defs/sync-completed",
+                        "notecard.codes.json#/$defs/sync-disconnecting",
+                        "notecard.codes.json#/$defs/sync-end",
+                        "notecard.codes.json#/$defs/sync-error",
+                        "notecard.codes.json#/$defs/sync-get-local-changes",
+                        "notecard.codes.json#/$defs/sync-get-remote-changes",
+                        "notecard.codes.json#/$defs/sync-local-error",
+                        "notecard.codes.json#/$defs/sync-remote-error",
+                        "notecard.codes.json#/$defs/ticket",
+                        "notecard.codes.json#/$defs/transport",
+                        "notecard.codes.json#/$defs/transport-unreachable",
+                        "notecard.codes.json#/$defs/unavailable",
+                        "notecard.codes.json#/$defs/wait-data",
+                        "notecard.codes.json#/$defs/wait-gateway",
+                        "notecard.codes.json#/$defs/wait-service",
+                        "notecard.codes.json#/$defs/web-payload",
+                        "notecard.codes.json#/$defs/wifi-ap",
+                        "notecard.codes.json#/$defs/wifi-auth",
+                        "notecard.codes.json#/$defs/wifi-config",
+                        "notecard.codes.json#/$defs/wifi-disconnect-begin",
+                        "notecard.codes.json#/$defs/wifi-disconnected",
+                        "notecard.codes.json#/$defs/wifi-error",
+                        "notecard.codes.json#/$defs/wifi-fatal",
+                        "notecard.codes.json#/$defs/wifi-join-wait",
+                        "notecard.codes.json#/$defs/wifi-joined"
+                      ]
                     },
                     "sync": {
                       "description": "`true` if the notecard has unsynchronized notes, or requires a sync to set its internal clock.",
@@ -10241,8 +10666,7 @@
                   },
                   "required": [
                     "status"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -10377,8 +10801,7 @@
                     "description": "If set to `true` and using a templated Notefile, the Notefile will be written to flash immediately, rather than being cached in RAM and written to flash later.",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -10413,8 +10836,7 @@
                   },
                   "required": [
                     "total"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             },
@@ -10603,15 +11025,14 @@
                           "body",
                           "time"
                         ],
-                        "additionalProperties": false
+                        "unevaluatedProperties": false
                       }
                     },
                     "total": {
                       "description": "The total number of Notes in the Notefile.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -10714,8 +11135,7 @@
                 },
                 "required": [
                   "file"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -10783,15 +11203,14 @@
                           "body",
                           "time"
                         ],
-                        "additionalProperties": false
+                        "unevaluatedProperties": false
                       }
                     },
                     "total": {
                       "description": "The total number of Notes in the Notefile.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -10873,8 +11292,7 @@
                 "required": [
                   "file",
                   "note"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -11034,8 +11452,7 @@
                       "description": "The time the Note was added to the Notecard or Notehub.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -11107,8 +11524,7 @@
                     "description": "If the Notefile has a `.db` or `.dbx` extension, specifies a unique Note ID. Not applicable to `.qi` Notefiles.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -11160,8 +11576,7 @@
                       "description": "The time the Note was added to the Notecard or Notehub.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -11273,8 +11688,7 @@
                 },
                 "required": [
                   "file"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -11299,6 +11713,11 @@
             "title": "Request Current Template",
             "description": "Retrieve the current template configuration for the readings.qo Notefile.",
             "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"verify\":true}"
+          },
+          {
+            "title": "Clear Template",
+            "description": "Clear the template from readings.qo. Omitting `body` and `payload` removes the template schema; subsequent Notes added to the Notefile will be stored as regular JSON objects.",
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\"}"
           }
         ],
         "responses": {
@@ -11331,8 +11750,7 @@
                       "type": "boolean",
                       "x-min-api-version": "3.2.1"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -11436,8 +11854,7 @@
                 },
                 "required": [
                   "file"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -11462,6 +11879,11 @@
             "title": "Request Current Template",
             "description": "Retrieve the current template configuration for the readings.qo Notefile.",
             "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"verify\":true}"
+          },
+          {
+            "title": "Clear Template",
+            "description": "Clear the template from readings.qo. Omitting `body` and `payload` removes the template schema; subsequent Notes added to the Notefile will be stored as regular JSON objects.",
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\"}"
           }
         ],
         "responses": {
@@ -11494,8 +11916,7 @@
                       "type": "boolean",
                       "x-min-api-version": "3.2.1"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -11578,6 +11999,10 @@
                     "description": "A base64-encoded binary payload. A Note must have either a `body` or `payload`, and can have both.",
                     "type": "string"
                   },
+                  "sync": {
+                    "description": "Set to `true` to sync the Notefile immediately after updating the Note. Only the specified Notefile is guaranteed to sync.",
+                    "type": "boolean"
+                  },
                   "verify": {
                     "description": "If set to `true` and using a templated Notefile, the Notefile will be written to flash immediately, rather than being cached in RAM and written to flash later.",
                     "type": "boolean"
@@ -11586,8 +12011,7 @@
                 "required": [
                   "file",
                   "note"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -11617,6 +12041,11 @@
             "title": "Update with Command",
             "description": "Update a Note using command syntax (no response expected).",
             "json": "{\"cmd\": \"note.update\", \"file\": \"cache.db\", \"note\": \"temp-data\", \"body\": {\"status\": \"updated\"}}"
+          },
+          {
+            "title": "Update and Sync",
+            "description": "Update a Note and trigger an immediate sync of the Notefile.",
+            "json": "{\"req\": \"note.update\", \"file\": \"my-settings.db\", \"note\": \"measurements\", \"body\": {\"interval\": 60}, \"sync\": true}"
           }
         ],
         "responses": {
@@ -11667,15 +12096,14 @@
                     }
                   },
                   "on": {
-                    "description": "When `true`, a Starnote will use the GPS/GNSS location from its paired Notecard, instead of its own GPS/GNSS location.",
+                    "description": "When `true`, a Starnote will use the location known to its paired Notecard, instead of the Starnote's own GPS/GNSS module.",
                     "type": "boolean",
                     "x-toggle": {
                       "group": "gps",
                       "method": "useNotecardGps"
                     }
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -11713,8 +12141,7 @@
                       "description": "Returned and `true` if a Starnote will use the GPS/GNSS location from its paired Notecard.",
                       "type": "boolean"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -11822,8 +12249,7 @@
                       "description": "Details about a Notecard's connection to a paired Starnote, for example: `{\"status\":\"{ntn-idle}{ntn-unknown-location}\"}`",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -11889,8 +12315,7 @@
                     "description": "The unique Note ID.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -11997,8 +12422,7 @@
                       "description": "The numeric value stored in the DB Notefile.",
                       "type": "number"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -12081,8 +12505,7 @@
                     "description": "The numeric value to be stored in the DB Notefile.",
                     "type": "number"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -12207,8 +12630,7 @@
                     "description": "Alias for a Proxy Route in Notehub.",
                     "type": "string"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -12253,8 +12675,7 @@
                       "description": "MD5 hash of the binary payload, if any.",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -12329,8 +12750,7 @@
                     "default": 90,
                     "type": "integer"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -12375,8 +12795,7 @@
                       "description": "Size of the unencoded binary payload (in bytes).",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -12538,8 +12957,7 @@
                       "description": "The HTTP Status Code.",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -12652,8 +13070,7 @@
                     "description": "`true` to request verification from Notehub once the payload or payload fragment is received. Automatically set to `true` when `status` is supplied.",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -12698,8 +13115,7 @@
                       "description": "If a `payload` is returned in the response, this is a 32-character hex-encoded MD5 sum of the payload or payload fragment. Useful for the host to check for any I2C/UART corruption.",
                       "type": "string"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },
@@ -12813,8 +13229,7 @@
                     "description": "`true` to request verification from Notehub once the payload or payload fragment is received. Automatically set to `true` when `status` is supplied.",
                     "type": "boolean"
                   }
-                },
-                "additionalProperties": false
+                }
               }
             }
           }
@@ -12859,8 +13274,7 @@
                       "description": "Size of the unencoded binary payload (in bytes).",
                       "type": "integer"
                     }
-                  },
-                  "additionalProperties": false
+                  }
                 }
               }
             },

@@ -44,6 +44,9 @@ struct CardTransport {
         static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char umin[] NOTE_FLASH_ATTR = "umin";
         static constexpr char rsp_method[] NOTE_FLASH_ATTR = "method";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_allow[] NOTE_FLASH_ATTR = "allow";
+        static constexpr char rsp_umin[] NOTE_FLASH_ATTR = "umin";
     };
 
     static constexpr string_view notecard_request = "card.transport";
@@ -126,9 +129,9 @@ struct CardTransport {
         CardTransport& operator()(note::string_view v);
     } method{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    /// The amount of time a Notecard will spend on any fallback transport
-    /// before retrying the first transport specified in the `method`. The
-    /// default is `3600` or 60 minutes.
+    /// The amount of time (in seconds) a Notecard will spend on any fallback
+    /// transport before retrying the first transport specified in the `method`.
+    /// The default is `3600` or 60 minutes.
     ///
     /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
@@ -137,9 +140,9 @@ struct CardTransport {
     struct seconds_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// The amount of time a Notecard will spend on any fallback transport
-        /// before retrying the first transport specified in the `method`. The
-        /// default is `3600` or 60 minutes.
+        /// The amount of time (in seconds) a Notecard will spend on any
+        /// fallback transport before retrying the first transport specified in
+        /// the `method`. The default is `3600` or 60 minutes.
         ///
         /// @since{5.3.1}
         CardTransport& operator()(note::json_int_t v);
@@ -235,6 +238,38 @@ struct CardTransport {
 
         /// The connectivity method currently enabled on the device.
         note::ResponseField<note::string_view> method{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+        /// The amount of time (in seconds) the Notecard will spend on any
+        /// fallback transport before retrying the first transport specified in
+        /// the `method`. The default is `3600` (60 minutes).
+        ///
+        /// @since{5.3.1}
+#if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
+        [[deprecated("requires firmware >= 5.3.1")]]
+#endif
+        note::ResponseField<note::json_int_t> seconds{};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+        /// When `true`, the Notecard is configured to allow adding Notes to
+        /// non-compact Notefiles while connected over a non-terrestrial
+        /// network. See Define NTN vs non-NTN Templates.
+        ///
+        /// @since{7.2.1}
+#if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
+        [[deprecated("requires firmware >= 7.2.1")]]
+#endif
+        note::ResponseField<bool> allow{};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+        /// When `true`, the Notecard is configured to force a longer network
+        /// transport timeout when using Wideband Notecards.
+        ///
+        /// @since{9.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
+        [[deprecated("requires firmware >= 9.1.1")]]
+#endif
+        note::ResponseField<bool> umin{};
+#endif
 
 #if !NOTE_NO_RESPONSE_RAII
         /// Allocator that minted this Response's interned string fields,
@@ -270,27 +305,53 @@ struct CardTransport {
         Response& operator=(const Response&) = delete;
 #endif // !NOTE_NO_RESPONSE_RAII
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("method")) rsp.method = reader_->get_string("method");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            if (reader_->has("allow")) rsp.allow = reader_->get_bool("allow");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+            if (reader_->has("umin")) rsp.umin = reader_->get_bool("umin");
+#endif
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+#pragma GCC diagnostic pop
 
         // Non-owning parse: string_views point into the reader's data.
         // The reader (and its underlying JSON buffer) must outlive the Response,
         // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("method")) rsp.method = reader_.get_string("method");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            if (reader_.has("allow")) rsp.allow = reader_.get_bool("allow");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+            if (reader_.has("umin")) rsp.umin = reader_.get_bool("umin");
+#endif
             return rsp;
         }
+#pragma GCC diagnostic pop
 #endif // !NOTE_NO_JSON_TREE
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
         // string_views survive after the parser's scratch buffer is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
@@ -300,14 +361,36 @@ struct CardTransport {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_method) == k_) { rsp.method = v_; return; }
             }
+            NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+                if (note::flash(keys_::rsp_allow) == k_) { rsp.allow = v_; return; }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+                if (note::flash(keys_::rsp_umin) == k_) { rsp.umin = v_; return; }
+#endif
+            }
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
+#endif
+            }
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#endif
+            }
             NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
+#pragma GCC diagnostic pop
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
             if (!method.empty()) method = pool.intern(method);
         }
+#pragma GCC diagnostic pop
 
 #ifdef ARDUINO
         /// Arduino Printable: prints response fields to Serial or any Print stream.
@@ -318,6 +401,24 @@ struct CardTransport {
             first_ = false;
             n += p.print("\"method\":");
             n += note::detail::print_json_value(p, method.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"seconds\":");
+            n += note::detail::print_json_value(p, seconds.value());
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"allow\":");
+            n += note::detail::print_json_value(p, allow.value());
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"umin\":");
+            n += note::detail::print_json_value(p, umin.value());
+#endif
             n += p.print("}");
             return n;
         }
@@ -449,6 +550,15 @@ struct request_traits<::note::api::CardTransport> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardTransport::keys_::rsp_method, static_cast<uint16_t>(offsetof(::note::api::CardTransport::Response, method)), ::note::FieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardTransport::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardTransport::Response, seconds)), ::note::FieldType::Int},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardTransport::keys_::rsp_allow, static_cast<uint16_t>(offsetof(::note::api::CardTransport::Response, allow)), ::note::FieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardTransport::keys_::rsp_umin, static_cast<uint16_t>(offsetof(::note::api::CardTransport::Response, umin)), ::note::FieldType::Bool},
+#endif
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

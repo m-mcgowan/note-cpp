@@ -57,6 +57,8 @@ struct CardAuxSerial {
             static constexpr char ms[] NOTE_FLASH_ATTR = "ms";
             static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
             static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_ms[] NOTE_FLASH_ATTR = "ms";
             static constexpr char rsp_rate[] NOTE_FLASH_ATTR = "rate";
         };
 
@@ -71,13 +73,13 @@ struct CardAuxSerial {
 #endif
 
 
-        /// If using `"mode": "accel"`, specify a sampling duration for the
-        /// Notecard accelerometer.
+        /// If using `"mode": "notify,accel"`, specify a sampling duration (in
+        /// milliseconds) for the Notecard accelerometer.
         struct duration_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// If using `"mode": "accel"`, specify a sampling duration for the
-            /// Notecard accelerometer.
+            /// If using `"mode": "notify,accel"`, specify a sampling duration
+            /// (in milliseconds) for the Notecard accelerometer.
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } duration{};
         /// If `true`, along with `"mode":"gps"` the Notecard will disable
@@ -94,7 +96,7 @@ struct CardAuxSerial {
         /// incoming data. This value should be set to the size of the host's
         /// serial receive buffer minus `1`, which represents the number of
         /// bytes the host can absorb before the sender must delay due to the
-        /// absence of flow control. For example, `note-arduino`` uses a buffer
+        /// absence of flow control. For example, `note-arduino` uses a buffer
         /// size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
@@ -105,7 +107,7 @@ struct CardAuxSerial {
             /// of the host's serial receive buffer minus `1`, which represents
             /// the number of bytes the host can absorb before the sender must
             /// delay due to the absence of flow control. For example, `note-
-            /// arduino`` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
+            /// arduino` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -283,6 +285,13 @@ struct CardAuxSerial {
 
             /// The current AUX `mode`.
             note::ResponseField<note::string_view> mode{};
+            /// The currently configured `max` transmission size, in bytes.
+            /// Returned only when a non-zero value has been configured.
+            note::ResponseField<note::json_int_t> max{};
+            /// The currently configured `ms` delay between transmissions, in
+            /// milliseconds. Returned only when a non-zero value has been
+            /// configured.
+            note::ResponseField<note::json_int_t> ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// The baud rate or speed at which information is transmitted over
             /// AUX serial.
@@ -334,6 +343,8 @@ struct CardAuxSerial {
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("ms")) rsp.ms = reader_->get_int("ms");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("rate")) rsp.rate = reader_->get_int("rate");
 #endif
@@ -350,6 +361,8 @@ struct CardAuxSerial {
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
                 if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("ms")) rsp.ms = reader_.get_int("ms");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("rate")) rsp.rate = reader_.get_int("rate");
 #endif
@@ -373,11 +386,15 @@ struct CardAuxSerial {
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_ms) == k_) { rsp.ms = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = ::note::parse_int(raw_); return; }
 #endif
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                    if (note::flash(keys_::rsp_ms) == k_) { rsp.ms = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = v_; return; }
 #endif
@@ -404,6 +421,14 @@ struct CardAuxSerial {
                 first_ = false;
                 n += p.print("\"mode\":");
                 n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"max\":");
+                n += note::detail::print_json_value(p, max.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"ms\":");
+                n += note::detail::print_json_value(p, ms.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -538,13 +563,13 @@ struct CardAuxSerial {
 #endif
 
 
-        /// If using `"mode": "accel"`, specify a sampling duration for the
-        /// Notecard accelerometer.
+        /// If using `"mode": "notify,accel"`, specify a sampling duration (in
+        /// milliseconds) for the Notecard accelerometer.
         struct duration_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// If using `"mode": "accel"`, specify a sampling duration for the
-            /// Notecard accelerometer.
+            /// If using `"mode": "notify,accel"`, specify a sampling duration
+            /// (in milliseconds) for the Notecard accelerometer.
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } duration{};
         /// The maximum amount of data, in bytes, that can be sent in a single
@@ -552,7 +577,7 @@ struct CardAuxSerial {
         /// incoming data. This value should be set to the size of the host's
         /// serial receive buffer minus `1`, which represents the number of
         /// bytes the host can absorb before the sender must delay due to the
-        /// absence of flow control. For example, `note-arduino`` uses a buffer
+        /// absence of flow control. For example, `note-arduino` uses a buffer
         /// size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
@@ -563,7 +588,7 @@ struct CardAuxSerial {
             /// of the host's serial receive buffer minus `1`, which represents
             /// the number of bytes the host can absorb before the sender must
             /// delay due to the absence of flow control. For example, `note-
-            /// arduino`` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
+            /// arduino` uses a buffer size of `(SERIAL_RX_BUFFER_SIZE - 1)`.
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -1324,6 +1349,8 @@ struct request_traits<::note::api::CardAuxSerial::Request> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardAuxSerial::Request::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardAuxSerial::Request::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardAuxSerial::Request::keys_::rsp_ms, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request::Response, ms)), ::note::FieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardAuxSerial::Request::keys_::rsp_rate, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request::Response, rate)), ::note::FieldType::Int},
 #endif

@@ -39,6 +39,7 @@ struct HubSyncStatus {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "hub.sync.status";
         static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
         static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
         static constexpr char rsp_completed[] NOTE_FLASH_ATTR = "completed";
@@ -108,15 +109,17 @@ struct HubSyncStatus {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(49) +
             ::note::detail::arena_cost(33) +
             ::note::detail::arena_cost(81) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
+        /// If present, a string describing the error that occurred during sync,
+        /// e.g. `{"err":"sync error {sync-error}"}`.
+        note::ResponseField<note::string_view> err{};
         /// The current state of the wireless connectivity module in use.
         note::ResponseField<note::string_view> mode{};
-        /// The status of the current or previous sync. Refer to this listing
-        /// for the meaning of the various status codes returned (e.g. `{sync-
-        /// end}`).
+        /// The status of the current or previous sync.
         note::ResponseField<note::string_view> status{};
         /// Number of seconds since the last sync completion.
         note::ResponseField<note::json_int_t> completed{};
@@ -162,9 +165,10 @@ struct HubSyncStatus {
             if (!alloc_) return;
 #if NOTE_RESPONSE_RELEASE_LOOP
             ::note::detail::release_string_fields(*alloc_,
-                &mode,
-                2);
+                &err,
+                3);
 #else
+            ::note::detail::deallocate_if_present(*alloc_, err.value());
             ::note::detail::deallocate_if_present(*alloc_, mode.value());
             ::note::detail::deallocate_if_present(*alloc_, status.value());
 #endif
@@ -191,6 +195,7 @@ struct HubSyncStatus {
 #if !NOTE_NO_JSON_TREE
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
+            if (reader_->has("err")) rsp.err = reader_->get_string("err");
             if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
             if (reader_->has("completed")) rsp.completed = reader_->get_int("completed");
@@ -216,6 +221,7 @@ struct HubSyncStatus {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
+            if (reader_.has("err")) rsp.err = reader_.get_string("err");
             if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
             if (reader_.has("completed")) rsp.completed = reader_.get_int("completed");
@@ -246,6 +252,7 @@ struct HubSyncStatus {
             }
             NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
+                if (note::flash(keys_::rsp_err) == k_) { rsp.err = v_; return; }
                 if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
@@ -281,6 +288,7 @@ struct HubSyncStatus {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
+            if (!err.empty()) err = pool.intern(err);
             if (!mode.empty()) mode = pool.intern(mode);
             if (!status.empty()) status = pool.intern(status);
         }
@@ -291,6 +299,10 @@ struct HubSyncStatus {
         size_t printTo(Print& p) const {
             size_t n = p.print("{");
             bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"err\":");
+            n += note::detail::print_json_value(p, err.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"mode\":");
@@ -421,6 +433,7 @@ struct request_traits<::note::api::HubSyncStatus> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::HubSyncStatus::keys_::rsp_err, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, err)), ::note::FieldType::String},
         {::note::api::HubSyncStatus::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, mode)), ::note::FieldType::String},
         {::note::api::HubSyncStatus::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, status)), ::note::FieldType::String},
         {::note::api::HubSyncStatus::keys_::rsp_completed, static_cast<uint16_t>(offsetof(::note::api::HubSyncStatus::Response, completed)), ::note::FieldType::Int},

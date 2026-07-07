@@ -10,6 +10,19 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+### Added
+- Typed request/response coverage for fields introduced in [notecard-schema v1.3.1](https://github.com/blues/notecard-schema/releases/tag/v1.3.1):
+  - `note.update` — new `sync` request field (sync the Notefile immediately after the update).
+  - `card.voltage` — `mode` now accepts a string value, plus response fields including `calibration`, `alert`, `on`, and `sync`.
+  - `card.motion.mode` — response fields `motion`, `seconds`, `start`, and `stop`.
+  - `card.transport` — additional response fields (`allow`, `umin`, and related).
+  - `card.aux.serial` — response fields `max` and `ms`.
+  - `card.location.mode` / `card.location.track` — heartbeat fields including `journey` and `hours`.
+  - Smaller additions across `hub.status`, `hub.sync.status`, `card.temp`, `card.wifi`, and `ntn.gps`.
+
+### Changed
+- Synced the bundled Notecard API definitions to notecard-schema v1.3.1 (upstream `fa30210`), regenerating the typed API and the API reference. Existing code continues to compile unchanged — the update only adds fields.
+
 ## [0.3.0] - 2026-07-02
 
 ### Added

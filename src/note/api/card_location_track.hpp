@@ -58,9 +58,11 @@ struct CardLocationTrack {
         static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
         static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
         static constexpr char rsp_file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
         static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
         static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_heartbeat[] NOTE_FLASH_ATTR = "heartbeat";
+        static constexpr char rsp_journey[] NOTE_FLASH_ATTR = "journey";
         static constexpr char rsp_start[] NOTE_FLASH_ATTR = "start";
         static constexpr char rsp_stop[] NOTE_FLASH_ATTR = "stop";
     };
@@ -87,26 +89,31 @@ struct CardLocationTrack {
         /// the data captured.
         CardLocationTrack& operator()(note::string_view v);
     } file{};
-    /// When `start` is `true`, set to `true` to enable tracking even when
-    /// motion is not detected. If using `heartbeat`, also set the `hours`
-    /// below.
+    /// When `start` is `true`, set to `true` to capture a tracking Note on a
+    /// fixed interval even when no motion has been detected. The interval is
+    /// configured with the `hours` field below.
     struct heartbeat_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// When `start` is `true`, set to `true` to enable tracking even when
-        /// motion is not detected. If using `heartbeat`, also set the `hours`
-        /// below.
+        /// When `start` is `true`, set to `true` to capture a tracking Note on
+        /// a fixed interval even when no motion has been detected. The interval
+        /// is configured with the `hours` field below.
         CardLocationTrack& operator()(bool v);
     } heartbeat{};
-    /// If `heartbeat` is true, add a heartbeat entry at this hourly interval.
-    /// Use a negative integer to specify a heartbeat in minutes instead of
-    /// hours.
+    /// When `heartbeat` is `true`, the interval at which to capture a heartbeat
+    /// tracking Note. A positive value sets the interval in hours (e.g. `2`
+    /// captures a Note every two hours). To configure an interval shorter than
+    /// one hour, pass a negative integer whose absolute value is the number of
+    /// minutes (e.g. `-30` captures a Note every 30 minutes).
     struct hours_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// If `heartbeat` is true, add a heartbeat entry at this hourly
-        /// interval. Use a negative integer to specify a heartbeat in minutes
-        /// instead of hours.
+        /// When `heartbeat` is `true`, the interval at which to capture a
+        /// heartbeat tracking Note. A positive value sets the interval in hours
+        /// (e.g. `2` captures a Note every two hours). To configure an interval
+        /// shorter than one hour, pass a negative integer whose absolute value
+        /// is the number of minutes (e.g. `-30` captures a Note every 30
+        /// minutes).
         CardLocationTrack& operator()(note::json_int_t v);
     } hours{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
@@ -208,13 +215,28 @@ struct CardLocationTrack {
 
         /// The tracking Notefile, if provided.
         note::ResponseField<note::string_view> file{};
-        /// The `heartbeat` interval in minutes, if provided.
+        /// The configured heartbeat interval in hours. Only returned when the
+        /// heartbeat interval is a whole number of hours; otherwise, the
+        /// interval is returned in `minutes` instead. `hours` and `minutes` are
+        /// never returned together.
+        note::ResponseField<note::json_int_t> hours{};
+        /// The configured heartbeat interval in minutes. Only returned when the
+        /// heartbeat interval is not a whole number of hours; when the interval
+        /// is a whole number of hours, it is returned in `hours` instead.
+        /// `hours` and `minutes` are never returned together.
         note::ResponseField<note::json_int_t> minutes{};
-        /// If tracking is enabled and a heartbeat `hours` value is not set, the
-        /// tracking interval set in `card.location.mode`.
+        /// If tracking is enabled and no heartbeat interval is configured, the
+        /// periodic tracking interval set via `card.location.mode`.
         note::ResponseField<note::json_int_t> seconds{};
         /// `true` if heartbeat is enabled.
         note::ResponseField<bool> heartbeat{};
+        /// `true` if a journey is currently in progress (i.e., the Notecard has
+        /// detected motion and is actively tracking a journey). The Notecard
+        /// tracks journeys when `card.location.mode` is set to `continuous` or
+        /// to `periodic` with `seconds` less than 300. See `_track.qo` for
+        /// details on the `journey` and `jcount` fields included in tracking
+        /// Notes.
+        note::ResponseField<bool> journey{};
         /// `true` if tracking is enabled.
         note::ResponseField<bool> start{};
         /// `true` if tracking is disabled.
@@ -258,9 +280,11 @@ struct CardLocationTrack {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("file")) rsp.file = reader_->get_string("file");
+            if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
             if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
             if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
             if (reader_->has("heartbeat")) rsp.heartbeat = reader_->get_bool("heartbeat");
+            if (reader_->has("journey")) rsp.journey = reader_->get_bool("journey");
             if (reader_->has("start")) rsp.start = reader_->get_bool("start");
             if (reader_->has("stop")) rsp.stop = reader_->get_bool("stop");
             rsp.reader_ = std::move(reader_);
@@ -273,9 +297,11 @@ struct CardLocationTrack {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
             if (reader_.has("file")) rsp.file = reader_.get_string("file");
+            if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
             if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
             if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
             if (reader_.has("heartbeat")) rsp.heartbeat = reader_.get_bool("heartbeat");
+            if (reader_.has("journey")) rsp.journey = reader_.get_bool("journey");
             if (reader_.has("start")) rsp.start = reader_.get_bool("start");
             if (reader_.has("stop")) rsp.stop = reader_.get_bool("stop");
             return rsp;
@@ -296,14 +322,17 @@ struct CardLocationTrack {
             }
             NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_heartbeat) == k_) { rsp.heartbeat = v_; return; }
+                if (note::flash(keys_::rsp_journey) == k_) { rsp.journey = v_; return; }
                 if (note::flash(keys_::rsp_start) == k_) { rsp.start = v_; return; }
                 if (note::flash(keys_::rsp_stop) == k_) { rsp.stop = v_; return; }
             }
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
             NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = v_; return; }
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
             }
@@ -327,6 +356,10 @@ struct CardLocationTrack {
             n += note::detail::print_json_value(p, file.value());
             if (!first_) n += p.print(",");
             first_ = false;
+            n += p.print("\"hours\":");
+            n += note::detail::print_json_value(p, hours.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
             n += p.print("\"minutes\":");
             n += note::detail::print_json_value(p, minutes.value());
             if (!first_) n += p.print(",");
@@ -337,6 +370,10 @@ struct CardLocationTrack {
             first_ = false;
             n += p.print("\"heartbeat\":");
             n += note::detail::print_json_value(p, heartbeat.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"journey\":");
+            n += note::detail::print_json_value(p, journey.value());
             if (!first_) n += p.print(",");
             first_ = false;
             n += p.print("\"start\":");
@@ -495,9 +532,11 @@ struct request_traits<::note::api::CardLocationTrack> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardLocationTrack::keys_::rsp_file, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, file)), ::note::FieldType::String},
+        {::note::api::CardLocationTrack::keys_::rsp_hours, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, hours)), ::note::FieldType::Int},
         {::note::api::CardLocationTrack::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, minutes)), ::note::FieldType::Int},
         {::note::api::CardLocationTrack::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, seconds)), ::note::FieldType::Int},
         {::note::api::CardLocationTrack::keys_::rsp_heartbeat, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, heartbeat)), ::note::FieldType::Bool},
+        {::note::api::CardLocationTrack::keys_::rsp_journey, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, journey)), ::note::FieldType::Bool},
         {::note::api::CardLocationTrack::keys_::rsp_start, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, start)), ::note::FieldType::Bool},
         {::note::api::CardLocationTrack::keys_::rsp_stop, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack::Response, stop)), ::note::FieldType::Bool},
     };

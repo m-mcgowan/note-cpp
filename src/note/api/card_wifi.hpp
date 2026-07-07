@@ -32,7 +32,7 @@ namespace note::api {
 
 
 
-/// Sets up a Notecard WiFi to connect to a WiFi access point.
+/// Sets up a Notecard's connection to a WiFi access point.
 ///
 /// @skus{CELL+WIFI,SKYLO,WIFI}
 struct CardWifi {

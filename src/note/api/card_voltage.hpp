@@ -56,6 +56,7 @@ struct CardVoltage {
             static constexpr char vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char vmin[] NOTE_FLASH_ATTR = "vmin";
             static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_calibration[] NOTE_FLASH_ATTR = "calibration";
             static constexpr char rsp_daily[] NOTE_FLASH_ATTR = "daily";
             static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
@@ -65,6 +66,9 @@ struct CardVoltage {
             static constexpr char rsp_vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char rsp_vmin[] NOTE_FLASH_ATTR = "vmin";
             static constexpr char rsp_weekly[] NOTE_FLASH_ATTR = "weekly";
+            static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
+            static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
             static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
@@ -80,13 +84,13 @@ struct CardVoltage {
 
 
         /// When enabled and the `usb` argument is set to `true`, the Notecard
-        /// will add an entry to the `health.qo` Notefile when USB power is
+        /// will add an entry to the `_health.qo` Notefile when USB power is
         /// connected or disconnected.
         struct alert_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
             /// When enabled and the `usb` argument is set to `true`, the
-            /// Notecard will add an entry to the `health.qo` Notefile when USB
+            /// Notecard will add an entry to the `_health.qo` Notefile when USB
             /// power is connected or disconnected.
             CardVoltage::Read& operator()(bool v);
         } alert{};
@@ -123,53 +127,26 @@ struct CardVoltage {
         /// voltage reading to a given device state like `high`, `normal`,
         /// `low`, and `dead`.
         ///
+        /// In addition to the named presets below, a custom semicolon-separated
+        /// shorthand string may be provided using any combination of the `usb`,
+        /// `high`, `normal`, `low`, and `dead` states (e.g.
+        /// `"usb:4.6;high:4.2;normal:3.6;low:0"`).
+        ///
         /// NOTE: Setting voltage thresholds is not supported on the Notecard
         /// XP.
-        // mode: default | lipo | l91 | alkaline | tad | lic | ?
         struct mode_t : Field<note::string_view> {
-#if __cplusplus >= 202002L && !defined(__clang__)
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                note::string_view sv(s, N - 1);
-                if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
-                    throw "card.voltage: invalid value for 'mode'";
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            mode_t(const mode_t&) = default;
-            mode_t& operator=(const mode_t&) = default;
-            mode_t(mode_t&&) = default;
-            mode_t& operator=(mode_t&&) = default;
-#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
-            static constexpr note::string_view default_{"default"};
-            static constexpr note::string_view lipo{"lipo"};
-            static constexpr note::string_view l91{"l91"};
-            static constexpr note::string_view alkaline{"alkaline"};
-            static constexpr note::string_view tad{"tad"};
-            static constexpr note::string_view lic{"lic"};
-            static constexpr note::string_view unknown{"?"};
             /// Used to set voltage thresholds based on how the Notecard will be
             /// powered, and which can be used to configure voltage-variable
             /// Notecard behavior. Each value is shorthand that assigns a
             /// battery voltage reading to a given device state like `high`,
             /// `normal`, `low`, and `dead`.
+            ///
+            /// In addition to the named presets below, a custom semicolon-
+            /// separated shorthand string may be provided using any combination
+            /// of the `usb`, `high`, `normal`, `low`, and `dead` states (e.g.
+            /// `"usb:4.6;high:4.2;normal:3.6;low:0"`).
             ///
             /// NOTE: Setting voltage thresholds is not supported on the
             /// Notecard XP.
@@ -261,23 +238,6 @@ struct CardVoltage {
             CardVoltage::Read& operator()(double v);
         } vmin{};
 
-        // Valid values for 'mode':
-        //   "default" — Default behavior. Equivalent to `normal:2.5;dead:0`.
-        //   "lipo" — LiPo batteries. Equivalent to `usb:4.6;high:4.0;normal:3.5;low:3.2;dead:0`.
-        //   "l91" — L91 batteries. Equivalent to `high:5.0;normal:4.5;low:0`.
-        //   "alkaline" — Alkaline batteries. Equivalent to `usb:4.6;high:4.2;normal:3.6;low:0`.
-        //   "tad" — Tadiran HLC batteries. Equivalent to `usb:4.6;normal:3.2;low:0`.
-        //   "lic" — Lithium-ion capacitors. Equivalent to `usb:4.6;high:3.8;normal:3.1;low:0`.
-        //   "?" — Query the Notecard for its currently-set thresholds.
-        // consteval: only callable at compile time (C++20)
-#if __cplusplus >= 202002L
-        static consteval note::string_view validatedMode(const char* v) {
-            note::string_view sv{v};
-            if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
-                throw "card.voltage: invalid value for 'mode'";
-            return sv;
-        }
-#endif
 
     // Semantic convenience methods — generated from x-toggle / x-action metadata
     // (method names that match a field accessor are skipped to avoid redefinition)
@@ -347,29 +307,58 @@ struct CardVoltage {
             /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
             /// voltage of `3.9`, the mode value would be `"normal"`.
             note::ResponseField<note::string_view> mode{};
-            /// Change of moving average in the last 24 hours, if relevant to
-            /// the time period analyzed.
+            /// If a user calibration value has been saved (via `"set": true`),
+            /// this is that value; otherwise it is the hardware-supplied
+            /// default.
+            note::ResponseField<double> calibration{};
+            /// Change in the 24-hour moving average over the analyzed window.
+            /// Only present when historic voltage trend calculations have been
+            /// enabled with `"on": true` and the analyzed window includes at
+            /// least 24 hours of history.
             note::ResponseField<double> daily{};
-            /// The number of hours used for trend analysis.
+            /// The number of hours of voltage history actually used in the
+            /// analysis. Only present when historic voltage trend calculations
+            /// have been enabled with `"on": true`.
             note::ResponseField<note::json_int_t> hours{};
-            /// Represents the Notecard's uptime in minutes. This field is not
-            /// present when the device is powered via USB.
+            /// The number of minutes since the Notecard was last on USB power.
+            /// Not present when the Notecard is currently connected to USB
+            /// power.
             note::ResponseField<note::json_int_t> minutes{};
-            /// Change of moving average in the last 30 days, if relevant to the
-            /// time period analyzed.
+            /// Change in the 30-day moving average over the analyzed window.
+            /// Only present when historic voltage trend calculations have been
+            /// enabled with `"on": true` and the analyzed window includes at
+            /// least 30 days of history.
             note::ResponseField<double> monthly{};
             /// The current voltage.
             note::ResponseField<double> value{};
-            /// The average voltage value during the measured period.
+            /// The average voltage during the analyzed window. Only present
+            /// when historic voltage trend calculations have been enabled with
+            /// `"on": true`.
             note::ResponseField<double> vavg{};
-            /// The highest voltage value captured during the measurement
-            /// period.
+            /// The highest voltage during the analyzed window. Only present
+            /// when historic voltage trend calculations have been enabled with
+            /// `"on": true`.
             note::ResponseField<double> vmax{};
-            /// The lowest voltage value captured during the measurement period.
+            /// The lowest voltage during the analyzed window. Only present when
+            /// historic voltage trend calculations have been enabled with
+            /// `"on": true`.
             note::ResponseField<double> vmin{};
-            /// Change of moving average in the last 7 days, if relevant to the
-            /// time period analyzed.
+            /// Change in the 7-day moving average over the analyzed window.
+            /// Only present when historic voltage trend calculations have been
+            /// enabled with `"on": true` and the analyzed window includes at
+            /// least 7 days of history.
             note::ResponseField<double> weekly{};
+            /// `true` if the Notecard is configured to add an entry to the
+            /// `_health.qo` Notefile on USB connect/disconnect (enabled by
+            /// sending `card.voltage` with `"usb": true, "alert": true`).
+            note::ResponseField<bool> alert{};
+            /// `true` if the request that produced this response set `"on":
+            /// true`.
+            note::ResponseField<bool> on{};
+            /// `true` if the Notecard is configured to perform a sync on USB
+            /// connect/disconnect (enabled by sending `card.voltage` with
+            /// `"usb": true, "sync": true`).
+            note::ResponseField<bool> sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             /// `true` if the Notecard is connected to USB power.
             ///
@@ -420,6 +409,7 @@ struct CardVoltage {
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
                 if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
                 if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
@@ -429,6 +419,9 @@ struct CardVoltage {
                 if (reader_->has("vmax")) rsp.vmax = reader_->get_double("vmax");
                 if (reader_->has("vmin")) rsp.vmin = reader_->get_double("vmin");
                 if (reader_->has("weekly")) rsp.weekly = reader_->get_double("weekly");
+                if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
+                if (reader_->has("on")) rsp.on = reader_->get_bool("on");
+                if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
 #endif
@@ -445,6 +438,7 @@ struct CardVoltage {
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
                 if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("calibration")) rsp.calibration = reader_.get_double("calibration");
                 if (reader_.has("daily")) rsp.daily = reader_.get_double("daily");
                 if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
@@ -454,6 +448,9 @@ struct CardVoltage {
                 if (reader_.has("vmax")) rsp.vmax = reader_.get_double("vmax");
                 if (reader_.has("vmin")) rsp.vmin = reader_.get_double("vmin");
                 if (reader_.has("weekly")) rsp.weekly = reader_.get_double("weekly");
+                if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
+                if (reader_.has("on")) rsp.on = reader_.get_bool("on");
+                if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
 #endif
@@ -477,6 +474,9 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_alert) == k_) { rsp.alert = v_; return; }
+                    if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
+                    if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
 #endif
@@ -484,6 +484,7 @@ struct CardVoltage {
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
@@ -497,6 +498,7 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = v_; return; }
                     if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = v_; return; }
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
@@ -527,6 +529,10 @@ struct CardVoltage {
                 first_ = false;
                 n += p.print("\"mode\":");
                 n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"calibration\":");
+                n += note::detail::print_json_value(p, calibration.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"daily\":");
@@ -563,6 +569,18 @@ struct CardVoltage {
                 first_ = false;
                 n += p.print("\"weekly\":");
                 n += note::detail::print_json_value(p, weekly.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"alert\":");
+                n += note::detail::print_json_value(p, alert.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"on\":");
+                n += note::detail::print_json_value(p, on.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"sync\":");
+                n += note::detail::print_json_value(p, sync.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -719,6 +737,7 @@ struct CardVoltage {
             static constexpr char vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char vmin[] NOTE_FLASH_ATTR = "vmin";
             static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_calibration[] NOTE_FLASH_ATTR = "calibration";
             static constexpr char rsp_daily[] NOTE_FLASH_ATTR = "daily";
             static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
@@ -728,6 +747,9 @@ struct CardVoltage {
             static constexpr char rsp_vmax[] NOTE_FLASH_ATTR = "vmax";
             static constexpr char rsp_vmin[] NOTE_FLASH_ATTR = "vmin";
             static constexpr char rsp_weekly[] NOTE_FLASH_ATTR = "weekly";
+            static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
+            static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
             static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
@@ -743,13 +765,13 @@ struct CardVoltage {
 
 
         /// When enabled and the `usb` argument is set to `true`, the Notecard
-        /// will add an entry to the `health.qo` Notefile when USB power is
+        /// will add an entry to the `_health.qo` Notefile when USB power is
         /// connected or disconnected.
         struct alert_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
             /// When enabled and the `usb` argument is set to `true`, the
-            /// Notecard will add an entry to the `health.qo` Notefile when USB
+            /// Notecard will add an entry to the `_health.qo` Notefile when USB
             /// power is connected or disconnected.
             CardVoltage::Configure& operator()(bool v);
         } alert{};
@@ -786,53 +808,26 @@ struct CardVoltage {
         /// voltage reading to a given device state like `high`, `normal`,
         /// `low`, and `dead`.
         ///
+        /// In addition to the named presets below, a custom semicolon-separated
+        /// shorthand string may be provided using any combination of the `usb`,
+        /// `high`, `normal`, `low`, and `dead` states (e.g.
+        /// `"usb:4.6;high:4.2;normal:3.6;low:0"`).
+        ///
         /// NOTE: Setting voltage thresholds is not supported on the Notecard
         /// XP.
-        // mode: default | lipo | l91 | alkaline | tad | lic | ?
         struct mode_t : Field<note::string_view> {
-#if __cplusplus >= 202002L && !defined(__clang__)
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                note::string_view sv(s, N - 1);
-                if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
-                    throw "card.voltage: invalid value for 'mode'";
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            mode_t(const mode_t&) = default;
-            mode_t& operator=(const mode_t&) = default;
-            mode_t(mode_t&&) = default;
-            mode_t& operator=(mode_t&&) = default;
-#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
-            static constexpr note::string_view default_{"default"};
-            static constexpr note::string_view lipo{"lipo"};
-            static constexpr note::string_view l91{"l91"};
-            static constexpr note::string_view alkaline{"alkaline"};
-            static constexpr note::string_view tad{"tad"};
-            static constexpr note::string_view lic{"lic"};
-            static constexpr note::string_view unknown{"?"};
             /// Used to set voltage thresholds based on how the Notecard will be
             /// powered, and which can be used to configure voltage-variable
             /// Notecard behavior. Each value is shorthand that assigns a
             /// battery voltage reading to a given device state like `high`,
             /// `normal`, `low`, and `dead`.
+            ///
+            /// In addition to the named presets below, a custom semicolon-
+            /// separated shorthand string may be provided using any combination
+            /// of the `usb`, `high`, `normal`, `low`, and `dead` states (e.g.
+            /// `"usb:4.6;high:4.2;normal:3.6;low:0"`).
             ///
             /// NOTE: Setting voltage thresholds is not supported on the
             /// Notecard XP.
@@ -924,23 +919,6 @@ struct CardVoltage {
             CardVoltage::Configure& operator()(double v);
         } vmin{};
 
-        // Valid values for 'mode':
-        //   "default" — Default behavior. Equivalent to `normal:2.5;dead:0`.
-        //   "lipo" — LiPo batteries. Equivalent to `usb:4.6;high:4.0;normal:3.5;low:3.2;dead:0`.
-        //   "l91" — L91 batteries. Equivalent to `high:5.0;normal:4.5;low:0`.
-        //   "alkaline" — Alkaline batteries. Equivalent to `usb:4.6;high:4.2;normal:3.6;low:0`.
-        //   "tad" — Tadiran HLC batteries. Equivalent to `usb:4.6;normal:3.2;low:0`.
-        //   "lic" — Lithium-ion capacitors. Equivalent to `usb:4.6;high:3.8;normal:3.1;low:0`.
-        //   "?" — Query the Notecard for its currently-set thresholds.
-        // consteval: only callable at compile time (C++20)
-#if __cplusplus >= 202002L
-        static consteval note::string_view validatedMode(const char* v) {
-            note::string_view sv{v};
-            if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
-                throw "card.voltage: invalid value for 'mode'";
-            return sv;
-        }
-#endif
 
     // Semantic convenience methods — generated from x-toggle / x-action metadata
     // (method names that match a field accessor are skipped to avoid redefinition)
@@ -1010,29 +988,58 @@ struct CardVoltage {
             /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
             /// voltage of `3.9`, the mode value would be `"normal"`.
             note::ResponseField<note::string_view> mode{};
-            /// Change of moving average in the last 24 hours, if relevant to
-            /// the time period analyzed.
+            /// If a user calibration value has been saved (via `"set": true`),
+            /// this is that value; otherwise it is the hardware-supplied
+            /// default.
+            note::ResponseField<double> calibration{};
+            /// Change in the 24-hour moving average over the analyzed window.
+            /// Only present when historic voltage trend calculations have been
+            /// enabled with `"on": true` and the analyzed window includes at
+            /// least 24 hours of history.
             note::ResponseField<double> daily{};
-            /// The number of hours used for trend analysis.
+            /// The number of hours of voltage history actually used in the
+            /// analysis. Only present when historic voltage trend calculations
+            /// have been enabled with `"on": true`.
             note::ResponseField<note::json_int_t> hours{};
-            /// Represents the Notecard's uptime in minutes. This field is not
-            /// present when the device is powered via USB.
+            /// The number of minutes since the Notecard was last on USB power.
+            /// Not present when the Notecard is currently connected to USB
+            /// power.
             note::ResponseField<note::json_int_t> minutes{};
-            /// Change of moving average in the last 30 days, if relevant to the
-            /// time period analyzed.
+            /// Change in the 30-day moving average over the analyzed window.
+            /// Only present when historic voltage trend calculations have been
+            /// enabled with `"on": true` and the analyzed window includes at
+            /// least 30 days of history.
             note::ResponseField<double> monthly{};
             /// The current voltage.
             note::ResponseField<double> value{};
-            /// The average voltage value during the measured period.
+            /// The average voltage during the analyzed window. Only present
+            /// when historic voltage trend calculations have been enabled with
+            /// `"on": true`.
             note::ResponseField<double> vavg{};
-            /// The highest voltage value captured during the measurement
-            /// period.
+            /// The highest voltage during the analyzed window. Only present
+            /// when historic voltage trend calculations have been enabled with
+            /// `"on": true`.
             note::ResponseField<double> vmax{};
-            /// The lowest voltage value captured during the measurement period.
+            /// The lowest voltage during the analyzed window. Only present when
+            /// historic voltage trend calculations have been enabled with
+            /// `"on": true`.
             note::ResponseField<double> vmin{};
-            /// Change of moving average in the last 7 days, if relevant to the
-            /// time period analyzed.
+            /// Change in the 7-day moving average over the analyzed window.
+            /// Only present when historic voltage trend calculations have been
+            /// enabled with `"on": true` and the analyzed window includes at
+            /// least 7 days of history.
             note::ResponseField<double> weekly{};
+            /// `true` if the Notecard is configured to add an entry to the
+            /// `_health.qo` Notefile on USB connect/disconnect (enabled by
+            /// sending `card.voltage` with `"usb": true, "alert": true`).
+            note::ResponseField<bool> alert{};
+            /// `true` if the request that produced this response set `"on":
+            /// true`.
+            note::ResponseField<bool> on{};
+            /// `true` if the Notecard is configured to perform a sync on USB
+            /// connect/disconnect (enabled by sending `card.voltage` with
+            /// `"usb": true, "sync": true`).
+            note::ResponseField<bool> sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             /// `true` if the Notecard is connected to USB power.
             ///
@@ -1083,6 +1090,7 @@ struct CardVoltage {
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
                 if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
                 if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
                 if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
@@ -1092,6 +1100,9 @@ struct CardVoltage {
                 if (reader_->has("vmax")) rsp.vmax = reader_->get_double("vmax");
                 if (reader_->has("vmin")) rsp.vmin = reader_->get_double("vmin");
                 if (reader_->has("weekly")) rsp.weekly = reader_->get_double("weekly");
+                if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
+                if (reader_->has("on")) rsp.on = reader_->get_bool("on");
+                if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
 #endif
@@ -1108,6 +1119,7 @@ struct CardVoltage {
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
                 if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("calibration")) rsp.calibration = reader_.get_double("calibration");
                 if (reader_.has("daily")) rsp.daily = reader_.get_double("daily");
                 if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
                 if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
@@ -1117,6 +1129,9 @@ struct CardVoltage {
                 if (reader_.has("vmax")) rsp.vmax = reader_.get_double("vmax");
                 if (reader_.has("vmin")) rsp.vmin = reader_.get_double("vmin");
                 if (reader_.has("weekly")) rsp.weekly = reader_.get_double("weekly");
+                if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
+                if (reader_.has("on")) rsp.on = reader_.get_bool("on");
+                if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
 #endif
@@ -1140,6 +1155,9 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_alert) == k_) { rsp.alert = v_; return; }
+                    if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
+                    if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
 #endif
@@ -1147,6 +1165,7 @@ struct CardVoltage {
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
@@ -1160,6 +1179,7 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = v_; return; }
                     if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = v_; return; }
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
@@ -1190,6 +1210,10 @@ struct CardVoltage {
                 first_ = false;
                 n += p.print("\"mode\":");
                 n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"calibration\":");
+                n += note::detail::print_json_value(p, calibration.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"daily\":");
@@ -1226,6 +1250,18 @@ struct CardVoltage {
                 first_ = false;
                 n += p.print("\"weekly\":");
                 n += note::detail::print_json_value(p, weekly.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"alert\":");
+                n += note::detail::print_json_value(p, alert.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"on\":");
+                n += note::detail::print_json_value(p, on.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"sync\":");
+                n += note::detail::print_json_value(p, sync.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -1442,6 +1478,7 @@ struct request_traits<::note::api::CardVoltage::Read> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardVoltage::Read::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardVoltage::Read::keys_::rsp_calibration, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, calibration)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_daily, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, daily)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, hours)), ::note::FieldType::Int},
         {::note::api::CardVoltage::Read::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, minutes)), ::note::FieldType::Int},
@@ -1451,6 +1488,9 @@ struct request_traits<::note::api::CardVoltage::Read> {
         {::note::api::CardVoltage::Read::keys_::rsp_vmax, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, vmax)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_vmin, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, vmin)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Read::keys_::rsp_weekly, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, weekly)), ::note::FieldType::Double},
+        {::note::api::CardVoltage::Read::keys_::rsp_alert, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, alert)), ::note::FieldType::Bool},
+        {::note::api::CardVoltage::Read::keys_::rsp_on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, on)), ::note::FieldType::Bool},
+        {::note::api::CardVoltage::Read::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, sync)), ::note::FieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardVoltage::Read::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read::Response, usb)), ::note::FieldType::Bool},
 #endif
@@ -1628,6 +1668,7 @@ struct request_traits<::note::api::CardVoltage::Configure> {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
         {::note::api::CardVoltage::Configure::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardVoltage::Configure::keys_::rsp_calibration, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, calibration)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_daily, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, daily)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, hours)), ::note::FieldType::Int},
         {::note::api::CardVoltage::Configure::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, minutes)), ::note::FieldType::Int},
@@ -1637,6 +1678,9 @@ struct request_traits<::note::api::CardVoltage::Configure> {
         {::note::api::CardVoltage::Configure::keys_::rsp_vmax, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, vmax)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_vmin, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, vmin)), ::note::FieldType::Double},
         {::note::api::CardVoltage::Configure::keys_::rsp_weekly, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, weekly)), ::note::FieldType::Double},
+        {::note::api::CardVoltage::Configure::keys_::rsp_alert, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, alert)), ::note::FieldType::Bool},
+        {::note::api::CardVoltage::Configure::keys_::rsp_on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, on)), ::note::FieldType::Bool},
+        {::note::api::CardVoltage::Configure::keys_::rsp_sync, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, sync)), ::note::FieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardVoltage::Configure::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure::Response, usb)), ::note::FieldType::Bool},
 #endif

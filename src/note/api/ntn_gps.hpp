@@ -66,13 +66,13 @@ struct NtnGps {
         /// This is the default configuration.
         NtnGps& operator()(bool v);
     } off{};
-    /// When `true`, a Starnote will use the GPS/GNSS location from its paired
-    /// Notecard, instead of its own GPS/GNSS location.
+    /// When `true`, a Starnote will use the location known to its paired
+    /// Notecard, instead of the Starnote's own GPS/GNSS module.
     struct on_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// When `true`, a Starnote will use the GPS/GNSS location from its
-        /// paired Notecard, instead of its own GPS/GNSS location.
+        /// When `true`, a Starnote will use the location known to its paired
+        /// Notecard, instead of the Starnote's own GPS/GNSS module.
         NtnGps& operator()(bool v);
     } on{};
 

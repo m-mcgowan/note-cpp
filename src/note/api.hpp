@@ -2140,18 +2140,18 @@ public:
         ; }
 
 #if __cplusplus >= 202002L
-        /// Sets up a Notecard WiFi to connect to a WiFi access point.
+        /// Sets up a Notecard's connection to a WiFi access point.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardWifi>())
         auto wifi() { return create_<api::CardWifi>(); }
 
-        /// Sets up a Notecard WiFi to connect to a WiFi access point.
+        /// Sets up a Notecard's connection to a WiFi access point.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardWifi>() && !T_::strict)
         [[deprecated("card.wifi is not available on this target")]]
         auto wifi() { return create_<api::CardWifi>(); }
 #else
-        /// Sets up a Notecard WiFi to connect to a WiFi access point.
+        /// Sets up a Notecard's connection to a WiFi access point.
         auto wifi() { return create_<api::CardWifi>(); }
 #endif
 

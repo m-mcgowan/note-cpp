@@ -59,7 +59,7 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 |  | `card.attn().on()` | [`CardAttn::On`](#cardattn) | void |
 |  | `card.attn().query()` | [`CardAttn::Query`](#cardattn) | `.files`, `.off`, `.set` |
 | `card.aux` | `card.aux()` | [`CardAux`](#cardaux) | `.mode`, `.seconds`, `.time`, `.power` |
-| `card.aux.serial` | `card.aux.serial.request()` | [`CardAuxSerial::Request`](#cardauxserial) | `.mode`, `.rate` |
+| `card.aux.serial` | `card.aux.serial.request()` | [`CardAuxSerial::Request`](#cardauxserial) | `.mode`, `.max`, `.ms`, `.rate` |
 |  | `card.aux.serial.notify()` | [`CardAuxSerial::Notify`](#cardauxserial) | void |
 |  | `card.aux.serial.gps()` | [`CardAuxSerial::Gps`](#cardauxserial) | void |
 |  | `card.aux.serial.configure()` | [`CardAuxSerial::Configure`](#cardauxserial) | void |
@@ -76,16 +76,16 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 | `card.io` | `card.io()` | [`CardIo`](#cardio) | void |
 | `card.led` | `card.led()` | [`CardLed`](#cardled) | void |
 | `card.location` | `card.location()` | [`CardLocation`](#cardlocation) | `.mode`, `.status`, `.count`, `.dop`, `.lat`, `.lon`, `.max`, `.time` |
-| `card.location.mode` | `card.location.mode.get()` | [`CardLocationMode::Get`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold` |
-|  | `card.location.mode.set()` | [`CardLocationMode::Set`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold` |
+| `card.location.mode` | `card.location.mode.get()` | [`CardLocationMode::Get`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold`, `.journey` |
+|  | `card.location.mode.set()` | [`CardLocationMode::Set`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold`, `.journey` |
 |  | `card.location.mode.continuous()` | [`CardLocationMode::Continuous`](#cardlocationmode) | `.mode`, `.vseconds`, `.threshold` |
 |  | `card.location.mode.periodic()` | [`CardLocationMode::Periodic`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold` |
 |  | `card.location.mode.fixed()` | [`CardLocationMode::Fixed`](#cardlocationmode) | `.mode`, `.lat`, `.lon` |
-|  | `card.location.mode.remove()` | [`CardLocationMode::Remove`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold` |
-| `card.location.track` | `card.location.track()` | [`CardLocationTrack`](#cardlocationtrack) | `.file`, `.minutes`, `.seconds`, `.heartbeat`, `.start`, `.stop` |
+|  | `card.location.mode.remove()` | [`CardLocationMode::Remove`](#cardlocationmode) | `.mode`, `.vseconds`, `.lat`, `.lon`, `.max`, `.minutes`, `.seconds`, `.threshold`, `.journey` |
+| `card.location.track` | `card.location.track()` | [`CardLocationTrack`](#cardlocationtrack) | `.file`, `.hours`, `.minutes`, `.seconds`, `.heartbeat`, `.journey`, `.start`, `.stop` |
 | `card.monitor` | `card.monitor()` | [`CardMonitor`](#cardmonitor) | void |
 | `card.motion` | `card.motion()` | [`CardMotion`](#cardmotion) | `.mode`, `.movements`, `.status`, `.count`, `.motion`, `.seconds`, `.alert` |
-| `card.motion.mode` | `card.motion.mode()` | [`CardMotionMode`](#cardmotionmode) | void |
+| `card.motion.mode` | `card.motion.mode()` | [`CardMotionMode`](#cardmotionmode) | `.motion`, `.seconds`, `.start`, `.stop` |
 | `card.motion.sync` | `card.motion.sync()` | [`CardMotionSync`](#cardmotionsync) | void |
 | `card.motion.track` | `card.motion.track()` | [`CardMotionTrack`](#cardmotiontrack) | void |
 | `card.power` | `card.power().read()` | [`CardPower::Read`](#cardpower) | `.milliampHours`, `.temperature`, `.voltage` |
@@ -101,13 +101,13 @@ Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), loca
 |  | `card.temp().stop()` | [`CardTemp::Stop`](#cardtemp) | `.calibration`, `.humidity`, `.pressure`, `.temperature`, `.value`, `.voltage`, `.usb` |
 | `card.time` | `card.time()` | [`CardTime`](#cardtime) | `.area`, `.country`, `.zone`, `.lat`, `.lon`, `.minutes`, `.time` |
 | `card.trace` | `card.trace()` | [`CardTrace`](#cardtrace) | void |
-| `card.transport` | `card.transport()` | [`CardTransport`](#cardtransport) | `.method` |
+| `card.transport` | `card.transport()` | [`CardTransport`](#cardtransport) | `.method`, `.seconds`, `.allow`, `.umin` |
 | `card.triangulate` | `card.triangulate()` | [`CardTriangulate`](#cardtriangulate) | `.mode`, `.length`, `.motion`, `.time`, `.on`, `.usb` |
 | `card.usage.get` | `card.usage.read()` | [`CardUsageGet`](#cardusageget) | `.bytesReceived`, `.bytesSent`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
 | `card.usage.test` | `card.usage.test()` | [`CardUsageTest`](#cardusagetest) | `.bytesPerDay`, `.bytesReceived`, `.bytesSent`, `.days`, `.max`, `.notesReceived`, `.notesSent`, `.seconds`, `.sessionsSecure`, `.sessionsStandard`, `.time` |
 | `card.version` | `card.version()` | [`CardVersion`](#cardversion) | `.board`, `.device`, `.name`, `.sku`, `.version`, `.cell`, `.gps`, `.wifi` |
-| `card.voltage` | `card.voltage().read()` | [`CardVoltage::Read`](#cardvoltage) | `.mode`, `.daily`, `.hours`, `.minutes`, `.monthly`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly`, `.usb` |
-|  | `card.voltage().configure()` | [`CardVoltage::Configure`](#cardvoltage) | `.mode`, `.daily`, `.hours`, `.minutes`, `.monthly`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly`, `.usb` |
+| `card.voltage` | `card.voltage().read()` | [`CardVoltage::Read`](#cardvoltage) | `.mode`, `.calibration`, `.daily`, `.hours`, `.minutes`, `.monthly`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly`, `.alert`, `.on`, `.sync`, `.usb` |
+|  | `card.voltage().configure()` | [`CardVoltage::Configure`](#cardvoltage) | `.mode`, `.calibration`, `.daily`, `.hours`, `.minutes`, `.monthly`, `.value`, `.vavg`, `.vmax`, `.vmin`, `.weekly`, `.alert`, `.on`, `.sync`, `.usb` |
 | `card.wifi` | `card.wifi()` | [`CardWifi`](#cardwifi) | `.security`, `.ssid`, `.version`, `.secure` |
 | `card.wireless` | `card.wireless()` | [`CardWireless`](#cardwireless) | `.status`, `.count` |
 | `card.wireless.penalty` | `card.wireless.penalty.check()` | [`CardWirelessPenalty::Check`](#cardwirelesspenalty) | `.status`, `.count`, `.minutes`, `.seconds` |
@@ -172,9 +172,9 @@ Notehub connection: sync, session state, signal, log forwarding.
 | `hub.log` | `hub.log()` | [`HubLog`](#hublog) | void |
 | `hub.set` | `hub.set()` | [`HubSet`](#hubset) | void |
 | `hub.signal` | `hub.signal()` | [`HubSignal`](#hubsignal) | `.signals`, `.connected` |
-| `hub.status` | `hub.status()` | [`HubStatus`](#hubstatus) | `.status`, `.connected` |
+| `hub.status` | `hub.status()` | [`HubStatus`](#hubstatus) | `.err`, `.status`, `.connected` |
 | `hub.sync` | `hub.sync()` | [`HubSync`](#hubsync) | void |
-| `hub.sync.status` | `hub.sync.status()` | [`HubSyncStatus`](#hubsyncstatus) | `.mode`, `.status`, `.completed`, `.requested`, `.seconds`, `.time`, `.alert`, `.scan`, `.sync` |
+| `hub.sync.status` | `hub.sync.status()` | [`HubSyncStatus`](#hubsyncstatus) | `.err`, `.mode`, `.status`, `.completed`, `.requested`, `.seconds`, `.time`, `.alert`, `.scan`, `.sync` |
 
 ### note
 
@@ -707,7 +707,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.duration` | `note::json_int_t` | no | If using `"mode": "accel"`, specify a sampling duration for the Notecard... |
+| `.duration` | `note::json_int_t` | no | If using `"mode": "notify,accel"`, specify a sampling duration (in... |
 | `.limit` | `bool` | no | If `true`, along with `"mode":"gps"` the Notecard will disable concurrent... |
 | `.max` | `note::json_int_t` | no | The maximum amount of data, in bytes, that can be sent in a single... |
 | `.minutes` | `note::json_int_t` | no | When using `"mode": "notify,dfu"`, specify an interval for notifying the host. |
@@ -720,6 +720,8 @@ auto rsp = nc.execute(req);
 | Field | Type | Description |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current AUX `mode`. |
+| `.max` | `note::json_int_t` | The currently configured `max` transmission size, in bytes. Returned only... |
+| `.ms` | `note::json_int_t` | The currently configured `ms` delay between transmissions, in milliseconds.... |
 | `.rate` | `note::json_int_t` | The baud rate or speed at which information is transmitted over AUX serial. |
 
 
@@ -754,7 +756,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.duration` | `note::json_int_t` | no | If using `"mode": "accel"`, specify a sampling duration for the Notecard... |
+| `.duration` | `note::json_int_t` | no | If using `"mode": "notify,accel"`, specify a sampling duration (in... |
 | `.max` | `note::json_int_t` | no | The maximum amount of data, in bytes, that can be sent in a single... |
 | `.minutes` | `note::json_int_t` | no | When using `"mode": "notify,dfu"`, specify an interval for notifying the host. |
 | `.notifications` | `note::string_view` | no | The AUX mode. Must be one of the following: |
@@ -1421,6 +1423,7 @@ auto rsp = nc.execute(req);
 | `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
 
 
 #### card.location.mode — set()
@@ -1476,6 +1479,7 @@ auto rsp = nc.execute(req);
 | `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
 
 
 #### card.location.mode — continuous()
@@ -1670,6 +1674,7 @@ auto rsp = nc.execute(req);
 | `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
 
 
 ### card.location.track
@@ -1704,8 +1709,8 @@ auto rsp = nc.execute(req);
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.file` | `note::string_view` | no | The Notefile in which to store tracked location data. See the `track.qo`... |
-| `.heartbeat` | `bool` | no | When `start` is `true`, set to `true` to enable tracking even when motion is... |
-| `.hours` | `note::json_int_t` | no | If `heartbeat` is true, add a heartbeat entry at this hourly interval. Use a... |
+| `.heartbeat` | `bool` | no | When `start` is `true`, set to `true` to capture a tracking Note on a fixed... |
+| `.hours` | `note::json_int_t` | no | When `heartbeat` is `true`, the interval at which to capture a heartbeat... |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload to be included in the next `track.qo` Note.... |
 | `.start` | `bool` | no | Set to `true` to start Notefile tracking. |
 | `.stop` | `bool` | no | Set to `true` to stop Notefile tracking. |
@@ -1716,9 +1721,11 @@ auto rsp = nc.execute(req);
 | Field | Type | Description |
 |-------|------|-------------|
 | `.file` | `note::string_view` | The tracking Notefile, if provided. |
-| `.minutes` | `note::json_int_t` | The `heartbeat` interval in minutes, if provided. |
-| `.seconds` | `note::json_int_t` | If tracking is enabled and a heartbeat `hours` value is not set, the... |
+| `.hours` | `note::json_int_t` | The configured heartbeat interval in hours. Only returned when the heartbeat... |
+| `.minutes` | `note::json_int_t` | The configured heartbeat interval in minutes. Only returned when the... |
+| `.seconds` | `note::json_int_t` | If tracking is enabled and no heartbeat interval is configured, the periodic... |
 | `.heartbeat` | `bool` | `true` if heartbeat is enabled. |
+| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
 | `.start` | `bool` | `true` if tracking is enabled. |
 | `.stop` | `bool` | `true` if tracking is disabled. |
 
@@ -1812,7 +1819,7 @@ auto rsp = nc.execute(req);
 |---|---|
 | **Group** | `api.card.motion.mode()` |
 | **Direct** | `note::api::CardMotionMode` |
-| **Response** | `ApiResult<void>` |
+| **Response** | `ApiResult<CardMotionMode::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
 
@@ -1843,6 +1850,14 @@ auto rsp = nc.execute(req);
 | `.start` | `bool` | no | `true` to enable the Notecard accelerometer and start motion tracking. |
 | `.stop` | `bool` | no | `true` to disable the Notecard accelerometer and stop motion tracking. |
 
+**Response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.motion` | `note::json_int_t` | The motion threshold (number of motion events in a single bucket) above... |
+| `.seconds` | `note::json_int_t` | The period (in seconds) of each bucket of movements being accumulated when... |
+| `.start` | `bool` | `true` if the Notecard accelerometer is enabled and motion tracking is active. |
+| `.stop` | `bool` | `true` if the Notecard accelerometer is disabled and motion tracking is stopped. |
 
 
 ### card.motion.sync
@@ -2293,7 +2308,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.calibration` | `double` | The calibration differential of the Notecard's onboard sensor. |
+| `.calibration` | `double` | The calibration differential, in degrees centigrade, applied to the... |
 | `.humidity` | `double` | If the Notecard finds a BME280 sensor on the I2C bus, this field will be set... |
 | `.pressure` | `double` | If the Notecard finds a BME280 or ENS210 sensor on the I2C bus, this field... |
 | `.temperature` | `double` | If the Notecard finds a BME280 or ENS210 sensor on the I2C bus, this field... |
@@ -2342,7 +2357,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.calibration` | `double` | The calibration differential of the Notecard's onboard sensor. |
+| `.calibration` | `double` | The calibration differential, in degrees centigrade, applied to the... |
 | `.humidity` | `double` | If the Notecard finds a BME280 sensor on the I2C bus, this field will be set... |
 | `.pressure` | `double` | If the Notecard finds a BME280 or ENS210 sensor on the I2C bus, this field... |
 | `.temperature` | `double` | If the Notecard finds a BME280 or ENS210 sensor on the I2C bus, this field... |
@@ -2391,7 +2406,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.calibration` | `double` | The calibration differential of the Notecard's onboard sensor. |
+| `.calibration` | `double` | The calibration differential, in degrees centigrade, applied to the... |
 | `.humidity` | `double` | If the Notecard finds a BME280 sensor on the I2C bus, this field will be set... |
 | `.pressure` | `double` | If the Notecard finds a BME280 or ENS210 sensor on the I2C bus, this field... |
 | `.temperature` | `double` | If the Notecard finds a BME280 or ENS210 sensor on the I2C bus, this field... |
@@ -2506,7 +2521,7 @@ auto rsp = nc.execute(req);
 |-------|------|----------|-------------|
 | `.allow` | `bool` | no | Set to `true` to allow adding Notes to non-compact Notefiles while connected... |
 | `.method` | `note::string_view` | no | The connectivity method to enable on the Notecard. |
-| `.seconds` | `note::json_int_t` | no | The amount of time a Notecard will spend on any fallback transport before... |
+| `.seconds` | `note::json_int_t` | no | The amount of time (in seconds) a Notecard will spend on any fallback... |
 | `.umin` | `bool` | no | Set to `true` to force a longer network transport timeout when using... |
 
 **Response fields:**
@@ -2514,6 +2529,9 @@ auto rsp = nc.execute(req);
 | Field | Type | Description |
 |-------|------|-------------|
 | `.method` | `note::string_view` | The connectivity method currently enabled on the device. |
+| `.seconds` | `note::json_int_t` | The amount of time (in seconds) the Notecard will spend on any fallback... |
+| `.allow` | `bool` | When `true`, the Notecard is configured to allow adding Notes to non-compact... |
+| `.umin` | `bool` | When `true`, the Notecard is configured to force a longer network transport... |
 
 
 ### card.triangulate
@@ -2759,15 +2777,19 @@ auto rsp = nc.execute(req);
 | Field | Type | Description |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.  For... |
-| `.daily` | `double` | Change of moving average in the last 24 hours, if relevant to the time... |
-| `.hours` | `note::json_int_t` | The number of hours used for trend analysis. |
-| `.minutes` | `note::json_int_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
-| `.monthly` | `double` | Change of moving average in the last 30 days, if relevant to the time period... |
+| `.calibration` | `double` | If a user calibration value has been saved (via `"set": true`), this is that... |
+| `.daily` | `double` | Change in the 24-hour moving average over the analyzed window. Only present... |
+| `.hours` | `note::json_int_t` | The number of hours of voltage history actually used in the analysis. Only... |
+| `.minutes` | `note::json_int_t` | The number of minutes since the Notecard was last on USB power. Not present... |
+| `.monthly` | `double` | Change in the 30-day moving average over the analyzed window. Only present... |
 | `.value` | `double` | The current voltage. |
-| `.vavg` | `double` | The average voltage value during the measured period. |
-| `.vmax` | `double` | The highest voltage value captured during the measurement period. |
-| `.vmin` | `double` | The lowest voltage value captured during the measurement period. |
-| `.weekly` | `double` | Change of moving average in the last 7 days, if relevant to the time period analyzed. |
+| `.vavg` | `double` | The average voltage during the analyzed window. Only present when historic... |
+| `.vmax` | `double` | The highest voltage during the analyzed window. Only present when historic... |
+| `.vmin` | `double` | The lowest voltage during the analyzed window. Only present when historic... |
+| `.weekly` | `double` | Change in the 7-day moving average over the analyzed window. Only present... |
+| `.alert` | `bool` | `true` if the Notecard is configured to add an entry to the `health.qo`... |
+| `.on` | `bool` | `true` if the request that produced this response set `"on": true`. |
+| `.sync` | `bool` | `true` if the Notecard is configured to perform a sync on USB... |
 | `.usb` | `bool` | `true` if the Notecard is connected to USB power. |
 
 
@@ -2821,15 +2843,19 @@ auto rsp = nc.execute(req);
 | Field | Type | Description |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.  For... |
-| `.daily` | `double` | Change of moving average in the last 24 hours, if relevant to the time... |
-| `.hours` | `note::json_int_t` | The number of hours used for trend analysis. |
-| `.minutes` | `note::json_int_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
-| `.monthly` | `double` | Change of moving average in the last 30 days, if relevant to the time period... |
+| `.calibration` | `double` | If a user calibration value has been saved (via `"set": true`), this is that... |
+| `.daily` | `double` | Change in the 24-hour moving average over the analyzed window. Only present... |
+| `.hours` | `note::json_int_t` | The number of hours of voltage history actually used in the analysis. Only... |
+| `.minutes` | `note::json_int_t` | The number of minutes since the Notecard was last on USB power. Not present... |
+| `.monthly` | `double` | Change in the 30-day moving average over the analyzed window. Only present... |
 | `.value` | `double` | The current voltage. |
-| `.vavg` | `double` | The average voltage value during the measured period. |
-| `.vmax` | `double` | The highest voltage value captured during the measurement period. |
-| `.vmin` | `double` | The lowest voltage value captured during the measurement period. |
-| `.weekly` | `double` | Change of moving average in the last 7 days, if relevant to the time period analyzed. |
+| `.vavg` | `double` | The average voltage during the analyzed window. Only present when historic... |
+| `.vmax` | `double` | The highest voltage during the analyzed window. Only present when historic... |
+| `.vmin` | `double` | The lowest voltage during the analyzed window. Only present when historic... |
+| `.weekly` | `double` | Change in the 7-day moving average over the analyzed window. Only present... |
+| `.alert` | `bool` | `true` if the Notecard is configured to add an entry to the `health.qo`... |
+| `.on` | `bool` | `true` if the request that produced this response set `"on": true`. |
+| `.sync` | `bool` | `true` if the Notecard is configured to perform a sync on USB... |
 | `.usb` | `bool` | `true` if the Notecard is connected to USB power. |
 
 
@@ -3808,6 +3834,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `.err` | `note::string_view` | If present, a string describing a connection or authentication error, e.g.... |
 | `.status` | `note::string_view` | Details about the Notecard's transport (e.g. cellular, WiFi, LoRa)... |
 | `.connected` | `bool` | `true` if the Notecard is connected to Notehub. |
 
@@ -3886,8 +3913,9 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `.err` | `note::string_view` | If present, a string describing the error that occurred during sync, e.g.... |
 | `.mode` | `note::string_view` | The current state of the wireless connectivity module in use. |
-| `.status` | `note::string_view` | The status of the current or previous sync. Refer to [this... |
+| `.status` | `note::string_view` | The status of the current or previous sync. |
 | `.completed` | `note::json_int_t` | Number of seconds since the last sync completion. |
 | `.requested` | `note::json_int_t` | Number of seconds since the last explicit sync request. |
 | `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
@@ -4332,6 +4360,7 @@ auto rsp = nc.execute(req);
 | `.file` | `note::string_view` | yes | The name of the DB Notefile that contains the Note to update. |
 | `.noteId` | `note::string_view` | yes | The unique Note ID. |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload. A Note must have either a `body` or... |
+| `.sync` | `bool` | no | Set to `true` to sync the Notefile immediately after updating the Note. Only... |
 | `.verify` | `bool` | no | If set to `true` and using a templated Notefile, the Notefile will be... |
 
 
@@ -4368,7 +4397,7 @@ auto rsp = nc.execute(req);
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.off` | `bool` | no | When `true`, a paired Starnote will use its own GPS/GNSS location. This is... |
-| `.on` | `bool` | no | When `true`, a Starnote will use the GPS/GNSS location from its paired... |
+| `.on` | `bool` | no | When `true`, a Starnote will use the location known to its paired Notecard,... |
 
 **Response fields:**
 

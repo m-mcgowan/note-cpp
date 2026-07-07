@@ -58,6 +58,7 @@ struct CardLocationMode {
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
             static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_journey[] NOTE_FLASH_ATTR = "journey";
         };
 
         static constexpr string_view notecard_request = "card.location.mode";
@@ -309,6 +310,13 @@ struct CardLocationMode {
 #endif
             note::ResponseField<note::json_int_t> threshold{};
 #endif
+            /// `true` if a journey is currently in progress (i.e., the Notecard
+            /// has detected motion and is actively tracking a journey). The
+            /// Notecard tracks journeys when `mode` is set to `continuous` or
+            /// to `periodic` with `seconds` less than 300. See `_track.qo` for
+            /// details on the `journey` and `jcount` fields included in
+            /// tracking Notes.
+            note::ResponseField<bool> journey{};
 
 #if !NOTE_NO_RESPONSE_RAII
             /// Allocator that minted this Response's interned string fields,
@@ -360,6 +368,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
+                if (reader_->has("journey")) rsp.journey = reader_->get_bool("journey");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -382,6 +391,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
+                if (reader_.has("journey")) rsp.journey = reader_.get_bool("journey");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -401,6 +411,9 @@ struct CardLocationMode {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
+                }
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_journey) == k_) { rsp.journey = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
@@ -477,6 +490,10 @@ struct CardLocationMode {
                 n += p.print("\"threshold\":");
                 n += note::detail::print_json_value(p, threshold.value());
 #endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"journey\":");
+                n += note::detail::print_json_value(p, journey.value());
                 n += p.print("}");
                 return n;
             }
@@ -609,6 +626,7 @@ struct CardLocationMode {
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
             static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_journey[] NOTE_FLASH_ATTR = "journey";
         };
 
         static constexpr string_view notecard_request = "card.location.mode";
@@ -860,6 +878,13 @@ struct CardLocationMode {
 #endif
             note::ResponseField<note::json_int_t> threshold{};
 #endif
+            /// `true` if a journey is currently in progress (i.e., the Notecard
+            /// has detected motion and is actively tracking a journey). The
+            /// Notecard tracks journeys when `mode` is set to `continuous` or
+            /// to `periodic` with `seconds` less than 300. See `_track.qo` for
+            /// details on the `journey` and `jcount` fields included in
+            /// tracking Notes.
+            note::ResponseField<bool> journey{};
 
 #if !NOTE_NO_RESPONSE_RAII
             /// Allocator that minted this Response's interned string fields,
@@ -911,6 +936,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
+                if (reader_->has("journey")) rsp.journey = reader_->get_bool("journey");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -933,6 +959,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
+                if (reader_.has("journey")) rsp.journey = reader_.get_bool("journey");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -952,6 +979,9 @@ struct CardLocationMode {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
+                }
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_journey) == k_) { rsp.journey = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
@@ -1028,6 +1058,10 @@ struct CardLocationMode {
                 n += p.print("\"threshold\":");
                 n += note::detail::print_json_value(p, threshold.value());
 #endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"journey\":");
+                n += note::detail::print_json_value(p, journey.value());
                 n += p.print("}");
                 return n;
             }
@@ -2239,6 +2273,7 @@ struct CardLocationMode {
             static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
             static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_journey[] NOTE_FLASH_ATTR = "journey";
         };
 
         static constexpr string_view notecard_request = "card.location.mode";
@@ -2480,6 +2515,13 @@ struct CardLocationMode {
 #endif
             note::ResponseField<note::json_int_t> threshold{};
 #endif
+            /// `true` if a journey is currently in progress (i.e., the Notecard
+            /// has detected motion and is actively tracking a journey). The
+            /// Notecard tracks journeys when `mode` is set to `continuous` or
+            /// to `periodic` with `seconds` less than 300. See `_track.qo` for
+            /// details on the `journey` and `jcount` fields included in
+            /// tracking Notes.
+            note::ResponseField<bool> journey{};
 
 #if !NOTE_NO_RESPONSE_RAII
             /// Allocator that minted this Response's interned string fields,
@@ -2531,6 +2573,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
+                if (reader_->has("journey")) rsp.journey = reader_->get_bool("journey");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -2553,6 +2596,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
+                if (reader_.has("journey")) rsp.journey = reader_.get_bool("journey");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -2572,6 +2616,9 @@ struct CardLocationMode {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
+                }
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_journey) == k_) { rsp.journey = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
@@ -2648,6 +2695,10 @@ struct CardLocationMode {
                 n += p.print("\"threshold\":");
                 n += note::detail::print_json_value(p, threshold.value());
 #endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"journey\":");
+                n += note::detail::print_json_value(p, journey.value());
                 n += p.print("}");
                 return n;
             }
@@ -2823,6 +2874,7 @@ struct request_traits<::note::api::CardLocationMode::Get> {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardLocationMode::Get::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, threshold)), ::note::FieldType::Int},
 #endif
+        {::note::api::CardLocationMode::Get::keys_::rsp_journey, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, journey)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -2976,6 +3028,7 @@ struct request_traits<::note::api::CardLocationMode::Set> {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardLocationMode::Set::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, threshold)), ::note::FieldType::Int},
 #endif
+        {::note::api::CardLocationMode::Set::keys_::rsp_journey, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, journey)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
@@ -3468,6 +3521,7 @@ struct request_traits<::note::api::CardLocationMode::Remove> {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         {::note::api::CardLocationMode::Remove::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, threshold)), ::note::FieldType::Int},
 #endif
+        {::note::api::CardLocationMode::Remove::keys_::rsp_journey, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, journey)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);

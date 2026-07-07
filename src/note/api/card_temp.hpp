@@ -164,7 +164,9 @@ struct CardTemp {
             static constexpr size_t max_arena_size =
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The calibration differential of the Notecard's onboard sensor.
+            /// The calibration differential, in degrees centigrade, applied to
+            /// the Notecard's onboard temperature sensor. This per-device
+            /// offset is added to the raw sensor reading to produce `value`.
             note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
             /// will be set to the humidity percentage value from the connected
@@ -501,7 +503,9 @@ struct CardTemp {
             static constexpr size_t max_arena_size =
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The calibration differential of the Notecard's onboard sensor.
+            /// The calibration differential, in degrees centigrade, applied to
+            /// the Notecard's onboard temperature sensor. This per-device
+            /// offset is added to the raw sensor reading to produce `value`.
             note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
             /// will be set to the humidity percentage value from the connected
@@ -822,7 +826,9 @@ struct CardTemp {
             static constexpr size_t max_arena_size =
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-            /// The calibration differential of the Notecard's onboard sensor.
+            /// The calibration differential, in degrees centigrade, applied to
+            /// the Notecard's onboard temperature sensor. This per-device
+            /// offset is added to the raw sensor reading to produce `value`.
             note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
             /// will be set to the humidity percentage value from the connected

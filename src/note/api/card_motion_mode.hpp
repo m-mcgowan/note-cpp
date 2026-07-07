@@ -44,6 +44,10 @@ struct CardMotionMode {
         static constexpr char sensitivity[] NOTE_FLASH_ATTR = "sensitivity";
         static constexpr char start[] NOTE_FLASH_ATTR = "start";
         static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+        static constexpr char rsp_motion[] NOTE_FLASH_ATTR = "motion";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char rsp_stop[] NOTE_FLASH_ATTR = "stop";
     };
 
     static constexpr string_view notecard_request = "card.motion.mode";
@@ -188,13 +192,118 @@ struct CardMotionMode {
     uint8_t extras_count_ = 0;
 #endif // NOTE_EXTRAS
 
-    using Response = void;
+    /// Response from configuring accelerometer motion monitoring parameters.
+    /// The response reflects the Notecard's current accelerometer
+    /// configuration.
+    struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
+
+        /// The motion threshold (number of motion events in a single bucket)
+        /// above which the Notecard state is considered `moving` and below
+        /// which the state is considered `stopped`.
+        note::ResponseField<note::json_int_t> motion{};
+        /// The period (in seconds) of each bucket of movements being
+        /// accumulated when `minutes` is used with `card.motion`.
+        note::ResponseField<note::json_int_t> seconds{};
+        /// `true` if the Notecard accelerometer is enabled and motion tracking
+        /// is active.
+        note::ResponseField<bool> start{};
+        /// `true` if the Notecard accelerometer is disabled and motion tracking
+        /// is stopped.
+        note::ResponseField<bool> stop{};
+
+
+#if !NOTE_NO_JSON_TREE
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
+            Response rsp;
+            if (reader_->has("motion")) rsp.motion = reader_->get_int("motion");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("start")) rsp.start = reader_->get_bool("start");
+            if (reader_->has("stop")) rsp.stop = reader_->get_bool("stop");
+            rsp.reader_ = std::move(reader_);
+            return rsp;
+        }
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            if (reader_.has("motion")) rsp.motion = reader_.get_int("motion");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("start")) rsp.start = reader_.get_bool("start");
+            if (reader_.has("stop")) rsp.stop = reader_.get_bool("stop");
+            return rsp;
+        }
+#endif // !NOTE_NO_JSON_TREE
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are interned into the StringPool immediately, so
+        // string_views survive after the parser's scratch buffer is reused.
+        struct Sink : ::note::DefaultSink {
+            Response& rsp;
+            ::note::StringPool& pool_;
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
+            }
+            NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                if (note::flash(keys_::rsp_start) == k_) { rsp.start = v_; return; }
+                if (note::flash(keys_::rsp_stop) == k_) { rsp.stop = v_; return; }
+            }
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
+            }
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = v_; return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+            }
+            NOTE_SINK_NOINLINE void reset() {
+                rsp = Response{};
+            }
+        };
+
+        void intern_strings(::note::StringPool&) {}
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"motion\":");
+            n += note::detail::print_json_value(p, motion.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"seconds\":");
+            n += note::detail::print_json_value(p, seconds.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"start\":");
+            n += note::detail::print_json_value(p, start.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"stop\":");
+            n += note::detail::print_json_value(p, stop.value());
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+#if !NOTE_NO_JSON_TREE
+    private:
+        std::unique_ptr<JsonReader> reader_;
+#endif
+    };
 
 #if NOTE_SINGLETON
     /// Send this request to the Notecard and wait for a response.
-    /// Returns an ApiResult<void> — boolean-convertible to true on success;
-    /// call .error() to inspect the ErrorInfo on failure.
-    ApiResult<void> execute() const;
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
+    ApiResult<Response> execute() const;
     /// Send this request as a fire-and-forget command (cmd) — the Notecard
     /// processes it without sending a response. Lower power and bandwidth
     /// than execute() when you don't need the result.
@@ -306,6 +415,17 @@ inline CardMotionMode& CardMotionMode::stop_t::operator()(bool v) {
 namespace note::detail {
 template<>
 struct request_traits<::note::api::CardMotionMode> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardMotionMode::keys_::rsp_motion, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode::Response, motion)), ::note::FieldType::Int},
+        {::note::api::CardMotionMode::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode::Response, seconds)), ::note::FieldType::Int},
+        {::note::api::CardMotionMode::keys_::rsp_start, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode::Response, start)), ::note::FieldType::Bool},
+        {::note::api::CardMotionMode::keys_::rsp_stop, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode::Response, stop)), ::note::FieldType::Bool},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
     static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -323,7 +443,7 @@ struct request_traits<::note::api::CardMotionMode> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
+    static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
 };
@@ -347,15 +467,18 @@ inline void CardMotionMode::build(JsonBuilder& b) const {
 #pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
-inline ApiResult<void> CardMotionMode::execute() const {
+inline ApiResult<typename CardMotionMode::Response> CardMotionMode::execute() const {
     auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
     ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardMotionMode>;
-    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
-    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-    return ApiResult<void>{};
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
 }
 inline Result<void> CardMotionMode::command() const {
     auto build_ = [&](JsonBuilder& b_) {

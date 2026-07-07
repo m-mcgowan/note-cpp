@@ -1089,11 +1089,15 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
 TEST_CASE("note::api::CardAuxSerial::Request response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("mode", std::string("x-mode"));
+    reader->set("max", note::json_int_t(42));
+    reader->set("ms", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     reader->set("rate", note::json_int_t(42));
 #endif
     auto rsp = note::api::CardAuxSerial::Request::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
+    REQUIRE(rsp.max == 42);
+    REQUIRE(rsp.ms == 42);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.rate == 42);
 #endif
@@ -1126,6 +1130,8 @@ TEST_CASE("note::api::CardAuxSerial::Request sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
+    sink.on_string("max", "x-max");
+    sink.on_string("ms", "x-ms");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     sink.on_string("rate", "x-rate");
 #endif
@@ -2452,6 +2458,7 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     reader->set("threshold", note::json_int_t(42));
 #endif
+    reader->set("journey", true);
     auto rsp = note::api::CardLocationMode::Get::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
     REQUIRE(rsp.vseconds == "x-vseconds");
@@ -2463,6 +2470,7 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.threshold == 42);
 #endif
+    REQUIRE(rsp.journey == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -2501,6 +2509,7 @@ TEST_CASE("note::api::CardLocationMode::Get sink field coverage") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     sink.on_string("threshold", "x-threshold");
 #endif
+    sink.on_bool("journey", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
     sink.on_float("lat", 9.9);
@@ -2598,6 +2607,7 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     reader->set("threshold", note::json_int_t(42));
 #endif
+    reader->set("journey", true);
     auto rsp = note::api::CardLocationMode::Set::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
     REQUIRE(rsp.vseconds == "x-vseconds");
@@ -2609,6 +2619,7 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.threshold == 42);
 #endif
+    REQUIRE(rsp.journey == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -2647,6 +2658,7 @@ TEST_CASE("note::api::CardLocationMode::Set sink field coverage") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     sink.on_string("threshold", "x-threshold");
 #endif
+    sink.on_bool("journey", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
     sink.on_float("lat", 9.9);
@@ -3085,6 +3097,7 @@ TEST_CASE("note::api::CardLocationMode::Remove response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     reader->set("threshold", note::json_int_t(42));
 #endif
+    reader->set("journey", true);
     auto rsp = note::api::CardLocationMode::Remove::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
     REQUIRE(rsp.vseconds == "x-vseconds");
@@ -3096,6 +3109,7 @@ TEST_CASE("note::api::CardLocationMode::Remove response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.threshold == 42);
 #endif
+    REQUIRE(rsp.journey == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -3134,6 +3148,7 @@ TEST_CASE("note::api::CardLocationMode::Remove sink field coverage") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     sink.on_string("threshold", "x-threshold");
 #endif
+    sink.on_bool("journey", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
     sink.on_float("lat", 9.9);
@@ -3216,16 +3231,20 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
 TEST_CASE("note::api::CardLocationTrack response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("file", std::string("x-file"));
+    reader->set("hours", note::json_int_t(42));
     reader->set("minutes", note::json_int_t(42));
     reader->set("seconds", note::json_int_t(42));
     reader->set("heartbeat", true);
+    reader->set("journey", true);
     reader->set("start", true);
     reader->set("stop", true);
     auto rsp = note::api::CardLocationTrack::Response::parse(std::move(reader));
     REQUIRE(rsp.file == "x-file");
+    REQUIRE(rsp.hours == 42);
     REQUIRE(rsp.minutes == 42);
     REQUIRE(rsp.seconds == 42);
     REQUIRE(rsp.heartbeat == true);
+    REQUIRE(rsp.journey == true);
     REQUIRE(rsp.start == true);
     REQUIRE(rsp.stop == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -3257,9 +3276,11 @@ TEST_CASE("note::api::CardLocationTrack sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("file", "x-file");
+    sink.on_string("hours", "x-hours");
     sink.on_string("minutes", "x-minutes");
     sink.on_string("seconds", "x-seconds");
     sink.on_bool("heartbeat", true);
+    sink.on_bool("journey", true);
     sink.on_bool("start", true);
     sink.on_bool("stop", true);
 
@@ -3473,6 +3494,64 @@ TEST_CASE("note::api::CardMotionMode request builder") {
         auto sreq = sh.api.card.motion.mode();
         sreq.execute();
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardMotionMode response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("motion", note::json_int_t(42));
+    reader->set("seconds", note::json_int_t(42));
+    reader->set("start", true);
+    reader->set("stop", true);
+    auto rsp = note::api::CardMotionMode::Response::parse(std::move(reader));
+    REQUIRE(rsp.motion == 42);
+    REQUIRE(rsp.seconds == 42);
+    REQUIRE(rsp.start == true);
+    REQUIRE(rsp.stop == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardMotionMode::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardMotionMode sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardMotionMode::Response rsp{};
+    note::api::CardMotionMode::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("motion", "x-motion");
+    sink.on_string("seconds", "x-seconds");
+    sink.on_bool("start", true);
+    sink.on_bool("stop", true);
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -4812,8 +4891,26 @@ TEST_CASE("note::api::CardTransport request builder") {
 TEST_CASE("note::api::CardTransport response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("method", std::string("x-method"));
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    reader->set("seconds", note::json_int_t(42));
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    reader->set("allow", true);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    reader->set("umin", true);
+#endif
     auto rsp = note::api::CardTransport::Response::parse(std::move(reader));
     REQUIRE(rsp.method == "x-method");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(rsp.seconds == 42);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(rsp.allow == true);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(rsp.umin == true);
+#endif
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -4843,8 +4940,23 @@ TEST_CASE("note::api::CardTransport sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("method", "x-method");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("seconds", "x-seconds");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    sink.on_bool("allow", true);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_bool("umin", true);
+#endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -5371,7 +5483,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req.calibration(1.5);
 #endif
     req.hours(note::json_int_t(42));
-    req.mode(note::string_view("default"));
+    req.mode(note::string_view("x-mode"));
     req.name(note::string_view("x-name"));
     req.off(true);
     req.offset(note::json_int_t(42));
@@ -5389,7 +5501,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     REQUIRE(h.last_req.find("\"calibration\":1.5") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\":\"default\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
@@ -5421,7 +5533,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req["calibration"] = 1.5;
 #endif
     req["hours"] = note::json_int_t(42);
-    req["mode"] = note::string_view("default");
+    req["mode"] = note::string_view("x-mode");
     req["name"] = note::string_view("x-name");
     req["off"] = true;
     req["offset"] = note::json_int_t(42);
@@ -5448,6 +5560,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
 TEST_CASE("note::api::CardVoltage::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("mode", std::string("x-mode"));
+    reader->set("calibration", 1.5);
     reader->set("daily", 1.5);
     reader->set("hours", note::json_int_t(42));
     reader->set("minutes", note::json_int_t(42));
@@ -5457,11 +5570,15 @@ TEST_CASE("note::api::CardVoltage::Read response parsing") {
     reader->set("vmax", 1.5);
     reader->set("vmin", 1.5);
     reader->set("weekly", 1.5);
+    reader->set("alert", true);
+    reader->set("on", true);
+    reader->set("sync", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     reader->set("usb", true);
 #endif
     auto rsp = note::api::CardVoltage::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
+    REQUIRE(rsp.calibration == 1.5);
     REQUIRE(rsp.daily == 1.5);
     REQUIRE(rsp.hours == 42);
     REQUIRE(rsp.minutes == 42);
@@ -5471,6 +5588,9 @@ TEST_CASE("note::api::CardVoltage::Read response parsing") {
     REQUIRE(rsp.vmax == 1.5);
     REQUIRE(rsp.vmin == 1.5);
     REQUIRE(rsp.weekly == 1.5);
+    REQUIRE(rsp.alert == true);
+    REQUIRE(rsp.on == true);
+    REQUIRE(rsp.sync == true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.usb == true);
 #endif
@@ -5503,6 +5623,7 @@ TEST_CASE("note::api::CardVoltage::Read sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
+    sink.on_number("calibration", "3.14");
     sink.on_number("daily", "3.14");
     sink.on_string("hours", "x-hours");
     sink.on_string("minutes", "x-minutes");
@@ -5512,11 +5633,15 @@ TEST_CASE("note::api::CardVoltage::Read sink field coverage") {
     sink.on_number("vmax", "3.14");
     sink.on_number("vmin", "3.14");
     sink.on_number("weekly", "3.14");
+    sink.on_bool("alert", true);
+    sink.on_bool("on", true);
+    sink.on_bool("sync", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     sink.on_bool("usb", true);
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("calibration", 9.9);
     sink.on_float("daily", 9.9);
     sink.on_float("monthly", 9.9);
     sink.on_float("value", 9.9);
@@ -5549,7 +5674,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req.calibration(1.5);
 #endif
     req.hours(note::json_int_t(42));
-    req.mode(note::string_view("default"));
+    req.mode(note::string_view("x-mode"));
     req.name(note::string_view("x-name"));
     req.off(true);
     req.offset(note::json_int_t(42));
@@ -5567,7 +5692,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     REQUIRE(h.last_req.find("\"calibration\":1.5") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\":\"default\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
@@ -5599,7 +5724,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req["calibration"] = 1.5;
 #endif
     req["hours"] = note::json_int_t(42);
-    req["mode"] = note::string_view("default");
+    req["mode"] = note::string_view("x-mode");
     req["name"] = note::string_view("x-name");
     req["off"] = true;
     req["offset"] = note::json_int_t(42);
@@ -5626,6 +5751,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
 TEST_CASE("note::api::CardVoltage::Configure response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("mode", std::string("x-mode"));
+    reader->set("calibration", 1.5);
     reader->set("daily", 1.5);
     reader->set("hours", note::json_int_t(42));
     reader->set("minutes", note::json_int_t(42));
@@ -5635,11 +5761,15 @@ TEST_CASE("note::api::CardVoltage::Configure response parsing") {
     reader->set("vmax", 1.5);
     reader->set("vmin", 1.5);
     reader->set("weekly", 1.5);
+    reader->set("alert", true);
+    reader->set("on", true);
+    reader->set("sync", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     reader->set("usb", true);
 #endif
     auto rsp = note::api::CardVoltage::Configure::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
+    REQUIRE(rsp.calibration == 1.5);
     REQUIRE(rsp.daily == 1.5);
     REQUIRE(rsp.hours == 42);
     REQUIRE(rsp.minutes == 42);
@@ -5649,6 +5779,9 @@ TEST_CASE("note::api::CardVoltage::Configure response parsing") {
     REQUIRE(rsp.vmax == 1.5);
     REQUIRE(rsp.vmin == 1.5);
     REQUIRE(rsp.weekly == 1.5);
+    REQUIRE(rsp.alert == true);
+    REQUIRE(rsp.on == true);
+    REQUIRE(rsp.sync == true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.usb == true);
 #endif
@@ -5681,6 +5814,7 @@ TEST_CASE("note::api::CardVoltage::Configure sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
+    sink.on_number("calibration", "3.14");
     sink.on_number("daily", "3.14");
     sink.on_string("hours", "x-hours");
     sink.on_string("minutes", "x-minutes");
@@ -5690,11 +5824,15 @@ TEST_CASE("note::api::CardVoltage::Configure sink field coverage") {
     sink.on_number("vmax", "3.14");
     sink.on_number("vmin", "3.14");
     sink.on_number("weekly", "3.14");
+    sink.on_bool("alert", true);
+    sink.on_bool("on", true);
+    sink.on_bool("sync", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     sink.on_bool("usb", true);
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("calibration", 9.9);
     sink.on_float("daily", 9.9);
     sink.on_float("monthly", 9.9);
     sink.on_float("value", 9.9);
@@ -7849,9 +7987,11 @@ TEST_CASE("note::api::HubStatus request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubStatus response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("err", std::string("x-err"));
     reader->set("status", std::string("x-status"));
     reader->set("connected", true);
     auto rsp = note::api::HubStatus::Response::parse(std::move(reader));
+    REQUIRE(rsp.err == "x-err");
     REQUIRE(rsp.status == "x-status");
     REQUIRE(rsp.connected == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -7882,6 +8022,7 @@ TEST_CASE("note::api::HubStatus sink field coverage") {
     note::api::HubStatus::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("err", "x-err");
     sink.on_string("status", "x-status");
     sink.on_bool("connected", true);
 
@@ -7985,6 +8126,7 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSyncStatus response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("err", std::string("x-err"));
     reader->set("mode", std::string("x-mode"));
     reader->set("status", std::string("x-status"));
     reader->set("completed", note::json_int_t(42));
@@ -7999,6 +8141,7 @@ TEST_CASE("note::api::HubSyncStatus response parsing") {
 #endif
     reader->set("sync", true);
     auto rsp = note::api::HubSyncStatus::Response::parse(std::move(reader));
+    REQUIRE(rsp.err == "x-err");
     REQUIRE(rsp.mode == "x-mode");
     REQUIRE(rsp.status == "x-status");
     REQUIRE(rsp.completed == 42);
@@ -8040,6 +8183,7 @@ TEST_CASE("note::api::HubSyncStatus sink field coverage") {
     note::api::HubSyncStatus::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("err", "x-err");
     sink.on_string("mode", "x-mode");
     sink.on_string("status", "x-status");
     sink.on_string("completed", "x-completed");
@@ -9123,11 +9267,13 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.payload(note::string_view("x-payload"));
+    req.sync(true);
     req.verify(true);
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; fh.nc.execute(req); }
@@ -9147,6 +9293,7 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     req["file"] = note::string_view("x-file");
     req["note"] = note::string_view("x-note");
     req["payload"] = note::string_view("x-payload");
+    req["sync"] = true;
     req["verify"] = true;
     // Cover command()
     req.command();

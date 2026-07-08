@@ -184,6 +184,53 @@ step_hw_swan_arduino_serial() {
     echo "  serial_basic OK"
 }
 
+step_avr_runtime() {
+    # AVR runtime attestation. The AVR size check builds the Uno firmware but
+    # never runs it; this step executes the smallest Uno build through the full
+    # execute() request/response cycle on a Wokwi-simulated ATmega328P against
+    # the mock Notecard chip, catching Uno-specific init/stack crashes that a
+    # compile-only check can't. Needs no physical device (category: host).
+    # Self-skips when the AVR toolchain, wokwi-cli, or the Wokwi token (.wokwi,
+    # developer-local / gitignored) isn't available — e.g. in CI.
+    if ! ls ~/.platformio/packages/toolchain-atmelavr* >/dev/null 2>&1; then
+        echo "  SKIP: AVR toolchain not installed."; return 0
+    fi
+    if ! command -v wokwi-cli >/dev/null 2>&1; then
+        echo "  SKIP: wokwi-cli not installed."; return 0
+    fi
+    if [ ! -f "$ROOT/.wokwi" ]; then
+        echo "  SKIP: no Wokwi token (.wokwi) present."; return 0
+    fi
+
+    local bsc="$ROOT/tools/binary-size-comparison"
+    echo "  Building avr-notecpp-scan-flash (smallest Uno build)..."
+    pio run -d "$bsc" -e avr-notecpp-scan-flash >/dev/null
+
+    echo "  Running Wokwi ATmega328P simulation..."
+    local out
+    # shellcheck disable=SC1091
+    out=$( . "$ROOT/.wokwi"; cd "$bsc" && wokwi-cli --timeout 30000 . 2>&1 || true )
+
+    # The sketch idles after its request sequence, so wokwi-cli ends on the
+    # timeout (expected — no auto-stop scenario). Pass = the full cycle ran with
+    # no crash/reboot: the final request (env.get) is reached and the reset
+    # handshake occurs exactly once (a stack-overflow crash reboots the sketch,
+    # repeating the handshake).
+    local resets
+    resets=$(echo "$out" | grep -c 'reset handshake')
+    if ! echo "$out" | grep -q 'env.get'; then
+        echo "$out" | tail -20
+        echo "  FAIL: AVR sim did not complete the request sequence (env.get not reached)."
+        return 1
+    fi
+    if [ "$resets" -ne 1 ]; then
+        echo "$out" | tail -20
+        echo "  FAIL: AVR sim rebooted ${resets}x — likely a stack overflow / crash."
+        return 1
+    fi
+    echo "  AVR Uno runtime: full execute() cycle OK (no crash, single boot)."
+}
+
 # ── Step registry ───────────────────────────────────────────────────────────
 # Format: "name|category|description|function"
 
@@ -205,6 +252,7 @@ STEPS=(
     "hw-esp32-arduino-serial|hardware|Arduino serial sketch on ESP32-S3|step_hw_esp32_arduino_serial"
     "hw-esp32-arduino-i2c|hardware|Arduino I2C sketch on ESP32-S3|step_hw_esp32_arduino_i2c"
     "hw-swan-arduino-serial|hardware|Arduino serial sketch on Swan|step_hw_swan_arduino_serial"
+    "avr-runtime|host|AVR Uno runtime via Wokwi (full execute cycle, no crash)|step_avr_runtime"
 )
 
 # ── Hardware device configuration ───────────────────────────────────────────

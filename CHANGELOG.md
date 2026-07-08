@@ -10,6 +10,8 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-07
+
 ### Added
 - Typed request/response coverage for fields introduced in [notecard-schema v1.3.1](https://github.com/blues/notecard-schema/releases/tag/v1.3.1):
   - `note.update` — new `sync` request field (sync the Notefile immediately after the update).

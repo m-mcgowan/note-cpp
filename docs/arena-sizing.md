@@ -101,16 +101,17 @@ The table below is auto-generated from the OpenAPI spec — see [`tools/arena_si
 | `CardContact::Get` | `email`=64, `name`=48, `org`=48, `role`=32 | 64 | **256** |
 | `CardContact::Set` | `email`=64, `name`=48, `org`=48, `role`=32 | 64 | **256** |
 | `CardVersion` | `board`=32, `device`=32, `name`=48, `sku`=24, `version`=40 | 64 | **256** |
+| `HubSyncStatus` | `err`=48, `mode`=32, `status`=80 | 64 | **224** |
 | `CardBinary::Clear` | `err`=48, `status`=80 | 64 | **192** |
 | `CardBinary::Status` | `err`=48, `status`=80 | 64 | **192** |
 | `CardBinaryGet` | `err`=48, `status`=80 | 64 | **192** |
 | `CardWifi` | `security`=24, `ssid`=48, `version`=40 | 64 | **192** |
 | `EnvGet` | `text`=128 | 64 | **192** |
+| `HubStatus` | `err`=48, `status`=80 | 64 | **192** |
 | `NtnStatus` | `err`=48, `status`=80 | 64 | **192** |
 | `VarGet` | `text`=128 | 64 | **192** |
 | `CardLocation` | `mode`=32, `status`=80 | 64 | **176** |
 | `DfuStatus` | `mode`=32, `status`=80 | 64 | **176** |
-| `HubSyncStatus` | `mode`=32, `status`=80 | 64 | **176** |
 | `CardLocationMode::Continuous` | `mode`=32, `vseconds`=48 | 64 | **144** |
 | `CardLocationMode::Get` | `mode`=32, `vseconds`=48 | 64 | **144** |
 | `CardLocationMode::Periodic` | `mode`=32, `vseconds`=48 | 64 | **144** |
@@ -122,7 +123,6 @@ The table below is auto-generated from the OpenAPI spec — see [`tools/arena_si
 | `CardWirelessPenalty::Check` | `status`=80 | 64 | **144** |
 | `CardWirelessPenalty::Clear` | `status`=80 | 64 | **144** |
 | `CardWirelessPenalty::Set` | `status`=80 | 64 | **144** |
-| `HubStatus` | `status`=80 | 64 | **144** |
 | `CardBinaryPut` | `err`=48 | 64 | **112** |
 | `CardDfu` | `name`=48 | 64 | **112** |
 | `CardLocationTrack` | `file`=48 | 64 | **112** |
@@ -141,6 +141,7 @@ The table below is auto-generated from the OpenAPI spec — see [`tools/arena_si
 | `CardAttn::Arm` | *(none)* | 64 | **64** |
 | `CardAttn::Rearm` | *(none)* | 64 | **64** |
 | `CardIllumination` | *(none)* | 64 | **64** |
+| `CardMotionMode` | *(none)* | 64 | **64** |
 | `CardPower::Configure` | *(none)* | 64 | **64** |
 | `CardPower::Read` | *(none)* | 64 | **64** |
 | `CardPower::Reset` | *(none)* | 64 | **64** |

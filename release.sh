@@ -104,6 +104,43 @@ git tag -a "$TAG" -m "$(printf "Release %s\n\n%s" "$TAG" "$changelog_body")"
 echo "Pushing tag to origin..."
 git push origin "$TAG"
 
-echo
-echo "Done. GitHub Actions will create the release from this tag."
-echo "  https://github.com/$(git remote get-url origin | sed 's|.*github.com[:/]||;s|\.git$||')/releases/tag/$TAG"
+REPO_SLUG=$(git remote get-url origin | sed 's|.*github.com[:/]||;s|\.git$||')
+
+# ── Publish the GitHub release with full notes ──────────────────────────────
+# Notes = changelog section + validation summary (host suite + hardware-in-the-
+# loop + AVR runtime) built by tools/release-notes.sh. The validation results
+# are developer-local (gitignored), so they can only be attached here, not by
+# the release.yml workflow. That workflow still fires on the tag push but only
+# creates a changelog-only release if one does not already exist — so whichever
+# runs first, the release ends up with these richer notes.
+if command -v gh >/dev/null 2>&1; then
+    NOTES_FILE=$(mktemp)
+    "$ROOT/tools/release-notes.sh" "$VERSION" > "$NOTES_FILE"
+
+    # Mark as a pre-release only for a semver pre-release identifier (a hyphen,
+    # e.g. 1.0.0-rc1). Plain 0.x releases are full releases so GitHub features
+    # them as the repo's "Latest release" — it never features a pre-release,
+    # which would leave the landing page with no release card.
+    if [[ "$VERSION" == *-* ]]; then
+        create_args=(--prerelease)
+        edit_args=(--prerelease=true)
+    else
+        create_args=(--latest)
+        edit_args=(--prerelease=false --latest)
+    fi
+
+    echo
+    if gh release view "$TAG" >/dev/null 2>&1; then
+        echo "Updating GitHub release $TAG with full notes..."
+        gh release edit "$TAG" --notes-file "$NOTES_FILE" "${edit_args[@]}"
+    else
+        echo "Creating GitHub release $TAG..."
+        gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" "${create_args[@]}"
+    fi
+    rm -f "$NOTES_FILE"
+    echo "Done."
+else
+    echo
+    echo "gh CLI not found — GitHub Actions will create a changelog-only release."
+fi
+echo "  https://github.com/$REPO_SLUG/releases/tag/$TAG"

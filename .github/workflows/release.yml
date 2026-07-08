@@ -2,6 +2,13 @@
 # for the tag's version, extracts that section as release notes, and
 # publishes a GitHub release (marked prerelease for any 0.x tag).
 #
+# FALLBACK ONLY: the normal path is `./release.sh`, which publishes the
+# release itself with richer notes — changelog PLUS the validation summary
+# (host suite + hardware-in-the-loop + AVR runtime) from the local, gitignored
+# results.json that this runner can't see. This workflow therefore skips
+# creation if the release already exists, and only creates a changelog-only
+# release for tags pushed WITHOUT release.sh (e.g. a hand-pushed tag).
+#
 # This workflow does NOT run tests — that's release-validate.yml's job,
 # which must be run manually before tagging. Tagging without a clean
 # validation pass is a process error, not something this workflow
@@ -48,11 +55,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           version="${{ steps.version.outputs.version }}"
-          prerelease=""
-          if [[ "$version" == 0.* ]]; then
-            prerelease="--prerelease"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists (published by release.sh with full validation notes); nothing to do."
+            exit 0
+          fi
+          # Pre-release only for a semver pre-release identifier (a hyphen,
+          # e.g. 1.0.0-rc1); plain 0.x are full releases and become "Latest"
+          # so the landing page features a release card. Mirrors release.sh.
+          flags="--latest"
+          if [[ "$version" == *-* ]]; then
+            flags="--prerelease"
           fi
           gh release create "$GITHUB_REF_NAME" \
             --title "v${version}" \
             --notes-file /tmp/release-notes.md \
-            $prerelease
+            $flags

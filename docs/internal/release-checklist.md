@@ -45,10 +45,20 @@ a success marker over the serial console.
 
 ## 5. Tag and publish
 
-- [ ] `git tag vX.Y.Z` on the release commit
-- [ ] `git push --tags` (only after local + CI validation)
-- [ ] Create a GitHub Release; tick **Pre-release** for 0.x releases
-- [ ] Release notes: paste the `## [X.Y.Z]` CHANGELOG block
+- [ ] Push `main` first (`release.sh` pushes only the tag, not the branch)
+- [ ] `./release.sh X.Y.Z` — this tags the release commit, pushes the tag, and
+      publishes the GitHub Release itself. It marks **Pre-release** for 0.x
+      automatically and writes the release notes via
+      [`tools/release-notes.sh`](../../tools/release-notes.sh): the
+      `## [X.Y.Z]` CHANGELOG block **plus a validation summary** (every
+      `validate-release.sh` step with its result and duration, and which
+      hardware/simulation ran). No manual note-pasting.
+  - The `release.yml` workflow also fires on the tag push but is a fallback:
+    it only creates a changelog-only release if `release.sh` hasn't already
+    published one (e.g. for a hand-pushed tag). It can't see the local,
+    gitignored `results.json`, so it never includes the validation summary.
+  - Because the notes pull from `.release-validation/results.json`, run
+    `release.sh` on the same machine where `validate-release.sh` passed.
 
 ## 6. Registries
 

@@ -174,7 +174,7 @@ Per-row code patterns: [Arduino guide § Binary size comparison](docs/platforms/
 
 ## Quality assurance
 
-Host coverage **97.5% lines / 99.0% functions / 96.2% branches**; on-device coverage (ESP32-S3) **81.6% lines / 82.7% functions**. The same `TEST_CASE`s run on the host doctest binaries (under 5 compilers) and on real Notecard hardware over serial/I2C, plus a Wokwi-simulated AVR runtime to catch Uno-specific init/stack issues. Docs are verified pre-push: every internal link resolves, every code snippet comes from a compiled source file, and the migration tables stay column-aligned by tooling.
+The same `TEST_CASE`s — over 2,000 of them — run on the host doctest binaries (under five compilers) and on real Notecard hardware over serial/I2C, plus a Wokwi-simulated ATmega328P runtime to catch Uno-specific init/stack issues. Host coverage stays high (95%+ lines) and is enforced in CI — see the coverage badge above. Docs are verified pre-push: every internal link resolves, every code snippet comes from a compiled source file, and the migration tables stay column-aligned by tooling.
 
 Full breakdown: [docs/quality-assurance.md](docs/quality-assurance.md).
 

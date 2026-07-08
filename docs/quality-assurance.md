@@ -8,20 +8,20 @@ The portable test suite is one set of `.cpp` files compiled into multiple binari
 
 | Level | What | Count |
 |-------|------|-------|
-| **Host unit tests** | doctest tests covering all endpoints, transport, SAX parsing, body structs, error handling | ~1,872 test cases |
-| **Arduino host build** | Same sources compiled with `ARDUINO` + stubs, verifying `Printable` integration | ~1,889 test cases |
-| **Backend parity** | cJSON / nlohmann / `StaticJsonBackend` run on host and device from one source | 89 test cases |
+| **Host unit tests** | doctest tests covering all endpoints, transport, SAX parsing, body structs, error handling | 2,000+ test cases |
+| **Arduino host build** | Same sources compiled with `ARDUINO` + stubs, verifying `Printable` integration | 2,000+ test cases |
+| **Backend parity** | cJSON / nlohmann / `StaticJsonBackend` run on host and device from one source | 100+ test cases |
 | **On-device firmware** | ESP32-S3 with a real Notecard over serial/I2C — runs the portable suite plus fixture tests for live API requests, binary transfer, streaming SAX | portable + device-only fixture tests |
 | **Wokwi runtime (AVR)** | Examples run on a simulated ATmega328P via `wokwi-cli` (CI) and the VS Code Wokwi extension (local) — catches stack-overflow / Arduino-init failures that static build verification can't | per-example smoke tests |
-| **Compile-fail tests** | Verify that invalid API usage doesn't compile (wrong types, invalid flags, bad JSON) | 19 |
+| **Compile-fail tests** | Verify that invalid API usage doesn't compile (wrong types, invalid flags, bad JSON) | 30+ |
 | **Multi-compiler CI** | g++ 12/13/14, clang++ 17/18, C++20 and C++23, libstdc++ and libc++ | 5 configurations |
 | **AVR build verification** | ATmega328P (Arduino Uno) binary size checks across four API styles | PlatformIO |
 | **Embedded compatibility** | Library examples compiled across ESP32, AVR, STM32 via [compat-check](https://github.com/m-mcgowan/embedded-cpp-compat-check) | CI |
 
 Coverage is tracked on both targets:
 
-- **Host:** GCC + lcov 2.x — lines 97.5%, functions 99.0%, branches 96.2%. Enforced in CI.
-- **Embedded (ESP32-S3):** lines 81.6%, functions 82.7%, gathered via [pio-cov](https://github.com/m-mcgowan/pio-cov), a PlatformIO-aware coverage runner.
+- **Host:** GCC + lcov 2.x — 95%+ line coverage, enforced in CI (see the coverage badge in the README for the live figure).
+- **Embedded (ESP32-S3):** tracked on-device via [pio-cov](https://github.com/m-mcgowan/pio-cov), a PlatformIO-aware coverage runner.
 
 Host tests run in ~35 seconds. The full CI matrix (5 compilers + coverage + embedded compat + Wokwi runtime) runs on every push.
 

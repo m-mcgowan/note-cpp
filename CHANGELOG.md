@@ -10,6 +10,14 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-14
+
+### Added
+- note-cpp is now installable through the **Arduino Library Manager**. The repository no longer contains symlinks (which the Library Manager rejects), and a canonical `note-cpp.h` header is provided. Either `#include <note-cpp.h>` or `#include <note.hpp>` works — both pull in the full typed API.
+
+### Changed
+- No API or behaviour changes. This release only adjusts repository packaging for Arduino Library Manager acceptance; existing sketches and CMake projects continue to build unchanged.
+
 ## [0.3.1] - 2026-07-07
 
 ### Added

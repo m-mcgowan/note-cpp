@@ -13,6 +13,15 @@ add_compile_options(
 )
 
 set(NOTE_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+# `include/` is a symlink to `src/` kept out of version control (the Arduino
+# Library Manager rejects symlinked repos). The top-level CMakeLists.txt
+# recreates it, but this test project is also configured standalone
+# (`cmake -B build tests/`), so recreate it here too for fresh checkouts.
+if(NOT EXISTS "${NOTE_CPP_ROOT}/include")
+    file(CREATE_LINK "src" "${NOTE_CPP_ROOT}/include" SYMBOLIC COPY_ON_ERROR)
+endif()
+
 include_directories(${NOTE_CPP_ROOT}/include ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Curated source lists

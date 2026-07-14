@@ -57,12 +57,38 @@ For the full pipeline — overlay handling, intent extensions, target filtering 
 src/note/          Headers (canonical location; include/ is a symlink)
 src/note/api/      Generated endpoint headers (74 files)
 src/note.hpp       Arduino gateway header
+src/note-cpp.h     Canonical library header (forwards to note.hpp)
 tests/             Unit tests (CMake discovers via cmake/note-cpp-sources.cmake)
 tools/codegen/     Code generator (Python + Jinja2)
 examples/          Arduino sketches, PlatformIO examples, binary size comparison
 docs/              Design documents, migration guide
 cmake/             CMake source lists (curated + generated)
 ```
+
+### The `include/` symlink
+
+`include/` is a symlink to `src/` — the compat alias CMake and desktop
+consumers use (`-Iinclude`, `#include <note/...>`). Headers physically live
+in `src/`; the Arduino build uses `src/` directly and never touches
+`include/`.
+
+The symlink is **not** version-controlled (it's in `.gitignore`). The Arduino
+Library Manager rejects any repository that contains a symlink
+(`arduino-lint` rule LS005), and `include/` was the last one. Build entry
+points recreate it automatically, so you normally never notice it's gone:
+
+- the top-level `CMakeLists.txt` and `tests/CMakeLists.txt` recreate it at
+  configure time (`file(CREATE_LINK ... SYMBOLIC COPY_ON_ERROR)`);
+- `ci.sh` recreates it on startup.
+
+If you need it by hand (e.g. running a tool directly against `include/`),
+just `ln -s src include`.
+
+The test suite's `tests/integration/firmware/test/test_units_*/` and fixture
+directories used to be symlinks too; those are now generated **include-shim**
+`.cpp` files (a two-line `#include` of the real source under `tests/`).
+Regenerate them with `tests/integration/firmware/test/sync_groups.sh` after
+editing `groups.tsv`.
 
 ## Where to put new tests
 

@@ -4,6 +4,13 @@ __pycache__/
 a.out
 build/
 build-*/
+
+# Top-level compat alias: `include/` is a symlink to `src/`, kept out of
+# version control because the Arduino Library Manager rejects symlinked
+# repos (arduino-lint LS005). Build entry points (top-level CMakeLists.txt
+# and ci.sh) recreate it on demand; the Arduino build never needs it (it
+# compiles src/ directly). See CONTRIBUTING.md.
+/include
 coverage/
 docs/html/
 tests/integration/firmware/boards.sh

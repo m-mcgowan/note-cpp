@@ -6,6 +6,13 @@ renice -n 10 $$ >/dev/null 2>&1 || true
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
+# `include/` is a symlink to `src/` (the compat alias used throughout this
+# script and by CMake consumers). It is kept out of version control because
+# the Arduino Library Manager rejects symlinked repositories (arduino-lint
+# LS005), so recreate it here for fresh checkouts. Harmless when it already
+# exists. The Arduino build never needs it — it compiles src/ directly.
+[ -e "$ROOT/include" ] || ln -s src "$ROOT/include"
+
 # ── Multi-compiler support ──────────────────────────────────────────────────
 # Usage:
 #   ./ci.sh                  Quick check: codegen + unit tests (default)

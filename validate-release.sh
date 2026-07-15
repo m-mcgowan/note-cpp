@@ -151,25 +151,39 @@ step_hw_esp32_i2c() {
             --test-port "$port")
 }
 
+# The Notecard on an MPCB fixture sits on non-default pins, so the example
+# sketches must be built with those pins injected. boards.sh exports the pin
+# numbers (NOTECARD_SERIAL_RX/TX, NOTECARD_I2C_SDA/SCL); we pass them as
+# -DRX1/-DTX1 (ESP32 core Serial1 pins) / -DWIRE_SDA/-DWIRE_SCL (consumed by the
+# example). --clean is required: without it arduino-cli reuses the cached core
+# object files, so a -DRX1 override never reaches Serial1's default-pin code.
+# Use compiler.cpp.extra_flags (additive), NOT build.extra_flags (that replaces
+# the platform defaults and disables USB-CDC → no serial output).
 step_hw_esp32_arduino_serial() {
     local port
     port=$(usb-device port "$ESP32_DEVICE")
-    arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
-        --upload --port "$port" \
-        "$ROOT/examples/arduino/serial_basic"
+    ( cd "$ROOT/tests/integration/firmware" && \
+        source boards.sh "$ESP32_BOARD" --serial-only && \
+        arduino-cli compile --clean --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
+            --build-property "compiler.cpp.extra_flags=-DRX1=${NOTECARD_SERIAL_RX} -DTX1=${NOTECARD_SERIAL_TX}" \
+            --upload --port "$port" \
+            "$ROOT/examples/arduino/serial_basic" )
     echo "  Uploaded. Verifying serial output..."
-    serial-monitor "$ESP32_DEVICE" --timeout 30 | grep -q "\[ok\] hub.set"
+    serial-monitor "$ESP32_DEVICE" --timeout 45 | grep -q "\[ok\] hub.set"
     echo "  serial_basic OK"
 }
 
 step_hw_esp32_arduino_i2c() {
     local port
     port=$(usb-device port "$ESP32_DEVICE")
-    arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
-        --upload --port "$port" \
-        "$ROOT/examples/arduino/i2c_basic"
+    ( cd "$ROOT/tests/integration/firmware" && \
+        source boards.sh "$ESP32_BOARD" --i2c-only && \
+        arduino-cli compile --clean --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
+            --build-property "compiler.cpp.extra_flags=-DWIRE_SDA=${NOTECARD_I2C_SDA} -DWIRE_SCL=${NOTECARD_I2C_SCL}" \
+            --upload --port "$port" \
+            "$ROOT/examples/arduino/i2c_basic" )
     echo "  Uploaded. Verifying serial output..."
-    serial-monitor "$ESP32_DEVICE" --timeout 30 | grep -q "\[ok\] hub.set"
+    serial-monitor "$ESP32_DEVICE" --timeout 45 | grep -q "\[ok\] hub.set"
     echo "  i2c_basic OK"
 }
 

@@ -3,6 +3,11 @@
 // Wiring: Notecard SDA/SCL → board I2C pins.
 // Default I2C address: 0x17.
 //
+// Pins: uses the board's default Wire pins. If your Notecard sits on
+// non-default I2C pins, override them at build time with
+//   -DWIRE_SDA=<pin> -DWIRE_SCL=<pin>
+// (works on cores whose Wire supports Wire.begin(sda, scl), e.g. ESP32).
+//
 // Dependencies: just note-cpp (header-only, no external JSON library needed).
 
 #ifdef __AVR__
@@ -31,7 +36,11 @@ void setup() {
     while (!Serial && millis() < 10000) delay(10);  // wait for USB CDC
     Serial.println("[note-cpp] i2c_basic starting");
 
-    nc.begin(Wire);
+#if defined(WIRE_SDA) && defined(WIRE_SCL)
+    nc.begin(Wire, WIRE_SDA, WIRE_SCL);  // non-default I2C pins (see header)
+#else
+    nc.begin(Wire);                      // board default Wire pins
+#endif
 
     auto r = nc.hub.set()
         .product("com.example.myproject:mydevice")

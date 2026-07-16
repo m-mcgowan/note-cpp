@@ -10,6 +10,11 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-16
+
+### Changed
+- The `i2c_basic` Arduino example now accepts optional `-DWIRE_SDA=<pin> -DWIRE_SCL=<pin>` build flags, so it can drive a Notecard wired to non-default I²C pins (previously it only worked on the board's default `Wire` pins). Builds without the flags are unchanged.
+
 ## [0.3.2] - 2026-07-14
 
 ### Added

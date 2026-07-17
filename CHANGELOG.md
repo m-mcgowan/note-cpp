@@ -10,6 +10,11 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-07-21
+
+### Changed
+- The Arduino IDE's "Add Library" menu now inserts `#include <note.hpp>` — the single-include entry point used throughout the documentation — instead of `#include <note-cpp.h>`. The `note-cpp.h` header remains available as a convenience for anyone who includes the library-name header directly; both pull in the full API.
+
 ## [0.3.3] - 2026-07-16
 
 ### Changed

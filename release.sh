@@ -144,3 +144,25 @@ else
     echo "gh CLI not found — GitHub Actions will create a changelog-only release."
 fi
 echo "  https://github.com/$REPO_SLUG/releases/tag/$TAG"
+
+# ── PlatformIO registry ─────────────────────────────────────────────────────
+# The PlatformIO registry (unlike the Arduino Library Manager, which auto-indexes
+# git tags) requires an explicit publish for each version. Best-effort: skip
+# cleanly when the CLI is absent or the account isn't authenticated, so a release
+# never fails on it. To publish manually: pio account login && pio pkg publish
+echo
+if command -v pio >/dev/null 2>&1; then
+    if pio account show >/dev/null 2>&1 || [ -n "${PLATFORMIO_AUTH_TOKEN:-}" ]; then
+        echo "Publishing v$VERSION to the PlatformIO registry..."
+        if pio pkg publish --no-interactive "$ROOT"; then
+            echo "  Published to PlatformIO."
+        else
+            echo "  WARNING: PlatformIO publish failed — publish manually: pio pkg publish"
+        fi
+    else
+        echo "PlatformIO: not authenticated — skipping registry publish."
+        echo "  To publish this version: pio account login && pio pkg publish"
+    fi
+else
+    echo "PlatformIO CLI not found — skipping registry publish."
+fi

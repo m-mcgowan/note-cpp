@@ -35,12 +35,6 @@ namespace note::api {
 /// Get the current temperature from the Notecard's onboard calibrated
 /// temperature sensor.
 ///
-/// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect a
-/// BME280 sensor on the I2C bus the Notecard will add `temperature`,
-/// `pressure`, and `humidity` fields to the response. If you connect an ENS210
-/// sensor on the I2C bus the Notecard will add `temperature` and `pressure`
-/// fields to the response.
-///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardTemp {
 
@@ -57,6 +51,7 @@ struct CardTemp {
             static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
             static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
@@ -168,13 +163,13 @@ struct CardTemp {
             /// the Notecard's onboard temperature sensor. This per-device
             /// offset is added to the raw sensor reading to produce `value`.
             note::ResponseField<double> calibration{};
-            /// If the Notecard finds a BME280 sensor on the I2C bus, this field
-            /// will be set to the humidity percentage value from the connected
-            /// sensor.
-            note::ResponseField<double> humidity{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
-            /// this field will be set to the atmospheric pressure value from
-            /// the connected sensor in Pascals.
+            /// this field will be set to the humidity percentage value from the
+            /// connected sensor.
+            note::ResponseField<double> humidity{};
+            /// If the Notecard finds a BME280 sensor on the I2C bus, this field
+            /// will be set to the atmospheric pressure value from the connected
+            /// sensor in Pascals.
             note::ResponseField<double> pressure{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the temperature value from the
@@ -185,6 +180,11 @@ struct CardTemp {
             note::ResponseField<double> value{};
             /// The current voltage.
             note::ResponseField<double> voltage{};
+            /// `true` if the Notecard's onboard accelerometer has been disabled
+            /// with a `card.motion.mode` request. In this case `value` is read
+            /// from the temperature sensor built into the Notecard's MCU rather
+            /// than from the accelerometer.
+            note::ResponseField<bool> off{};
             /// `true` if the Notecard is connected to USB power.
             note::ResponseField<bool> usb{};
 
@@ -198,6 +198,7 @@ struct CardTemp {
                 if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("off")) rsp.off = reader_->get_bool("off");
                 if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
@@ -214,6 +215,7 @@ struct CardTemp {
                 if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("off")) rsp.off = reader_.get_bool("off");
                 if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 return rsp;
             }
@@ -228,6 +230,7 @@ struct CardTemp {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
@@ -282,6 +285,10 @@ struct CardTemp {
                 first_ = false;
                 n += p.print("\"voltage\":");
                 n += note::detail::print_json_value(p, voltage.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"off\":");
+                n += note::detail::print_json_value(p, off.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"usb\":");
@@ -376,12 +383,6 @@ struct CardTemp {
     /// Get the current temperature from the Notecard's onboard calibrated
     /// temperature sensor.
     ///
-    /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect a
-    /// BME280 sensor on the I2C bus the Notecard will add `temperature`,
-    /// `pressure`, and `humidity` fields to the response. If you connect an
-    /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-    /// `pressure` fields to the response.
-    ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Configure {
         struct keys_ {
@@ -396,6 +397,7 @@ struct CardTemp {
             static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
             static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
@@ -507,13 +509,13 @@ struct CardTemp {
             /// the Notecard's onboard temperature sensor. This per-device
             /// offset is added to the raw sensor reading to produce `value`.
             note::ResponseField<double> calibration{};
-            /// If the Notecard finds a BME280 sensor on the I2C bus, this field
-            /// will be set to the humidity percentage value from the connected
-            /// sensor.
-            note::ResponseField<double> humidity{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
-            /// this field will be set to the atmospheric pressure value from
-            /// the connected sensor in Pascals.
+            /// this field will be set to the humidity percentage value from the
+            /// connected sensor.
+            note::ResponseField<double> humidity{};
+            /// If the Notecard finds a BME280 sensor on the I2C bus, this field
+            /// will be set to the atmospheric pressure value from the connected
+            /// sensor in Pascals.
             note::ResponseField<double> pressure{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the temperature value from the
@@ -524,6 +526,11 @@ struct CardTemp {
             note::ResponseField<double> value{};
             /// The current voltage.
             note::ResponseField<double> voltage{};
+            /// `true` if the Notecard's onboard accelerometer has been disabled
+            /// with a `card.motion.mode` request. In this case `value` is read
+            /// from the temperature sensor built into the Notecard's MCU rather
+            /// than from the accelerometer.
+            note::ResponseField<bool> off{};
             /// `true` if the Notecard is connected to USB power.
             note::ResponseField<bool> usb{};
 
@@ -537,6 +544,7 @@ struct CardTemp {
                 if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("off")) rsp.off = reader_->get_bool("off");
                 if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
@@ -553,6 +561,7 @@ struct CardTemp {
                 if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("off")) rsp.off = reader_.get_bool("off");
                 if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 return rsp;
             }
@@ -567,6 +576,7 @@ struct CardTemp {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
@@ -621,6 +631,10 @@ struct CardTemp {
                 first_ = false;
                 n += p.print("\"voltage\":");
                 n += note::detail::print_json_value(p, voltage.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"off\":");
+                n += note::detail::print_json_value(p, off.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"usb\":");
@@ -715,12 +729,6 @@ struct CardTemp {
     /// Get the current temperature from the Notecard's onboard calibrated
     /// temperature sensor.
     ///
-    /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect a
-    /// BME280 sensor on the I2C bus the Notecard will add `temperature`,
-    /// `pressure`, and `humidity` fields to the response. If you connect an
-    /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-    /// `pressure` fields to the response.
-    ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Stop {
         struct keys_ {
@@ -735,6 +743,7 @@ struct CardTemp {
             static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
             static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
             static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
             static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
         };
 
@@ -830,13 +839,13 @@ struct CardTemp {
             /// the Notecard's onboard temperature sensor. This per-device
             /// offset is added to the raw sensor reading to produce `value`.
             note::ResponseField<double> calibration{};
-            /// If the Notecard finds a BME280 sensor on the I2C bus, this field
-            /// will be set to the humidity percentage value from the connected
-            /// sensor.
-            note::ResponseField<double> humidity{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
-            /// this field will be set to the atmospheric pressure value from
-            /// the connected sensor in Pascals.
+            /// this field will be set to the humidity percentage value from the
+            /// connected sensor.
+            note::ResponseField<double> humidity{};
+            /// If the Notecard finds a BME280 sensor on the I2C bus, this field
+            /// will be set to the atmospheric pressure value from the connected
+            /// sensor in Pascals.
             note::ResponseField<double> pressure{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the temperature value from the
@@ -847,6 +856,11 @@ struct CardTemp {
             note::ResponseField<double> value{};
             /// The current voltage.
             note::ResponseField<double> voltage{};
+            /// `true` if the Notecard's onboard accelerometer has been disabled
+            /// with a `card.motion.mode` request. In this case `value` is read
+            /// from the temperature sensor built into the Notecard's MCU rather
+            /// than from the accelerometer.
+            note::ResponseField<bool> off{};
             /// `true` if the Notecard is connected to USB power.
             note::ResponseField<bool> usb{};
 
@@ -860,6 +874,7 @@ struct CardTemp {
                 if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
                 if (reader_->has("value")) rsp.value = reader_->get_double("value");
                 if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("off")) rsp.off = reader_->get_bool("off");
                 if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
@@ -876,6 +891,7 @@ struct CardTemp {
                 if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
                 if (reader_.has("value")) rsp.value = reader_.get_double("value");
                 if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("off")) rsp.off = reader_.get_bool("off");
                 if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
                 return rsp;
             }
@@ -890,6 +906,7 @@ struct CardTemp {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
@@ -944,6 +961,10 @@ struct CardTemp {
                 first_ = false;
                 n += p.print("\"voltage\":");
                 n += note::detail::print_json_value(p, voltage.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"off\":");
+                n += note::detail::print_json_value(p, off.value());
                 if (!first_) n += p.print(",");
                 first_ = false;
                 n += p.print("\"usb\":");
@@ -1069,6 +1090,7 @@ struct request_traits<::note::api::CardTemp::Read> {
         {::note::api::CardTemp::Read::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, temperature)), ::note::FieldType::Double},
         {::note::api::CardTemp::Read::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, value)), ::note::FieldType::Double},
         {::note::api::CardTemp::Read::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, voltage)), ::note::FieldType::Double},
+        {::note::api::CardTemp::Read::keys_::rsp_off, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, off)), ::note::FieldType::Bool},
         {::note::api::CardTemp::Read::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Read::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
@@ -1170,6 +1192,7 @@ struct request_traits<::note::api::CardTemp::Configure> {
         {::note::api::CardTemp::Configure::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, temperature)), ::note::FieldType::Double},
         {::note::api::CardTemp::Configure::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, value)), ::note::FieldType::Double},
         {::note::api::CardTemp::Configure::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, voltage)), ::note::FieldType::Double},
+        {::note::api::CardTemp::Configure::keys_::rsp_off, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, off)), ::note::FieldType::Bool},
         {::note::api::CardTemp::Configure::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Configure::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop
@@ -1266,6 +1289,7 @@ struct request_traits<::note::api::CardTemp::Stop> {
         {::note::api::CardTemp::Stop::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, temperature)), ::note::FieldType::Double},
         {::note::api::CardTemp::Stop::keys_::rsp_value, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, value)), ::note::FieldType::Double},
         {::note::api::CardTemp::Stop::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, voltage)), ::note::FieldType::Double},
+        {::note::api::CardTemp::Stop::keys_::rsp_off, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, off)), ::note::FieldType::Bool},
         {::note::api::CardTemp::Stop::keys_::rsp_usb, static_cast<uint16_t>(offsetof(::note::api::CardTemp::Stop::Response, usb)), ::note::FieldType::Bool},
     };
 #pragma GCC diagnostic pop

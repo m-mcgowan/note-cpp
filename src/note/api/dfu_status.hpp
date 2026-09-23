@@ -121,36 +121,59 @@ struct DfuStatus {
         /// firmware updates.
         DfuStatus& operator()(note::string_view v);
     } name{};
-    /// `true` to disable firmware downloads from Notehub.
+    /// `true` to disable firmware downloads from Notehub. This setting persists
+    /// across Notecard restarts. If both `on` and `off` are provided in the
+    /// same request, `off` takes precedence.
     struct off_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// `true` to disable firmware downloads from Notehub.
+        /// `true` to disable firmware downloads from Notehub. This setting
+        /// persists across Notecard restarts. If both `on` and `off` are
+        /// provided in the same request, `off` takes precedence.
         DfuStatus& operator()(bool v);
     } off{};
-    /// `true` to allow firmware downloads from Notehub.
+    /// `true` to allow firmware downloads from Notehub. Downloads are enabled
+    /// by default, and this setting persists across Notecard restarts.
+    ///
+    /// Enabling downloads here does not guarantee that a download will proceed.
+    /// It can still be deferred by the `_fw_download_disabled` and
+    /// `_fw_download_window_mins` environment variables, or by the `vvalue`
+    /// voltage gate below.
     struct on_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// `true` to allow firmware downloads from Notehub.
+        /// `true` to allow firmware downloads from Notehub. Downloads are
+        /// enabled by default, and this setting persists across Notecard
+        /// restarts.
+        ///
+        /// Enabling downloads here does not guarantee that a download will
+        /// proceed. It can still be deferred by the `_fw_download_disabled` and
+        /// `_fw_download_window_mins` environment variables, or by the `vvalue`
+        /// voltage gate below.
         DfuStatus& operator()(bool v);
     } on{};
     /// When setting `stop` to `true`, an optional string synchronized to
-    /// Notehub, which can be used for informational or diagnostic purposes.
+    /// Notehub, which can be used for informational or diagnostic purposes. If
+    /// `stop` is `true` and no `status` is provided, the Notecard reports
+    /// `successful firmware update`.
     struct status_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         /// When setting `stop` to `true`, an optional string synchronized to
         /// Notehub, which can be used for informational or diagnostic purposes.
+        /// If `stop` is `true` and no `status` is provided, the Notecard
+        /// reports `successful firmware update`.
         DfuStatus& operator()(note::string_view v);
     } status{};
-    /// `true` to clear DFU state and delete the local firmware image from the
-    /// Notecard.
+    /// `true` to end the current DFU. The Notecard exits DFU operating mode and
+    /// marks the update `completed`, or `error` if an `err` string is also
+    /// provided.
     struct stop_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// `true` to clear DFU state and delete the local firmware image from
-        /// the Notecard.
+        /// `true` to end the current DFU. The Notecard exits DFU operating mode
+        /// and marks the update `completed`, or `error` if an `err` string is
+        /// also provided.
         DfuStatus& operator()(bool v);
     } stop{};
     /// Version information on the host firmware to pass to Notehub. You may
@@ -187,14 +210,16 @@ struct DfuStatus {
     /// A voltage-variable string that controls, by Notecard voltage, whether or
     /// not DFU is enabled. Use a boolean `1` (on) or `0` (off) for each
     /// source/voltage level:
-    /// `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`.
+    /// `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`. The default is
+    /// `usb:1;high:1;normal:1;low:0;dead:0`.
     struct vvalue_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         /// A voltage-variable string that controls, by Notecard voltage,
         /// whether or not DFU is enabled. Use a boolean `1` (on) or `0` (off)
         /// for each source/voltage level:
-        /// `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`.
+        /// `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`. The default is
+        /// `usb:1;high:1;normal:1;low:0;dead:0`.
         DfuStatus& operator()(note::string_view v);
     } vvalue{};
 

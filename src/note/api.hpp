@@ -67,6 +67,7 @@
 #include <note/api/note_get.hpp>
 #include <note/api/note_template.hpp>
 #include <note/api/note_update.hpp>
+#include <note/api/ntn_config.hpp>
 #include <note/api/ntn_gps.hpp>
 #include <note/api/ntn_reset.hpp>
 #include <note/api/ntn_status.hpp>
@@ -655,30 +656,12 @@ public:
     public:
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
-        ///
-        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
-        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
-        /// `pressure`, and `humidity` fields to the response. If you connect an
-        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-        /// `pressure` fields to the response.
         auto read() { return create_<api::CardTemp::Read>(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
-        ///
-        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
-        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
-        /// `pressure`, and `humidity` fields to the response. If you connect an
-        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-        /// `pressure` fields to the response.
         auto configure() { return create_<api::CardTemp::Configure>(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
-        ///
-        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
-        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
-        /// `pressure`, and `humidity` fields to the response. If you connect an
-        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-        /// `pressure` fields to the response.
         auto stop() { return create_<api::CardTemp::Stop>(); }
     };
 
@@ -1299,7 +1282,7 @@ public:
         /// If you connect a BME280 sensor on the I2C bus, Notecard will include
         /// a temperature, humidity, and pressure reading with each captured
         /// Note. If you connect an ENS210 sensor on the I2C bus, Notecard will
-        /// include a temperature and pressure reading with each captured Note.
+        /// include a temperature and humidity reading with each captured Note.
         /// Learn more in _track.qo.
         auto track() { return create_<api::CardLocationTrack>(); }
     };
@@ -2056,12 +2039,6 @@ public:
 
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
-        ///
-        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
-        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
-        /// `pressure`, and `humidity` fields to the response. If you connect an
-        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-        /// `pressure` fields to the response.
         CardTempFactory temp() { return
 #if NOTE_SINGLETON
             {}
@@ -3110,24 +3087,64 @@ public:
 
 
 #if __cplusplus >= 202002L
-        /// Determines whether a Notecard should override a paired Starnote's
-        /// GPS/GNSS location with its own GPS/GNSS location. The paired
-        /// Starnote uses its own GPS/GNSS location by default.
+        /// Returns the configuration and identity of the satellite (NTN)
+        /// module: the network it is provisioned for, its modem, its SKU and
+        /// ordering code, and the firmware it is running.
+        template<typename T_ = TargetT_>
+        requires (target_supports<T_, api::NtnConfig>())
+        auto config() { return create_<api::NtnConfig>(); }
+
+        /// Returns the configuration and identity of the satellite (NTN)
+        /// module: the network it is provisioned for, its modem, its SKU and
+        /// ordering code, and the firmware it is running.
+        template<typename T_ = TargetT_>
+        requires (!target_supports<T_, api::NtnConfig>() && !T_::strict)
+        [[deprecated("ntn.config is not available on this target")]]
+        auto config() { return create_<api::NtnConfig>(); }
+#else
+        /// Returns the configuration and identity of the satellite (NTN)
+        /// module: the network it is provisioned for, its modem, its SKU and
+        /// ordering code, and the firmware it is running.
+        auto config() { return create_<api::NtnConfig>(); }
+#endif
+
+#if __cplusplus >= 202002L
+        /// On a Notecard paired with a Starnote, this controls whether the
+        /// Notecard supplies a location it already knows to the Starnote for
+        /// satellite use. It does not, by default.
+        ///
+        /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part
+        /// of the same module. This request controls whether the Notecard uses
+        /// a known location (typically a fixed location set with
+        /// `card.location.mode`), instead of acquiring a new location for NTN
+        /// use.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::NtnGps>())
         auto gps() { return create_<api::NtnGps>(); }
 
-        /// Determines whether a Notecard should override a paired Starnote's
-        /// GPS/GNSS location with its own GPS/GNSS location. The paired
-        /// Starnote uses its own GPS/GNSS location by default.
+        /// On a Notecard paired with a Starnote, this controls whether the
+        /// Notecard supplies a location it already knows to the Starnote for
+        /// satellite use. It does not, by default.
+        ///
+        /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part
+        /// of the same module. This request controls whether the Notecard uses
+        /// a known location (typically a fixed location set with
+        /// `card.location.mode`), instead of acquiring a new location for NTN
+        /// use.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::NtnGps>() && !T_::strict)
         [[deprecated("ntn.gps is not available on this target")]]
         auto gps() { return create_<api::NtnGps>(); }
 #else
-        /// Determines whether a Notecard should override a paired Starnote's
-        /// GPS/GNSS location with its own GPS/GNSS location. The paired
-        /// Starnote uses its own GPS/GNSS location by default.
+        /// On a Notecard paired with a Starnote, this controls whether the
+        /// Notecard supplies a location it already knows to the Starnote for
+        /// satellite use. It does not, by default.
+        ///
+        /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part
+        /// of the same module. This request controls whether the Notecard uses
+        /// a known location (typically a fixed location set with
+        /// `card.location.mode`), instead of acquiring a new location for NTN
+        /// use.
         auto gps() { return create_<api::NtnGps>(); }
 #endif
 

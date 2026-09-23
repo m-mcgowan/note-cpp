@@ -55,6 +55,7 @@
   "note.add": "POST",
   "note.delete": "DELETE",
   "note.update": "PUT",
+  "ntn.config": "GET",
   "ntn.gps": "PUT",
   "ntn.reset": "DELETE",
   "ntn.status": "GET",

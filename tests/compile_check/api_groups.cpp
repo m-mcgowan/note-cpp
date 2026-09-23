@@ -125,6 +125,7 @@ void test_group_accessors(TestApi& api) {
     use(api.note.update(note::string_view("x-file"), note::string_view("x-note")));
 
     // ntn
+    use(api.ntn.config());
     use(api.ntn.gps());
     use(api.ntn.reset());
     use(api.ntn.status());
@@ -239,6 +240,7 @@ void test_direct_types() {
     use(note::api::NoteTemplate::Define{});
     use(note::api::NoteTemplate::Remove{});
     use(note::api::NoteUpdate{});
+    use(note::api::NtnConfig{});
     use(note::api::NtnGps{});
     use(note::api::NtnReset{});
     use(note::api::NtnStatus{});

@@ -209,7 +209,8 @@ struct CardWifi {
             ::note::detail::arena_cost(41) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// The security protocol the WiFi access point uses.
+        /// The security protocol the WiFi access point uses. Notecard supports
+        /// personal (pre-shared key) security only. Will be one of:
         note::ResponseField<note::string_view> security{};
         /// The SSID of the WiFi access point.
         note::ResponseField<note::string_view> ssid{};

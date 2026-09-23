@@ -10,6 +10,16 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-13
+
+### Added
+- Typed support for the new **`ntn.config`** request — returns the satellite (NTN) module's configuration and identity (provisioned network, modem, SKU and ordering code, APN, band, firmware version, and more).
+- New request fields synced from [notecard-schema v1.6.0](https://github.com/blues/notecard-schema/releases/tag/v1.6.0): `card.monitor` (`on` / `off`), `card.voltage` (`now`), `card.power` (`hours`), `card.transport` (`set`), and `file.changes.pending` (`files` / `items`); plus new response fields on `note.template` (`delete`, `port`) and `card.temp` (`off`).
+- New enum values: `card.wifi` security types (`open`, `wep`, `wpa2-wpa1`, `wpa2-psk`) and the `dfu-completed` state on `hub.set`.
+
+### Changed
+- Synced the bundled Notecard API definitions to notecard-schema v1.6.0 (upstream `03c5498`), regenerating the typed API and the API reference. The update is additive — existing code continues to compile unchanged — and also refreshes documentation, several default values (e.g. `card.voltage` thresholds), and field constraints across many requests.
+
 ## [0.3.4] - 2026-07-21
 
 ### Changed

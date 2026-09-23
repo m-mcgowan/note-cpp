@@ -384,6 +384,10 @@ TEST_CASE("Api::note resource group") {
 
 TEST_CASE("Api::ntn resource group") {
     Harness h;
+    SUBCASE("ntn.config") {
+        h.api.execute(h.api.ntn.config());
+        REQUIRE(h.last_req.find("ntn.config") != std::string::npos);
+    }
     SUBCASE("ntn.gps") {
         h.api.execute(h.api.ntn.gps());
         REQUIRE(h.last_req.find("ntn.gps") != std::string::npos);

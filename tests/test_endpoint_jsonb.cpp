@@ -977,6 +977,16 @@ TEST_CASE("note::api::NoteUpdate JSONB wire format") {
 }
 
 
+TEST_CASE("note::api::NtnConfig JSONB wire format") {
+    note::api::NtnConfig req{};
+    auto bytes = build_jsonb_request(req);
+    REQUIRE(bytes.size() >= 2);
+    CHECK(bytes.front() == note::jsonb::kBeginObject);
+    CHECK(bytes.back()  == note::jsonb::kEndObject);
+    CHECK(find_jsonb_string(bytes, "req") == note::api::NtnConfig::notecard_request);
+}
+
+
 TEST_CASE("note::api::NtnGps JSONB wire format") {
     note::api::NtnGps req{};
     auto bytes = build_jsonb_request(req);

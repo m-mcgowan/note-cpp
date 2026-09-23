@@ -178,15 +178,17 @@ struct NoteAdd {
         NoteAdd& operator()(bool v);
     } full{};
 #endif
-    /// The name of an environment variable in your Notehub.io project that
+    /// The name of an environment variable in your Notehub project that
     /// contains the contents of a public key. Used when encrypting the Note
-    /// body for transport.
+    /// body for transport. Note body encryption is not supported on Notecard
+    /// for LoRa.
     struct key_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-        /// The name of an environment variable in your Notehub.io project that
+        /// The name of an environment variable in your Notehub project that
         /// contains the contents of a public key. Used when encrypting the Note
-        /// body for transport.
+        /// body for transport. Note body encryption is not supported on
+        /// Notecard for LoRa.
         NoteAdd& operator()(note::string_view v);
     } key{};
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)

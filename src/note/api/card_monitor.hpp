@@ -41,6 +41,8 @@ struct CardMonitor {
         static constexpr char req[] NOTE_FLASH_ATTR = "card.monitor";
         static constexpr char count[] NOTE_FLASH_ATTR = "count";
         static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
         static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
     };
 
@@ -55,13 +57,15 @@ struct CardMonitor {
 #endif
 
 
-    /// The number of pulses to send to the overridden AUX pin LED. Set this
-    /// value to `0` to return the LED to its default behavior.
+    /// The number of pulses to send to the overridden AUX pin LED. To return
+    /// the LED to its default behavior, use `"off": true` along with the `mode`
+    /// of the LED.
     struct count_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// The number of pulses to send to the overridden AUX pin LED. Set this
-        /// value to `0` to return the LED to its default behavior.
+        /// The number of pulses to send to the overridden AUX pin LED. To
+        /// return the LED to its default behavior, use `"off": true` along with
+        /// the `mode` of the LED.
         CardMonitor& operator()(note::json_int_t v);
     } count{};
     /// Can be set to one of `green`, `red` or `yellow` to temporarily override
@@ -110,6 +114,24 @@ struct CardMonitor {
         /// See Using Monitor Mode for additional details.
         CardMonitor& operator()(note::string_view v);
     } mode{};
+    /// Set to `true`, along with a `mode`, to clear an override and return that
+    /// AUX pin LED to its default behavior.
+    struct off_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        /// Set to `true`, along with a `mode`, to clear an override and return
+        /// that AUX pin LED to its default behavior.
+        CardMonitor& operator()(bool v);
+    } off{};
+    /// Set to `true`, along with a `mode`, to turn that AUX pin LED on
+    /// continuously.
+    struct on_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        /// Set to `true`, along with a `mode`, to turn that AUX pin LED on
+        /// continuously.
+        CardMonitor& operator()(bool v);
+    } on{};
     /// Set to `true` to configure LED behavior so that it is only active when
     /// the Notecard is connected to USB power.
     struct usb_t : Field<bool> {
@@ -155,6 +177,8 @@ struct CardMonitor {
     note::DynField operator[](note::string_view k_) {
         if (k_ == "count") return note::dyn_field_for(count);
         if (k_ == "mode") return note::dyn_field_for(mode);
+        if (k_ == "off") return note::dyn_field_for(off);
+        if (k_ == "on") return note::dyn_field_for(on);
         if (k_ == "usb") return note::dyn_field_for(usb);
         if (extras_count_ < NOTE_EXTRAS_MAX) {
             auto& slot = extras_[extras_count_++];
@@ -218,6 +242,14 @@ struct CardMonitor {
             n += p.print(",\"mode\":");
             n += note::detail::print_json_value(p, *mode);
         }
+        if (off) {
+            n += p.print(",\"off\":");
+            n += note::detail::print_json_value(p, *off);
+        }
+        if (on) {
+            n += p.print(",\"on\":");
+            n += note::detail::print_json_value(p, *on);
+        }
         if (usb) {
             n += p.print(",\"usb\":");
             n += note::detail::print_json_value(p, *usb);
@@ -252,6 +284,16 @@ inline CardMonitor& CardMonitor::mode_t::operator()(note::string_view v) {
     return *reinterpret_cast<CardMonitor*>(
         reinterpret_cast<char*>(this) - offsetof(CardMonitor, mode));
 }
+inline CardMonitor& CardMonitor::off_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardMonitor*>(
+        reinterpret_cast<char*>(this) - offsetof(CardMonitor, off));
+}
+inline CardMonitor& CardMonitor::on_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardMonitor*>(
+        reinterpret_cast<char*>(this) - offsetof(CardMonitor, on));
+}
 inline CardMonitor& CardMonitor::usb_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardMonitor*>(
@@ -269,6 +311,8 @@ struct request_traits<::note::api::CardMonitor> {
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {::note::api::CardMonitor::keys_::count, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, count)), ::note::ReqFieldType::Int},
             {::note::api::CardMonitor::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, mode)), ::note::ReqFieldType::String},
+            {::note::api::CardMonitor::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, off)), ::note::ReqFieldType::Bool},
+            {::note::api::CardMonitor::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, on)), ::note::ReqFieldType::Bool},
             {::note::api::CardMonitor::keys_::usb, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, usb)), ::note::ReqFieldType::Bool},
         };
 #pragma GCC diagnostic pop

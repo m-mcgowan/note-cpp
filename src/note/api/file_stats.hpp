@@ -102,12 +102,16 @@ struct FileStats {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// The number of Notes across all Notefiles pending sync.
+        /// The number of Notes pending sync. Reflects only the Notefile named
+        /// by the `file` argument, or all Notefiles when `file` is omitted.
         note::ResponseField<note::json_int_t> changes{};
-        /// The total number of Notes across all Notefiles.
+        /// The total number of Notes, synced and unsynced. Reflects only the
+        /// Notefile named by the `file` argument, or all Notefiles when `file`
+        /// is omitted.
         note::ResponseField<note::json_int_t> total{};
-        /// `true` if a sync is recommended based on the number of pending
-        /// notes.
+        /// `true` if a sync is recommended. This is set when an in-scope
+        /// Notefile's in-memory footprint reaches a critical size and should be
+        /// flushed, not when a particular number of Notes is pending.
         note::ResponseField<bool> sync{};
 
 

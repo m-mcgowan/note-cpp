@@ -68,6 +68,7 @@ set(NOTE_CPP_GENERATED_HEADERS
     include/note/api/note_get.hpp
     include/note/api/note_template.hpp
     include/note/api/note_update.hpp
+    include/note/api/ntn_config.hpp
     include/note/api/ntn_gps.hpp
     include/note/api/ntn_reset.hpp
     include/note/api/ntn_status.hpp

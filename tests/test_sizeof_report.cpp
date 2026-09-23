@@ -107,6 +107,7 @@ TEST_CASE("Request struct sizes") {
         {"NoteTemplate::Define", sizeof(note::api::NoteTemplate::Define)},
         {"NoteTemplate::Remove", sizeof(note::api::NoteTemplate::Remove)},
         {"NoteUpdate", sizeof(note::api::NoteUpdate)},
+        {"NtnConfig", sizeof(note::api::NtnConfig)},
         {"NtnGps", sizeof(note::api::NtnGps)},
         {"NtnReset", sizeof(note::api::NtnReset)},
         {"NtnStatus", sizeof(note::api::NtnStatus)},

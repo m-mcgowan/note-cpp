@@ -41,6 +41,7 @@ struct CardPower {
     struct Read {
         struct keys_ {
             static constexpr char req[] NOTE_FLASH_ATTR = "card.power";
+            static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char rsp_milliampHours[] NOTE_FLASH_ATTR = "milliamp_hours";
@@ -59,13 +60,30 @@ struct CardPower {
 #endif
 
 
+        /// How often, in hours, Notecard should log power consumption in a
+        /// `_log.qo` Note. Provided as a convenience alternative to `minutes`.
+        /// If both `hours` and `minutes` are provided, the resulting cadence is
+        /// the sum of the two.
+        struct hours_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            /// How often, in hours, Notecard should log power consumption in a
+            /// `_log.qo` Note. Provided as a convenience alternative to
+            /// `minutes`. If both `hours` and `minutes` are provided, the
+            /// resulting cadence is the sum of the two.
+            CardPower::Read& operator()(note::json_int_t v);
+        } hours{};
         /// How often, in minutes, Notecard should log power consumption in a
-        /// `_log.qo` Note. The default value is `720` (12 hours).
+        /// `_log.qo` Note. The default value is `720` (12 hours). May be
+        /// combined with `hours`, in which case the two values are added
+        /// together.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
             /// How often, in minutes, Notecard should log power consumption in
-            /// a `_log.qo` Note. The default value is `720` (12 hours).
+            /// a `_log.qo` Note. The default value is `720` (12 hours). May be
+            /// combined with `hours`, in which case the two values are added
+            /// together.
             CardPower::Read& operator()(note::json_int_t v);
         } minutes{};
         /// Set to `true` to reset the power consumption counters back to 0.
@@ -100,6 +118,7 @@ struct CardPower {
         /// usable for assignment; unknown keys are added as extras (subject to
         /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
+            if (k_ == "hours") return note::dyn_field_for(hours);
             if (k_ == "minutes") return note::dyn_field_for(minutes);
             if (k_ == "reset") return note::dyn_field_for(reset);
             if (extras_count_ < NOTE_EXTRAS_MAX) {
@@ -124,10 +143,11 @@ struct CardPower {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
             note::ResponseField<double> milliampHours{};
-            /// The temperature from Notecard's onboard sensor in degrees
-            /// centigrade, including the calibration offset.
+            /// The temperature in degrees centigrade, as measured by the
+            /// coulomb counter on the connected Mojo.
             note::ResponseField<double> temperature{};
-            /// The current voltage.
+            /// The voltage, in volts, measured by Mojo on the load side of its
+            /// current-sense resistor.
             note::ResponseField<double> voltage{};
 
 
@@ -247,6 +267,10 @@ struct CardPower {
             size_t n = p.print("{\"req\":\"");
             n += p.print(notecard_request.data());
             n += p.print("\"");
+            if (hours) {
+                n += p.print(",\"hours\":");
+                n += note::detail::print_json_value(p, *hours);
+            }
             if (minutes) {
                 n += p.print(",\"minutes\":");
                 n += note::detail::print_json_value(p, *minutes);
@@ -281,6 +305,7 @@ struct CardPower {
     struct Configure {
         struct keys_ {
             static constexpr char req[] NOTE_FLASH_ATTR = "card.power";
+            static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char rsp_milliampHours[] NOTE_FLASH_ATTR = "milliamp_hours";
@@ -299,13 +324,30 @@ struct CardPower {
 #endif
 
 
+        /// How often, in hours, Notecard should log power consumption in a
+        /// `_log.qo` Note. Provided as a convenience alternative to `minutes`.
+        /// If both `hours` and `minutes` are provided, the resulting cadence is
+        /// the sum of the two.
+        struct hours_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            /// How often, in hours, Notecard should log power consumption in a
+            /// `_log.qo` Note. Provided as a convenience alternative to
+            /// `minutes`. If both `hours` and `minutes` are provided, the
+            /// resulting cadence is the sum of the two.
+            CardPower::Configure& operator()(note::json_int_t v);
+        } hours{};
         /// How often, in minutes, Notecard should log power consumption in a
-        /// `_log.qo` Note. The default value is `720` (12 hours).
+        /// `_log.qo` Note. The default value is `720` (12 hours). May be
+        /// combined with `hours`, in which case the two values are added
+        /// together.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
             /// How often, in minutes, Notecard should log power consumption in
-            /// a `_log.qo` Note. The default value is `720` (12 hours).
+            /// a `_log.qo` Note. The default value is `720` (12 hours). May be
+            /// combined with `hours`, in which case the two values are added
+            /// together.
             CardPower::Configure& operator()(note::json_int_t v);
         } minutes{};
         /// Set to `true` to reset the power consumption counters back to 0.
@@ -340,6 +382,7 @@ struct CardPower {
         /// usable for assignment; unknown keys are added as extras (subject to
         /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
+            if (k_ == "hours") return note::dyn_field_for(hours);
             if (k_ == "minutes") return note::dyn_field_for(minutes);
             if (k_ == "reset") return note::dyn_field_for(reset);
             if (extras_count_ < NOTE_EXTRAS_MAX) {
@@ -364,10 +407,11 @@ struct CardPower {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
             note::ResponseField<double> milliampHours{};
-            /// The temperature from Notecard's onboard sensor in degrees
-            /// centigrade, including the calibration offset.
+            /// The temperature in degrees centigrade, as measured by the
+            /// coulomb counter on the connected Mojo.
             note::ResponseField<double> temperature{};
-            /// The current voltage.
+            /// The voltage, in volts, measured by Mojo on the load side of its
+            /// current-sense resistor.
             note::ResponseField<double> voltage{};
 
 
@@ -487,6 +531,10 @@ struct CardPower {
             size_t n = p.print("{\"req\":\"");
             n += p.print(notecard_request.data());
             n += p.print("\"");
+            if (hours) {
+                n += p.print(",\"hours\":");
+                n += note::detail::print_json_value(p, *hours);
+            }
             if (minutes) {
                 n += p.print(",\"minutes\":");
                 n += note::detail::print_json_value(p, *minutes);
@@ -521,6 +569,7 @@ struct CardPower {
     struct Reset {
         struct keys_ {
             static constexpr char req[] NOTE_FLASH_ATTR = "card.power";
+            static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
             static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char rsp_milliampHours[] NOTE_FLASH_ATTR = "milliamp_hours";
@@ -539,13 +588,30 @@ struct CardPower {
 #endif
 
 
+        /// How often, in hours, Notecard should log power consumption in a
+        /// `_log.qo` Note. Provided as a convenience alternative to `minutes`.
+        /// If both `hours` and `minutes` are provided, the resulting cadence is
+        /// the sum of the two.
+        struct hours_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            /// How often, in hours, Notecard should log power consumption in a
+            /// `_log.qo` Note. Provided as a convenience alternative to
+            /// `minutes`. If both `hours` and `minutes` are provided, the
+            /// resulting cadence is the sum of the two.
+            CardPower::Reset& operator()(note::json_int_t v);
+        } hours{};
         /// How often, in minutes, Notecard should log power consumption in a
-        /// `_log.qo` Note. The default value is `720` (12 hours).
+        /// `_log.qo` Note. The default value is `720` (12 hours). May be
+        /// combined with `hours`, in which case the two values are added
+        /// together.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
             /// How often, in minutes, Notecard should log power consumption in
-            /// a `_log.qo` Note. The default value is `720` (12 hours).
+            /// a `_log.qo` Note. The default value is `720` (12 hours). May be
+            /// combined with `hours`, in which case the two values are added
+            /// together.
             CardPower::Reset& operator()(note::json_int_t v);
         } minutes{};
 
@@ -569,6 +635,7 @@ struct CardPower {
         /// usable for assignment; unknown keys are added as extras (subject to
         /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
+            if (k_ == "hours") return note::dyn_field_for(hours);
             if (k_ == "minutes") return note::dyn_field_for(minutes);
             if (extras_count_ < NOTE_EXTRAS_MAX) {
                 auto& slot = extras_[extras_count_++];
@@ -592,10 +659,11 @@ struct CardPower {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
             note::ResponseField<double> milliampHours{};
-            /// The temperature from Notecard's onboard sensor in degrees
-            /// centigrade, including the calibration offset.
+            /// The temperature in degrees centigrade, as measured by the
+            /// coulomb counter on the connected Mojo.
             note::ResponseField<double> temperature{};
-            /// The current voltage.
+            /// The voltage, in volts, measured by Mojo on the load side of its
+            /// current-sense resistor.
             note::ResponseField<double> voltage{};
 
 
@@ -715,6 +783,10 @@ struct CardPower {
             size_t n = p.print("{\"req\":\"");
             n += p.print(notecard_request.data());
             n += p.print("\"");
+            if (hours) {
+                n += p.print(",\"hours\":");
+                n += note::detail::print_json_value(p, *hours);
+            }
             if (minutes) {
                 n += p.print(",\"minutes\":");
                 n += note::detail::print_json_value(p, *minutes);
@@ -741,6 +813,11 @@ struct CardPower {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardPower::Read& CardPower::Read::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
+    return *reinterpret_cast<CardPower::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Read, hours));
+}
 inline CardPower::Read& CardPower::Read::minutes_t::operator()(note::json_int_t v) {
     Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardPower::Read*>(
@@ -771,6 +848,7 @@ struct request_traits<::note::api::CardPower::Read> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardPower::Read::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read, hours)), ::note::ReqFieldType::Int},
             {::note::api::CardPower::Read::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read, minutes)), ::note::ReqFieldType::Int},
             {::note::api::CardPower::Read::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read, reset)), ::note::ReqFieldType::Bool},
         };
@@ -826,6 +904,11 @@ inline Result<void> CardPower::Read::command() const {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardPower::Configure& CardPower::Configure::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
+    return *reinterpret_cast<CardPower::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Configure, hours));
+}
 inline CardPower::Configure& CardPower::Configure::minutes_t::operator()(note::json_int_t v) {
     Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardPower::Configure*>(
@@ -856,6 +939,7 @@ struct request_traits<::note::api::CardPower::Configure> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardPower::Configure::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure, hours)), ::note::ReqFieldType::Int},
             {::note::api::CardPower::Configure::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure, minutes)), ::note::ReqFieldType::Int},
             {::note::api::CardPower::Configure::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure, reset)), ::note::ReqFieldType::Bool},
         };
@@ -911,6 +995,11 @@ inline Result<void> CardPower::Configure::command() const {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardPower::Reset& CardPower::Reset::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
+    return *reinterpret_cast<CardPower::Reset*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Reset, hours));
+}
 inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(note::json_int_t v) {
     Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardPower::Reset*>(
@@ -936,6 +1025,7 @@ struct request_traits<::note::api::CardPower::Reset> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardPower::Reset::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardPower::Reset, hours)), ::note::ReqFieldType::Int},
             {::note::api::CardPower::Reset::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardPower::Reset, minutes)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop

@@ -42,6 +42,7 @@ struct CardTransport {
         static constexpr char allow[] NOTE_FLASH_ATTR = "allow";
         static constexpr char method[] NOTE_FLASH_ATTR = "method";
         static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char set[] NOTE_FLASH_ATTR = "set";
         static constexpr char umin[] NOTE_FLASH_ATTR = "umin";
         static constexpr char rsp_method[] NOTE_FLASH_ATTR = "method";
         static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
@@ -61,8 +62,8 @@ struct CardTransport {
 
 
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    /// Set to `true` to allow adding Notes to non-compact Notefiles while
-    /// connected over a non-terrestrial network.
+    /// Set to `true` to allow adding Notes to templated Notefiles that have no
+    /// `port` while connected over a non-terrestrial network.
     ///
     /// See Define NTN vs non-NTN Templates.
     ///
@@ -73,8 +74,8 @@ struct CardTransport {
     struct allow_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// Set to `true` to allow adding Notes to non-compact Notefiles while
-        /// connected over a non-terrestrial network.
+        /// Set to `true` to allow adding Notes to templated Notefiles that have
+        /// no `port` while connected over a non-terrestrial network.
         ///
         /// See Define NTN vs non-NTN Templates.
         ///
@@ -148,6 +149,15 @@ struct CardTransport {
         CardTransport& operator()(note::json_int_t v);
     } seconds{};
 #endif
+    /// Set to `true` to apply the `allow` argument without also changing the
+    /// transport `method`.
+    struct set_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        /// Set to `true` to apply the `allow` argument without also changing
+        /// the transport `method`.
+        CardTransport& operator()(bool v);
+    } set{};
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     /// Set to `true` to force a longer network transport timeout when using
     /// Wideband Notecards.
@@ -172,7 +182,7 @@ struct CardTransport {
     //   "cell" — Enables **cellular only** on the device.
     //   "cell-ntn" — Prioritizes cellular connectivity while falling back to NTN if a cell...
     //   "dual-wifi-cell" — Deprecated form of `"wifi-cell"`
-    //   "ntn" — Enables **NTN (Non-Terrestrial Network)** mode on the device for use ...
+    //   "ntn" — Enables **NTN (Non-Terrestrial Network)** mode on the device, using e...
     //   "wifi" — Enables **WiFi only** on the device.
     //   "wifi-cell" — Prioritizes WiFi connectivity while falling back to cellular if a WiF...
     //   "wifi-cell-ntn" — Prioritizes WiFi connectivity while falling back to cellular, and las...
@@ -213,6 +223,7 @@ struct CardTransport {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "seconds") return note::dyn_field_for(seconds);
 #endif
+        if (k_ == "set") return note::dyn_field_for(set);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "umin") return note::dyn_field_for(umin);
 #endif
@@ -487,6 +498,10 @@ struct CardTransport {
             n += note::detail::print_json_value(p, *seconds);
         }
 #endif
+        if (set) {
+            n += p.print(",\"set\":");
+            n += note::detail::print_json_value(p, *set);
+        }
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
         if (umin) {
             n += p.print(",\"umin\":");
@@ -533,6 +548,11 @@ inline CardTransport& CardTransport::seconds_t::operator()(note::json_int_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardTransport, seconds));
 }
 #endif
+inline CardTransport& CardTransport::set_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardTransport*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTransport, set));
+}
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
 inline CardTransport& CardTransport::umin_t::operator()(bool v) {
     Field<bool>::operator=(v);
@@ -574,6 +594,7 @@ struct request_traits<::note::api::CardTransport> {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             {::note::api::CardTransport::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::CardTransport, seconds)), ::note::ReqFieldType::Int},
 #endif
+            {::note::api::CardTransport::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardTransport, set)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
             {::note::api::CardTransport::keys_::umin, static_cast<uint16_t>(offsetof(::note::api::CardTransport, umin)), ::note::ReqFieldType::Bool},
 #endif

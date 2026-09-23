@@ -32,9 +32,14 @@ namespace note::api {
 
 
 
-/// Determines whether a Notecard should override a paired Starnote's GPS/GNSS
-/// location with its own GPS/GNSS location. The paired Starnote uses its own
-/// GPS/GNSS location by default.
+/// On a Notecard paired with a Starnote, this controls whether the Notecard
+/// supplies a location it already knows to the Starnote for satellite use. It
+/// does not, by default.
+///
+/// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part of the
+/// same module. This request controls whether the Notecard uses a known
+/// location (typically a fixed location set with `card.location.mode`), instead
+/// of acquiring a new location for NTN use.
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NtnGps {
@@ -57,22 +62,24 @@ struct NtnGps {
 #endif
 
 
-    /// When `true`, a paired Starnote will use its own GPS/GNSS location. This
-    /// is the default configuration.
+    /// When `true`, the Notecard does not supply its location to the NTN
+    /// module. This is the default configuration.
     struct off_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// When `true`, a paired Starnote will use its own GPS/GNSS location.
-        /// This is the default configuration.
+        /// When `true`, the Notecard does not supply its location to the NTN
+        /// module. This is the default configuration.
         NtnGps& operator()(bool v);
     } off{};
-    /// When `true`, a Starnote will use the location known to its paired
-    /// Notecard, instead of the Starnote's own GPS/GNSS module.
+    /// When `true`, the Notecard supplies its location to the NTN module. If
+    /// the Notecard does not yet know its location, none is supplied, and this
+    /// setting has no effect until a location becomes available.
     struct on_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// When `true`, a Starnote will use the location known to its paired
-        /// Notecard, instead of the Starnote's own GPS/GNSS module.
+        /// When `true`, the Notecard supplies its location to the NTN module.
+        /// If the Notecard does not yet know its location, none is supplied,
+        /// and this setting has no effect until a location becomes available.
         NtnGps& operator()(bool v);
     } on{};
 
@@ -120,11 +127,12 @@ struct NtnGps {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// Returned and `true` if a paired Starnote will use its own GPS/GNSS
-        /// location.
+        /// Returned and `true` if the Notecard does not supply its location to
+        /// a paired Starnote. Starnote relies solely on its own GPS/GNSS
+        /// module.
         note::ResponseField<bool> off{};
-        /// Returned and `true` if a Starnote will use the GPS/GNSS location
-        /// from its paired Notecard.
+        /// Returned and `true` if the Notecard supplies a location it already
+        /// knows to a paired Starnote.
         note::ResponseField<bool> on{};
 
 

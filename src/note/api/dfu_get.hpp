@@ -63,35 +63,44 @@ struct DfuGet {
 #endif
 
 
-    /// If `true`, the Notecard will return firmware data in the binary I/O
-    /// buffer instead of the response `payload` field. This allows for larger
-    /// data transfers and more efficient processing. When `true`, the response
-    /// will include `cobs`, `length`, and `status` (MD5 hash) fields instead of
-    /// `payload`.
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    /// If `true`, the Notecard places the firmware data in the binary storage
+    /// area instead of the response `payload` field, and returns `cobs`,
+    /// `length`, and `status` fields instead. Read it out with card.binary.get,
+    /// then clear the area with a `card.binary` request and `delete` set to
+    /// `true`.
     ///
     /// Learn more in this guide on Sending and Receiving Large Binary Objects.
+    ///
+    /// @since{9.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
+    [[deprecated("requires firmware >= 9.1.1")]]
+#endif
     struct binary_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// If `true`, the Notecard will return firmware data in the binary I/O
-        /// buffer instead of the response `payload` field. This allows for
-        /// larger data transfers and more efficient processing. When `true`,
-        /// the response will include `cobs`, `length`, and `status` (MD5 hash)
-        /// fields instead of `payload`.
+        /// If `true`, the Notecard places the firmware data in the binary
+        /// storage area instead of the response `payload` field, and returns
+        /// `cobs`, `length`, and `status` fields instead. Read it out with
+        /// card.binary.get, then clear the area with a `card.binary` request
+        /// and `delete` set to `true`.
         ///
         /// Learn more in this guide on Sending and Receiving Large Binary
         /// Objects.
+        ///
+        /// @since{9.1.1}
         DfuGet& operator()(bool v);
     } binary{};
-    /// The number of bytes of firmware data to read and return to the host. Set
-    /// to `0` to verify that the Notecard is in DFU mode without attempting to
-    /// retrieve data.
+#endif
+    /// The number of bytes of firmware data to read and return to the host, up
+    /// to a maximum of 8192 per request. Set to `0` to verify that the Notecard
+    /// is ready to serve firmware data without retrieving any.
     struct length_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// The number of bytes of firmware data to read and return to the host.
-        /// Set to `0` to verify that the Notecard is in DFU mode without
-        /// attempting to retrieve data.
+        /// The number of bytes of firmware data to read and return to the host,
+        /// up to a maximum of 8192 per request. Set to `0` to verify that the
+        /// Notecard is ready to serve firmware data without retrieving any.
         DfuGet& operator()(note::json_int_t v);
     } length{};
     /// The offset to use before performing a read of firmware data.
@@ -122,7 +131,9 @@ struct DfuGet {
     /// usable for assignment; unknown keys are added as extras (subject to
     /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "binary") return note::dyn_field_for(binary);
+#endif
         if (k_ == "length") return note::dyn_field_for(length);
         if (k_ == "offset") return note::dyn_field_for(offset);
         if (extras_count_ < NOTE_EXTRAS_MAX) {
@@ -137,8 +148,8 @@ struct DfuGet {
     uint8_t extras_count_ = 0;
 #endif // NOTE_EXTRAS
 
-    /// Response containing base64-encoded firmware data retrieved from the
-    /// Notecard for use with host MCU firmware updates.
+    /// Response containing firmware data retrieved from the Notecard for use
+    /// with host MCU firmware updates.
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
@@ -150,16 +161,16 @@ struct DfuGet {
         /// This field is only present when `binary` is not used or is `false`
         /// in the request.
         note::ResponseField<note::string_view> payload{};
-        /// When `binary` is `true` in the request, this field contains a
-        /// 32-character hex-encoded MD5 hash of the firmware data. Useful for
-        /// the host to verify data integrity.
+        /// A 32-character hex-encoded MD5 hash of the firmware data returned by
+        /// this request, covering only the requested `offset` and `length`.
+        /// Useful for the host to verify data integrity.
         note::ResponseField<note::string_view> status{};
-        /// When `binary` is `true` in the request, this field contains the COBS
-        /// encoded length of the firmware data in the binary I/O buffer.
+        /// When `binary` is `true` in the request, this field contains the
+        /// COBS-encoded length of the firmware data in the binary storage area.
         note::ResponseField<note::json_int_t> cobs{};
         /// When `binary` is `true` in the request, this field contains the
-        /// actual length of the firmware data in bytes in the binary I/O
-        /// buffer.
+        /// decoded length of the firmware data in bytes in the binary storage
+        /// area.
         note::ResponseField<note::json_int_t> length{};
 
 #if !NOTE_NO_RESPONSE_RAII
@@ -325,10 +336,12 @@ struct DfuGet {
         size_t n = p.print("{\"req\":\"");
         n += p.print(notecard_request.data());
         n += p.print("\"");
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
         if (binary) {
             n += p.print(",\"binary\":");
             n += note::detail::print_json_value(p, *binary);
         }
+#endif
         if (length) {
             n += p.print(",\"length\":");
             n += note::detail::print_json_value(p, *length);
@@ -357,11 +370,14 @@ struct DfuGet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
 inline DfuGet& DfuGet::binary_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<DfuGet*>(
         reinterpret_cast<char*>(this) - offsetof(DfuGet, binary));
 }
+#endif
 inline DfuGet& DfuGet::length_t::operator()(note::json_int_t v) {
     Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<DfuGet*>(
@@ -393,7 +409,9 @@ struct request_traits<::note::api::DfuGet> {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
             {::note::api::DfuGet::keys_::binary, static_cast<uint16_t>(offsetof(::note::api::DfuGet, binary)), ::note::ReqFieldType::Bool},
+#endif
             {::note::api::DfuGet::keys_::length, static_cast<uint16_t>(offsetof(::note::api::DfuGet, length)), ::note::ReqFieldType::Int},
             {::note::api::DfuGet::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::DfuGet, offset)), ::note::ReqFieldType::Int},
         };
@@ -409,7 +427,11 @@ struct request_traits<::note::api::DfuGet> {
 } // namespace note::detail
 namespace note::api {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 inline void DfuGet::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
     using meta_ = ::note::detail::request_traits<DfuGet>;
     uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
     ::note::generic_build(b, this, descs_, n_);
@@ -419,6 +441,7 @@ inline void DfuGet::build(JsonBuilder& b) const {
                    extras_[i_].value);
 #endif
 }
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename DfuGet::Response> DfuGet::execute() const {

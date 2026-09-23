@@ -223,7 +223,10 @@ struct EnvGet {
         /// If a `name` was specified, the value of the environment variable.
         note::ResponseField<note::string_view> text{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        /// The time of the Notecard variable or variables change.
+        /// The time of the most recent change to any environment variable on
+        /// the Notecard, not just to the variables returned. This field is only
+        /// included when neither `name` nor `names` was specified in the
+        /// request.
         ///
         /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)

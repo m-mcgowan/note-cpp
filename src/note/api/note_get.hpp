@@ -65,11 +65,13 @@ struct NoteGet {
 #endif
 
 
-        /// `true` to decrypt encrypted inbound Notefiles.
+        /// `true` to decrypt encrypted inbound Notefiles. Notefile decryption
+        /// is not supported on Notecard for LoRa.
         struct decrypt_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            /// `true` to decrypt encrypted inbound Notefiles.
+            /// `true` to decrypt encrypted inbound Notefiles. Notefile
+            /// decryption is not supported on Notecard for LoRa.
             NoteGet::Read& operator()(bool v);
         } decrypt{};
         /// `true` to allow retrieval of a deleted Note.
@@ -510,11 +512,13 @@ struct NoteGet {
 #endif
 
 
-        /// `true` to decrypt encrypted inbound Notefiles.
+        /// `true` to decrypt encrypted inbound Notefiles. Notefile decryption
+        /// is not supported on Notecard for LoRa.
         struct decrypt_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            /// `true` to decrypt encrypted inbound Notefiles.
+            /// `true` to decrypt encrypted inbound Notefiles. Notefile
+            /// decryption is not supported on Notecard for LoRa.
             NoteGet::Pop& operator()(bool v);
         } decrypt{};
         /// `true` to allow retrieval of a deleted Note.

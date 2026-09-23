@@ -122,14 +122,19 @@ struct CardLocationMode {
             /// tracking.
             CardLocationMode::Get& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the number of minutes the device should be
-        /// outside the geofence before the Notecard location is tracked.
+        /// When geofence is enabled, the debounce period in minutes for
+        /// transitions across the geofence boundary. The Notecard reports a
+        /// transition the first time a GPS fix lands on the opposite side of
+        /// the boundary from the previous one, then ignores further transitions
+        /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the number of minutes the device
-            /// should be outside the geofence before the Notecard location is
-            /// tracked.
+            /// When geofence is enabled, the debounce period in minutes for
+            /// transitions across the geofence boundary. The Notecard reports a
+            /// transition the first time a GPS fix lands on the opposite side
+            /// of the boundary from the previous one, then ignores further
+            /// transitions for this many minutes.
             CardLocationMode::Get& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
@@ -294,8 +299,9 @@ struct CardLocationMode {
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured geofence
-            /// debounce period.
+            /// If geofence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the geofence
+            /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
             note::ResponseField<note::json_int_t> seconds{};
@@ -690,14 +696,19 @@ struct CardLocationMode {
             /// tracking.
             CardLocationMode::Set& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the number of minutes the device should be
-        /// outside the geofence before the Notecard location is tracked.
+        /// When geofence is enabled, the debounce period in minutes for
+        /// transitions across the geofence boundary. The Notecard reports a
+        /// transition the first time a GPS fix lands on the opposite side of
+        /// the boundary from the previous one, then ignores further transitions
+        /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the number of minutes the device
-            /// should be outside the geofence before the Notecard location is
-            /// tracked.
+            /// When geofence is enabled, the debounce period in minutes for
+            /// transitions across the geofence boundary. The Notecard reports a
+            /// transition the first time a GPS fix lands on the opposite side
+            /// of the boundary from the previous one, then ignores further
+            /// transitions for this many minutes.
             CardLocationMode::Set& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
@@ -862,8 +873,9 @@ struct CardLocationMode {
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured geofence
-            /// debounce period.
+            /// If geofence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the geofence
+            /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
             note::ResponseField<note::json_int_t> seconds{};
@@ -1565,14 +1577,19 @@ struct CardLocationMode {
             /// tracking.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the number of minutes the device should be
-        /// outside the geofence before the Notecard location is tracked.
+        /// When geofence is enabled, the debounce period in minutes for
+        /// transitions across the geofence boundary. The Notecard reports a
+        /// transition the first time a GPS fix lands on the opposite side of
+        /// the boundary from the previous one, then ignores further transitions
+        /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the number of minutes the device
-            /// should be outside the geofence before the Notecard location is
-            /// tracked.
+            /// When geofence is enabled, the debounce period in minutes for
+            /// transitions across the geofence boundary. The Notecard reports a
+            /// transition the first time a GPS fix lands on the opposite side
+            /// of the boundary from the previous one, then ignores further
+            /// transitions for this many minutes.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } minutes{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -1678,8 +1695,9 @@ struct CardLocationMode {
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured geofence
-            /// debounce period.
+            /// If geofence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the geofence
+            /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
             note::ResponseField<note::json_int_t> seconds{};
@@ -2328,14 +2346,19 @@ struct CardLocationMode {
             /// tracking.
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the number of minutes the device should be
-        /// outside the geofence before the Notecard location is tracked.
+        /// When geofence is enabled, the debounce period in minutes for
+        /// transitions across the geofence boundary. The Notecard reports a
+        /// transition the first time a GPS fix lands on the opposite side of
+        /// the boundary from the previous one, then ignores further transitions
+        /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the number of minutes the device
-            /// should be outside the geofence before the Notecard location is
-            /// tracked.
+            /// When geofence is enabled, the debounce period in minutes for
+            /// transitions across the geofence boundary. The Notecard reports a
+            /// transition the first time a GPS fix lands on the opposite side
+            /// of the boundary from the previous one, then ignores further
+            /// transitions for this many minutes.
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
@@ -2499,8 +2522,9 @@ struct CardLocationMode {
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured geofence
-            /// debounce period.
+            /// If geofence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the geofence
+            /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
             note::ResponseField<note::json_int_t> seconds{};

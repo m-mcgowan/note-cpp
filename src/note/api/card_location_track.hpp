@@ -44,7 +44,7 @@ namespace note::api {
 /// If you connect a BME280 sensor on the I2C bus, Notecard will include a
 /// temperature, humidity, and pressure reading with each captured Note. If you
 /// connect an ENS210 sensor on the I2C bus, Notecard will include a temperature
-/// and pressure reading with each captured Note. Learn more in _track.qo.
+/// and humidity reading with each captured Note. Learn more in _track.qo.
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardLocationTrack {

@@ -3305,10 +3305,14 @@ TEST_CASE("note::api::CardMonitor request builder") {
     req.execute();
     req.count(note::json_int_t(42));
     req.mode(note::string_view("green"));
+    req.off(true);
+    req.on(true);
     req.usb(true);
     req.execute();
     REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\":\"green\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; fh.nc.execute(req); }
@@ -3327,6 +3331,8 @@ TEST_CASE("note::api::CardMonitor request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["count"] = note::json_int_t(42);
     req["mode"] = note::string_view("green");
+    req["off"] = true;
+    req["on"] = true;
     req["usb"] = true;
     // Cover command()
     req.command();
@@ -3662,9 +3668,11 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     auto req = h.api.card.power().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
+    req.hours(note::json_int_t(42));
     req.minutes(note::json_int_t(42));
     req.reset(true);
     req.execute();
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -3682,6 +3690,7 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
+    req["hours"] = note::json_int_t(42);
     req["minutes"] = note::json_int_t(42);
     req["reset"] = true;
     // Cover command()
@@ -3759,9 +3768,11 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     auto req = h.api.card.power().configure();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
+    req.hours(note::json_int_t(42));
     req.minutes(note::json_int_t(42));
     req.reset(true);
     req.execute();
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -3779,6 +3790,7 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
+    req["hours"] = note::json_int_t(42);
     req["minutes"] = note::json_int_t(42);
     req["reset"] = true;
     // Cover command()
@@ -3856,8 +3868,10 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     auto req = h.api.card.power().reset();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
+    req.hours(note::json_int_t(42));
     req.minutes(note::json_int_t(42));
     req.execute();
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; fh.nc.execute(req); }
@@ -3874,6 +3888,7 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
+    req["hours"] = note::json_int_t(42);
     req["minutes"] = note::json_int_t(42);
     // Cover command()
     req.command();
@@ -4390,6 +4405,7 @@ TEST_CASE("note::api::CardTemp::Read response parsing") {
     reader->set("temperature", 1.5);
     reader->set("value", 1.5);
     reader->set("voltage", 1.5);
+    reader->set("off", true);
     reader->set("usb", true);
     auto rsp = note::api::CardTemp::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.calibration == 1.5);
@@ -4398,6 +4414,7 @@ TEST_CASE("note::api::CardTemp::Read response parsing") {
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.value == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    REQUIRE(rsp.off == true);
     REQUIRE(rsp.usb == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
@@ -4433,6 +4450,7 @@ TEST_CASE("note::api::CardTemp::Read sink field coverage") {
     sink.on_number("temperature", "3.14");
     sink.on_number("value", "3.14");
     sink.on_number("voltage", "3.14");
+    sink.on_bool("off", true);
     sink.on_bool("usb", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -4508,6 +4526,7 @@ TEST_CASE("note::api::CardTemp::Configure response parsing") {
     reader->set("temperature", 1.5);
     reader->set("value", 1.5);
     reader->set("voltage", 1.5);
+    reader->set("off", true);
     reader->set("usb", true);
     auto rsp = note::api::CardTemp::Configure::Response::parse(std::move(reader));
     REQUIRE(rsp.calibration == 1.5);
@@ -4516,6 +4535,7 @@ TEST_CASE("note::api::CardTemp::Configure response parsing") {
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.value == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    REQUIRE(rsp.off == true);
     REQUIRE(rsp.usb == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
@@ -4551,6 +4571,7 @@ TEST_CASE("note::api::CardTemp::Configure sink field coverage") {
     sink.on_number("temperature", "3.14");
     sink.on_number("value", "3.14");
     sink.on_number("voltage", "3.14");
+    sink.on_bool("off", true);
     sink.on_bool("usb", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -4623,6 +4644,7 @@ TEST_CASE("note::api::CardTemp::Stop response parsing") {
     reader->set("temperature", 1.5);
     reader->set("value", 1.5);
     reader->set("voltage", 1.5);
+    reader->set("off", true);
     reader->set("usb", true);
     auto rsp = note::api::CardTemp::Stop::Response::parse(std::move(reader));
     REQUIRE(rsp.calibration == 1.5);
@@ -4631,6 +4653,7 @@ TEST_CASE("note::api::CardTemp::Stop response parsing") {
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.value == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    REQUIRE(rsp.off == true);
     REQUIRE(rsp.usb == true);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
@@ -4666,6 +4689,7 @@ TEST_CASE("note::api::CardTemp::Stop sink field coverage") {
     sink.on_number("temperature", "3.14");
     sink.on_number("value", "3.14");
     sink.on_number("voltage", "3.14");
+    sink.on_bool("off", true);
     sink.on_bool("usb", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -4837,6 +4861,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     req.seconds(note::json_int_t(42));
 #endif
+    req.set(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req.umin(true);
 #endif
@@ -4848,6 +4873,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #endif
+    REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"umin\":true") != std::string::npos);
 #endif
@@ -4873,6 +4899,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     req["seconds"] = note::json_int_t(42);
 #endif
+    req["set"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req["umin"] = true;
 #endif
@@ -5485,6 +5512,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req.hours(note::json_int_t(42));
     req.mode(note::string_view("x-mode"));
     req.name(note::string_view("x-name"));
+    req.now(true);
     req.off(true);
     req.offset(note::json_int_t(42));
     req.on(true);
@@ -5503,6 +5531,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"now\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
@@ -5535,6 +5564,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req["hours"] = note::json_int_t(42);
     req["mode"] = note::string_view("x-mode");
     req["name"] = note::string_view("x-name");
+    req["now"] = true;
     req["off"] = true;
     req["offset"] = note::json_int_t(42);
     req["on"] = true;
@@ -5676,6 +5706,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req.hours(note::json_int_t(42));
     req.mode(note::string_view("x-mode"));
     req.name(note::string_view("x-name"));
+    req.now(true);
     req.off(true);
     req.offset(note::json_int_t(42));
     req.on(true);
@@ -5694,6 +5725,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"now\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
@@ -5726,6 +5758,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req["hours"] = note::json_int_t(42);
     req["mode"] = note::string_view("x-mode");
     req["name"] = note::string_view("x-name");
+    req["now"] = true;
     req["off"] = true;
     req["offset"] = note::json_int_t(42);
     req["on"] = true;
@@ -6417,11 +6450,15 @@ TEST_CASE("note::api::DfuGet request builder") {
     auto req = h.api.dfu.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req.binary(true);
+#endif
     req.length(note::json_int_t(42));
     req.offset(note::json_int_t(42));
     req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
+#endif
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -6439,7 +6476,9 @@ TEST_CASE("note::api::DfuGet request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req["binary"] = true;
+#endif
     req["length"] = note::json_int_t(42);
     req["offset"] = note::json_int_t(42);
     // Cover command()
@@ -7283,7 +7322,9 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     auto req = h.api.file.changes.pending();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
+    req.files.add(note::string_view("x-files-item"));
     req.execute();
+    REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -8971,6 +9012,8 @@ TEST_CASE("note::api::NoteTemplate::Define response parsing") {
 #endif
     reader->set("bytes", note::json_int_t(42));
     reader->set("length", note::json_int_t(42));
+    reader->set("port", note::json_int_t(42));
+    reader->set("delete", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("template", true);
 #endif
@@ -8980,6 +9023,8 @@ TEST_CASE("note::api::NoteTemplate::Define response parsing") {
 #endif
     REQUIRE(rsp.bytes == 42);
     REQUIRE(rsp.length == 42);
+    REQUIRE(rsp.port == 42);
+    REQUIRE(rsp.delete_ == true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.template_ == true);
 #endif
@@ -9017,6 +9062,8 @@ TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
 #endif
     sink.on_string("bytes", "x-bytes");
     sink.on_string("length", "x-length");
+    sink.on_string("port", "x-port");
+    sink.on_bool("delete", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     sink.on_bool("template", true);
 #endif
@@ -9149,6 +9196,8 @@ TEST_CASE("note::api::NoteTemplate::Remove response parsing") {
 #endif
     reader->set("bytes", note::json_int_t(42));
     reader->set("length", note::json_int_t(42));
+    reader->set("port", note::json_int_t(42));
+    reader->set("delete", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("template", true);
 #endif
@@ -9158,6 +9207,8 @@ TEST_CASE("note::api::NoteTemplate::Remove response parsing") {
 #endif
     REQUIRE(rsp.bytes == 42);
     REQUIRE(rsp.length == 42);
+    REQUIRE(rsp.port == 42);
+    REQUIRE(rsp.delete_ == true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.template_ == true);
 #endif
@@ -9195,6 +9246,8 @@ TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
 #endif
     sink.on_string("bytes", "x-bytes");
     sink.on_string("length", "x-length");
+    sink.on_string("port", "x-port");
+    sink.on_bool("delete", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     sink.on_bool("template", true);
 #endif
@@ -9304,6 +9357,132 @@ TEST_CASE("note::api::NoteUpdate request builder") {
         auto sreq = sh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
         sreq.execute();
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NtnConfig request builder") {
+    Harness h;
+    auto req = h.api.ntn.config();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; fh.nc.execute(req); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute();
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover command()
+    req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.ntn.config();
+        sreq.execute();
+    }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NtnConfig response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("err", std::string("x-err"));
+    auto rsp = note::api::NtnConfig::Response::parse(std::move(reader));
+    REQUIRE(rsp.err == "x-err");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NtnConfig::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NtnConfig sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NtnConfig::Response rsp{};
+    note::api::NtnConfig::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("err", "x-err");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
+    // Exercise body path WITH a body handler — all method types.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
+    sink.on_float("v", 42.0);
+    sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset with body handler — covers the body_handler_ true branch.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------

@@ -67,11 +67,13 @@ struct FileChanges {
     /// One or more files to obtain change information from. Omit to return
     /// changes for all Notefiles.
     note::ArrayField<note::string_view, 8> files{};
-    /// ID of a change tracker to use to determine changes to Notefiles.
+    /// ID of a change tracker to use to determine changes to Notefiles. Must be
+    /// accompanied by a `files` argument.
     struct tracker_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         /// ID of a change tracker to use to determine changes to Notefiles.
+        /// Must be accompanied by a `files` argument.
         FileChanges& operator()(note::string_view v);
     } tracker{};
 
@@ -114,14 +116,15 @@ struct FileChanges {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// If a change tracker is used, the number of changes across all files.
+        /// The number of changes across all files. Omitted when the request did
+        /// not supply a `tracker`, and omitted when the count is zero.
         note::ResponseField<note::json_int_t> changes{};
         /// The total of local Notes across all Notefiles. This includes Inbound
         /// Notes that have not been deleted, as well as outbound Notes that
         /// have yet to sync.
         note::ResponseField<note::json_int_t> total{};
         /// Set to `true` if this was a pending changes request and there are
-        /// changes
+        /// changes.
         note::ResponseField<bool> pending{};
 
 

@@ -127,6 +127,7 @@ The table below is auto-generated from the OpenAPI spec — see [`tools/arena_si
 | `CardDfu` | `name`=48 | 64 | **112** |
 | `CardLocationTrack` | `file`=48 | 64 | **112** |
 | `NoteAdd` | `note`=48 | 64 | **112** |
+| `NtnConfig` | `err`=48 | 64 | **112** |
 | `CardAux` | `mode`=32 | 64 | **96** |
 | `CardAuxSerial::Request` | `mode`=32 | 64 | **96** |
 | `CardCarrier` | `mode`=32 | 64 | **96** |

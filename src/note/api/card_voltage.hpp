@@ -47,6 +47,7 @@ struct CardVoltage {
             static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
             static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char now[] NOTE_FLASH_ATTR = "now";
             static constexpr char off[] NOTE_FLASH_ATTR = "off";
             static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
             static constexpr char on[] NOTE_FLASH_ATTR = "on";
@@ -161,6 +162,19 @@ struct CardVoltage {
             /// default timing values.
             CardVoltage::Read& operator()(note::string_view v);
         } name{};
+        /// By default, the returned `value` is an average of the voltage
+        /// readings taken over the previous 15 minutes, which smooths out
+        /// momentary fluctuations. Set to `true` to return the instantaneous
+        /// voltage reading instead.
+        struct now_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            /// By default, the returned `value` is an average of the voltage
+            /// readings taken over the previous 15 minutes, which smooths out
+            /// momentary fluctuations. Set to `true` to return the
+            /// instantaneous voltage reading instead.
+            CardVoltage::Read& operator()(bool v);
+        } now{};
         /// Disable historic voltage trend calculations.
         struct off_t : Field<bool> {
             using Field<bool>::Field;
@@ -220,21 +234,25 @@ struct CardVoltage {
         } usb{};
 #endif
         /// Ignore voltage readings above this level when performing
-        /// calculations.
+        /// calculations. Defaults to the maximum voltage the Notecard's
+        /// components are rated for.
         struct vmax_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// Ignore voltage readings above this level when performing
-            /// calculations.
+            /// calculations. Defaults to the maximum voltage the Notecard's
+            /// components are rated for.
             CardVoltage::Read& operator()(double v);
         } vmax{};
         /// Ignore voltage readings below this level when performing
-        /// calculations.
+        /// calculations. Defaults to the minimum voltage the Notecard's
+        /// components are rated for.
         struct vmin_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// Ignore voltage readings below this level when performing
-            /// calculations.
+            /// calculations. Defaults to the minimum voltage the Notecard's
+            /// components are rated for.
             CardVoltage::Read& operator()(double v);
         } vmin{};
 
@@ -270,6 +288,7 @@ struct CardVoltage {
             if (k_ == "hours") return note::dyn_field_for(hours);
             if (k_ == "mode") return note::dyn_field_for(mode);
             if (k_ == "name") return note::dyn_field_for(name);
+            if (k_ == "now") return note::dyn_field_for(now);
             if (k_ == "off") return note::dyn_field_for(off);
             if (k_ == "offset") return note::dyn_field_for(offset);
             if (k_ == "on") return note::dyn_field_for(on);
@@ -329,7 +348,9 @@ struct CardVoltage {
             /// enabled with `"on": true` and the analyzed window includes at
             /// least 30 days of history.
             note::ResponseField<double> monthly{};
-            /// The current voltage.
+            /// The current voltage, in volts. By default this is an average
+            /// over the trailing 15-minute window; use `"now": true` to request
+            /// an instantaneous reading.
             note::ResponseField<double> value{};
             /// The average voltage during the analyzed window. Only present
             /// when historic voltage trend calculations have been enabled with
@@ -661,6 +682,10 @@ struct CardVoltage {
                 n += p.print(",\"name\":");
                 n += note::detail::print_json_value(p, *name);
             }
+            if (now) {
+                n += p.print(",\"now\":");
+                n += note::detail::print_json_value(p, *now);
+            }
             if (off) {
                 n += p.print(",\"off\":");
                 n += note::detail::print_json_value(p, *off);
@@ -728,6 +753,7 @@ struct CardVoltage {
             static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
             static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
             static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char now[] NOTE_FLASH_ATTR = "now";
             static constexpr char off[] NOTE_FLASH_ATTR = "off";
             static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
             static constexpr char on[] NOTE_FLASH_ATTR = "on";
@@ -842,6 +868,19 @@ struct CardVoltage {
             /// default timing values.
             CardVoltage::Configure& operator()(note::string_view v);
         } name{};
+        /// By default, the returned `value` is an average of the voltage
+        /// readings taken over the previous 15 minutes, which smooths out
+        /// momentary fluctuations. Set to `true` to return the instantaneous
+        /// voltage reading instead.
+        struct now_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            /// By default, the returned `value` is an average of the voltage
+            /// readings taken over the previous 15 minutes, which smooths out
+            /// momentary fluctuations. Set to `true` to return the
+            /// instantaneous voltage reading instead.
+            CardVoltage::Configure& operator()(bool v);
+        } now{};
         /// Disable historic voltage trend calculations.
         struct off_t : Field<bool> {
             using Field<bool>::Field;
@@ -901,21 +940,25 @@ struct CardVoltage {
         } usb{};
 #endif
         /// Ignore voltage readings above this level when performing
-        /// calculations.
+        /// calculations. Defaults to the maximum voltage the Notecard's
+        /// components are rated for.
         struct vmax_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// Ignore voltage readings above this level when performing
-            /// calculations.
+            /// calculations. Defaults to the maximum voltage the Notecard's
+            /// components are rated for.
             CardVoltage::Configure& operator()(double v);
         } vmax{};
         /// Ignore voltage readings below this level when performing
-        /// calculations.
+        /// calculations. Defaults to the minimum voltage the Notecard's
+        /// components are rated for.
         struct vmin_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// Ignore voltage readings below this level when performing
-            /// calculations.
+            /// calculations. Defaults to the minimum voltage the Notecard's
+            /// components are rated for.
             CardVoltage::Configure& operator()(double v);
         } vmin{};
 
@@ -951,6 +994,7 @@ struct CardVoltage {
             if (k_ == "hours") return note::dyn_field_for(hours);
             if (k_ == "mode") return note::dyn_field_for(mode);
             if (k_ == "name") return note::dyn_field_for(name);
+            if (k_ == "now") return note::dyn_field_for(now);
             if (k_ == "off") return note::dyn_field_for(off);
             if (k_ == "offset") return note::dyn_field_for(offset);
             if (k_ == "on") return note::dyn_field_for(on);
@@ -1010,7 +1054,9 @@ struct CardVoltage {
             /// enabled with `"on": true` and the analyzed window includes at
             /// least 30 days of history.
             note::ResponseField<double> monthly{};
-            /// The current voltage.
+            /// The current voltage, in volts. By default this is an average
+            /// over the trailing 15-minute window; use `"now": true` to request
+            /// an instantaneous reading.
             note::ResponseField<double> value{};
             /// The average voltage during the analyzed window. Only present
             /// when historic voltage trend calculations have been enabled with
@@ -1342,6 +1388,10 @@ struct CardVoltage {
                 n += p.print(",\"name\":");
                 n += note::detail::print_json_value(p, *name);
             }
+            if (now) {
+                n += p.print(",\"now\":");
+                n += note::detail::print_json_value(p, *now);
+            }
             if (off) {
                 n += p.print(",\"off\":");
                 n += note::detail::print_json_value(p, *off);
@@ -1426,6 +1476,11 @@ inline CardVoltage::Read& CardVoltage::Read::name_t::operator()(note::string_vie
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, name));
 }
+inline CardVoltage::Read& CardVoltage::Read::now_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, now));
+}
 inline CardVoltage::Read& CardVoltage::Read::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardVoltage::Read*>(
@@ -1509,6 +1564,7 @@ struct request_traits<::note::api::CardVoltage::Read> {
             {::note::api::CardVoltage::Read::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, hours)), ::note::ReqFieldType::Int},
             {::note::api::CardVoltage::Read::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, mode)), ::note::ReqFieldType::String},
             {::note::api::CardVoltage::Read::keys_::name, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, name)), ::note::ReqFieldType::String},
+            {::note::api::CardVoltage::Read::keys_::now, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, now)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Read::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, off)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Read::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, offset)), ::note::ReqFieldType::Int},
             {::note::api::CardVoltage::Read::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
@@ -1616,6 +1672,11 @@ inline CardVoltage::Configure& CardVoltage::Configure::name_t::operator()(note::
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, name));
 }
+inline CardVoltage::Configure& CardVoltage::Configure::now_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, now));
+}
 inline CardVoltage::Configure& CardVoltage::Configure::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardVoltage::Configure*>(
@@ -1699,6 +1760,7 @@ struct request_traits<::note::api::CardVoltage::Configure> {
             {::note::api::CardVoltage::Configure::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, hours)), ::note::ReqFieldType::Int},
             {::note::api::CardVoltage::Configure::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, mode)), ::note::ReqFieldType::String},
             {::note::api::CardVoltage::Configure::keys_::name, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, name)), ::note::ReqFieldType::String},
+            {::note::api::CardVoltage::Configure::keys_::now, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, now)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Configure::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, off)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Configure::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, offset)), ::note::ReqFieldType::Int},
             {::note::api::CardVoltage::Configure::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},

@@ -115,7 +115,7 @@ struct CardLocation {
         note::ResponseField<note::json_int_t> count{};
         /// The "Dilution of Precision" value from the latest GPS/GNSS reading.
         /// The lower the value, the higher the confidence level of the reading.
-        /// Values can be interpreted in this Wikipedia table#Interpretation).
+        /// Values can be interpreted in this Wikipedia table.
         note::ResponseField<double> dop{};
         /// The latitude in degrees of the last known location.
         note::ResponseField<double> lat{};

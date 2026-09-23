@@ -72,11 +72,15 @@ struct HubSet {
 #endif
 
 
-    /// Use `true` to align syncs on a regular time-periodic cycle.
+    /// Use `true` to align syncs on a regular time-periodic cycle. The cycle is
+    /// anchored to the moment the Notecard first obtained valid time after
+    /// booting, not to a wall-clock time.
     struct align_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
-        /// Use `true` to align syncs on a regular time-periodic cycle.
+        /// Use `true` to align syncs on a regular time-periodic cycle. The
+        /// cycle is anchored to the moment the Notecard first obtained valid
+        /// time after booting, not to a wall-clock time.
         HubSet& operator()(bool v);
     } align{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -171,7 +175,7 @@ struct HubSet {
     ///
     /// NOTE: The Notecard must be in `periodic` or `continuous` mode to use the
     /// onboard GPS module.
-    // mode: periodic | continuous | minimum | off | dfu | -
+    // mode: periodic | continuous | minimum | off | dfu | dfu-completed | -
     struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
         constexpr mode_t() = default;
@@ -179,7 +183,7 @@ struct HubSet {
         consteval mode_t(const char (&s)[N])
             : Field<note::string_view>(note::string_view(s, N - 1)) {
             note::string_view sv(s, N - 1);
-            if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu" && sv != "-")
+            if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu" && sv != "dfu-completed" && sv != "-")
                 throw "hub.set: invalid value for 'mode'";
         }
         template<typename U>
@@ -209,6 +213,7 @@ struct HubSet {
         static constexpr note::string_view minimum{"minimum"};
         static constexpr note::string_view off{"off"};
         static constexpr note::string_view dfu{"dfu"};
+        static constexpr note::string_view dfu_completed{"dfu-completed"};
         static constexpr note::string_view _{"-"};
         /// The Notecard's synchronization mode.
         ///
@@ -506,12 +511,13 @@ struct HubSet {
     //   "minimum" — Disables periodic connection. The Notecard will not sync until it rec...
     //   "off" — Disables automatic and manual syncs. `hub.sync` requests will be igno...
     //   "dfu" — Puts the Notecard in DFU mode for IAP host MCU firmware updates. This...
+    //   "dfu-completed" — Takes the Notecard out of DFU mode and resumes its previous synchroni...
     //   "-" — Resets the mode to the default value (`periodic`).
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
-        if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu" && sv != "-")
+        if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu" && sv != "dfu-completed" && sv != "-")
             throw "hub.set: invalid value for 'mode'";
         return sv;
     }

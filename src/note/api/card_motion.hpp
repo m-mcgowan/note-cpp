@@ -126,10 +126,11 @@ struct CardMotion {
         /// Each character will be a digit 0-9, A-Z to indicate a count of
         /// 10-35, or `*` to indicate a count greater than 35.
         note::ResponseField<note::string_view> movements{};
-        /// Comma-separated list of accelerometer orientation events that
-        /// ocurred since the last request to `card.motion`. One or more of the
-        /// following: `"face-up"`, `"face-down"`, `"portrait-up"`, `"portrait-
-        /// down"`, `"landscape-right"`, `"landscape-left"`, `"angled"`.
+        /// The Notecard's current orientation, as one of the following values:
+        /// `"face-up"`, `"face-down"`, `"portrait-up"`, `"portrait-down"`,
+        /// `"landscape-right"`, `"landscape-left"`, or `"angled"` (tilted, but
+        /// not clearly in any of the other orientations). `"unavailable"` is
+        /// returned if the accelerometer is disabled.
         note::ResponseField<note::string_view> status{};
         /// The number of accelerometer motion events since the `card.motion`
         /// request was last made.

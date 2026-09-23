@@ -60,6 +60,8 @@ struct NoteTemplate {
             static constexpr char rsp_format[] NOTE_FLASH_ATTR = "format";
             static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
             static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char rsp_port[] NOTE_FLASH_ATTR = "port";
+            static constexpr char rsp_delete_[] NOTE_FLASH_ATTR = "delete";
             static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
         };
 
@@ -353,6 +355,12 @@ struct NoteTemplate {
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
             note::ResponseField<note::json_int_t> length{};
+            /// If the `verify` argument is provided and the Notefile has an
+            /// active template, the `port` assigned to the template.
+            note::ResponseField<note::json_int_t> port{};
+            /// If the `verify` argument is provided, `true` when the template
+            /// was created with `delete` set to `true`. Omitted otherwise.
+            note::ResponseField<bool> delete_{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
@@ -435,6 +443,8 @@ struct NoteTemplate {
 #endif
                 if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
                 if (reader_->has("length")) rsp.length = reader_->get_int("length");
+                if (reader_->has("port")) rsp.port = reader_->get_int("port");
+                if (reader_->has("delete")) rsp.delete_ = reader_->get_bool("delete");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
 #endif
@@ -456,6 +466,8 @@ struct NoteTemplate {
 #endif
                 if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
                 if (reader_.has("length")) rsp.length = reader_.get_int("length");
+                if (reader_.has("port")) rsp.port = reader_.get_int("port");
+                if (reader_.has("delete")) rsp.delete_ = reader_.get_bool("delete");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
 #endif
@@ -517,6 +529,7 @@ struct NoteTemplate {
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
+                    if (note::flash(keys_::rsp_delete_) == k_) { rsp.delete_ = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
 #endif
@@ -525,11 +538,13 @@ struct NoteTemplate {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_port) == k_) { rsp.port = ::note::parse_int(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                    if (note::flash(keys_::rsp_port) == k_) { rsp.port = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
@@ -573,6 +588,14 @@ struct NoteTemplate {
                 first_ = false;
                 n += p.print("\"length\":");
                 n += note::detail::print_json_value(p, length.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"port\":");
+                n += note::detail::print_json_value(p, port.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"delete\":");
+                n += note::detail::print_json_value(p, delete_.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -709,6 +732,8 @@ struct NoteTemplate {
             static constexpr char rsp_format[] NOTE_FLASH_ATTR = "format";
             static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
             static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char rsp_port[] NOTE_FLASH_ATTR = "port";
+            static constexpr char rsp_delete_[] NOTE_FLASH_ATTR = "delete";
             static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
         };
 
@@ -1015,6 +1040,12 @@ struct NoteTemplate {
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
             note::ResponseField<note::json_int_t> length{};
+            /// If the `verify` argument is provided and the Notefile has an
+            /// active template, the `port` assigned to the template.
+            note::ResponseField<note::json_int_t> port{};
+            /// If the `verify` argument is provided, `true` when the template
+            /// was created with `delete` set to `true`. Omitted otherwise.
+            note::ResponseField<bool> delete_{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
@@ -1097,6 +1128,8 @@ struct NoteTemplate {
 #endif
                 if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
                 if (reader_->has("length")) rsp.length = reader_->get_int("length");
+                if (reader_->has("port")) rsp.port = reader_->get_int("port");
+                if (reader_->has("delete")) rsp.delete_ = reader_->get_bool("delete");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
 #endif
@@ -1118,6 +1151,8 @@ struct NoteTemplate {
 #endif
                 if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
                 if (reader_.has("length")) rsp.length = reader_.get_int("length");
+                if (reader_.has("port")) rsp.port = reader_.get_int("port");
+                if (reader_.has("delete")) rsp.delete_ = reader_.get_bool("delete");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
 #endif
@@ -1179,6 +1214,7 @@ struct NoteTemplate {
                 }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
+                    if (note::flash(keys_::rsp_delete_) == k_) { rsp.delete_ = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
 #endif
@@ -1187,11 +1223,13 @@ struct NoteTemplate {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_port) == k_) { rsp.port = ::note::parse_int(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                    if (note::flash(keys_::rsp_port) == k_) { rsp.port = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
@@ -1235,6 +1273,14 @@ struct NoteTemplate {
                 first_ = false;
                 n += p.print("\"length\":");
                 n += note::detail::print_json_value(p, length.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"port\":");
+                n += note::detail::print_json_value(p, port.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"delete\":");
+                n += note::detail::print_json_value(p, delete_.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -1410,6 +1456,8 @@ struct request_traits<::note::api::NoteTemplate::Define> {
 #endif
         {::note::api::NoteTemplate::Define::keys_::rsp_bytes, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, bytes)), ::note::FieldType::Int},
         {::note::api::NoteTemplate::Define::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, length)), ::note::FieldType::Int},
+        {::note::api::NoteTemplate::Define::keys_::rsp_port, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, port)), ::note::FieldType::Int},
+        {::note::api::NoteTemplate::Define::keys_::rsp_delete_, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, delete_)), ::note::FieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         {::note::api::NoteTemplate::Define::keys_::rsp_template_, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Define::Response, template_)), ::note::FieldType::Bool},
 #endif
@@ -1569,6 +1617,8 @@ struct request_traits<::note::api::NoteTemplate::Remove> {
 #endif
         {::note::api::NoteTemplate::Remove::keys_::rsp_bytes, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, bytes)), ::note::FieldType::Int},
         {::note::api::NoteTemplate::Remove::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, length)), ::note::FieldType::Int},
+        {::note::api::NoteTemplate::Remove::keys_::rsp_port, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, port)), ::note::FieldType::Int},
+        {::note::api::NoteTemplate::Remove::keys_::rsp_delete_, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, delete_)), ::note::FieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         {::note::api::NoteTemplate::Remove::keys_::rsp_template_, static_cast<uint16_t>(offsetof(::note::api::NoteTemplate::Remove::Response, template_)), ::note::FieldType::Bool},
 #endif

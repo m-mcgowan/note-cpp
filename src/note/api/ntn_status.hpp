@@ -99,7 +99,9 @@ struct NtnStatus {
         /// connected {no-ntn-module}"}`
         note::ResponseField<note::string_view> err{};
         /// Details about a Notecard's connection to a paired Starnote, for
-        /// example: `{"status":"{ntn-idle}{ntn-unknown-location}"}`
+        /// example: `{"status":"{ntn-idle}{ntn-unknown-location}"}`. See
+        /// Notecard Error and Status Codes for a full list of status codes and
+        /// their meanings.
         note::ResponseField<note::string_view> status{};
 
 #if !NOTE_NO_RESPONSE_RAII

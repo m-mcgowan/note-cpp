@@ -19,6 +19,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/array_field.hpp>
 #include <note/progmem.hpp>
 #include <note/target.hpp>
 
@@ -38,6 +39,7 @@ namespace note::api {
 struct FileChangesPending {
     struct keys_ {
         static constexpr char req[] NOTE_FLASH_ATTR = "file.changes.pending";
+        static constexpr char files[] NOTE_FLASH_ATTR = "files";
         static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
         static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
         static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
@@ -53,6 +55,12 @@ struct FileChangesPending {
     void* nc_ = nullptr;
 #endif
 
+
+    /// One or more files to obtain pending change information from. Omit to
+    /// return pending changes for all Notefiles.
+    /// One or more files to obtain pending change information from. Omit to
+    /// return pending changes for all Notefiles.
+    note::ArrayField<note::string_view, 8> files{};
 
 
 #if NOTE_EXTRAS
@@ -95,7 +103,8 @@ struct FileChangesPending {
 
         /// The number of changes across all files.
         note::ResponseField<note::json_int_t> changes{};
-        /// The total of unsynced notes across all Notefiles.
+        /// The total number of local Notes across all Notefiles that matched
+        /// the request.
         note::ResponseField<note::json_int_t> total{};
         /// `true` if there are pending changes.
         note::ResponseField<bool> pending{};
@@ -251,6 +260,16 @@ struct request_traits<::note::api::FileChangesPending> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::FileChangesPending::keys_::files, static_cast<uint16_t>(offsetof(::note::api::FileChangesPending, files)), ::note::ReqFieldType::Array},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 #if NOTE_SINGLETON
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
@@ -260,12 +279,14 @@ struct request_traits<::note::api::FileChangesPending> {
 namespace note::api {
 
 inline void FileChangesPending::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<FileChangesPending>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
     for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
         std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
                    extras_[i_].value);
 #endif
-    (void)b;
 }
 
 #if NOTE_SINGLETON

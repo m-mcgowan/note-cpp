@@ -37,9 +37,11 @@ namespace note::api {
 /// does not, by default.
 ///
 /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part of the
-/// same module. This request controls whether the Notecard uses a known
-/// location (typically a fixed location set with `card.location.mode`), instead
-/// of acquiring a new location for NTN use.
+/// same module, and by default that module gets its own GPS/GNSS fix while it
+/// registers. This request controls whether the Notecard instead passes the
+/// module a location it already knows (typically a fixed location set with
+/// `card.location.mode`), which lets the module skip its own fix and register
+/// faster.
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NtnGps {
@@ -121,18 +123,19 @@ struct NtnGps {
     uint8_t extras_count_ = 0;
 #endif // NOTE_EXTRAS
 
-    /// Response indicating current Starnote GPS/GNSS location configuration.
+    /// Response indicating current NTN GPS/GNSS location configuration.
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// Returned and `true` if the Notecard does not supply its location to
-        /// a paired Starnote. Starnote relies solely on its own GPS/GNSS
-        /// module.
+        /// the NTN module (a paired Starnote, or Notecard for Skylo's satellite
+        /// module). The module relies solely on its own GPS/GNSS.
         note::ResponseField<bool> off{};
         /// Returned and `true` if the Notecard supplies a location it already
-        /// knows to a paired Starnote.
+        /// knows to the NTN module (a paired Starnote, or Notecard for Skylo's
+        /// satellite module).
         note::ResponseField<bool> on{};
 
 

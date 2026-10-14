@@ -138,15 +138,19 @@ struct WebGet {
         /// in that case are returned directly to the host.
         WebGet& operator()(note::string_view v);
     } file{};
-    /// Used along with `binary:true` and `offset`, sent as a URL parameter to
-    /// the remote endpoint. Represents the number of bytes to retrieve from the
-    /// binary payload segment.
+    /// Used along with `binary:true` and `offset`. Represents the number of
+    /// bytes to retrieve from the binary payload segment. Notehub requests this
+    /// byte range from the remote endpoint with an HTTP `Range` header (`Range:
+    /// bytes=<offset>-<offset+max-1>`), so the endpoint must support range
+    /// requests.
     struct max_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// Used along with `binary:true` and `offset`, sent as a URL parameter
-        /// to the remote endpoint. Represents the number of bytes to retrieve
-        /// from the binary payload segment.
+        /// Used along with `binary:true` and `offset`. Represents the number of
+        /// bytes to retrieve from the binary payload segment. Notehub requests
+        /// this byte range from the remote endpoint with an HTTP `Range` header
+        /// (`Range: bytes=<offset>-<offset+max-1>`), so the endpoint must
+        /// support range requests.
         WebGet& operator()(note::json_int_t v);
     } max{};
     /// A web URL endpoint relative to the host configured in the Proxy Route.
@@ -173,16 +177,17 @@ struct WebGet {
         /// stored.
         WebGet& operator()(note::string_view v);
     } noteId{};
-    /// Used along with `binary:true` and `max`, sent as a URL parameter to the
-    /// remote endpoint. Represents the number of bytes to offset the binary
-    /// payload from 0 when retrieving binary data from the remote endpoint.
+    /// Used along with `binary:true` and `max`. Represents the number of bytes
+    /// to offset the binary payload from 0 when retrieving binary data from the
+    /// remote endpoint. Notehub sends `offset` and `max` to the endpoint as an
+    /// HTTP `Range` header, not as URL parameters.
     struct offset_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// Used along with `binary:true` and `max`, sent as a URL parameter to
-        /// the remote endpoint. Represents the number of bytes to offset the
-        /// binary payload from 0 when retrieving binary data from the remote
-        /// endpoint.
+        /// Used along with `binary:true` and `max`. Represents the number of
+        /// bytes to offset the binary payload from 0 when retrieving binary
+        /// data from the remote endpoint. Notehub sends `offset` and `max` to
+        /// the endpoint as an HTTP `Range` header, not as URL parameters.
         WebGet& operator()(note::json_int_t v);
     } offset{};
     /// Alias for a Proxy Route in Notehub.

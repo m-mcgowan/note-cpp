@@ -3119,17 +3119,18 @@ TEST_CASE("note::api::DfuStatus transport equivalence") {
 
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::EnvDefault::Set transport equivalence (void)") {
+TEST_CASE("note::api::EnvDefault::Set transport equivalence") {
     SUBCASE("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({})");
+        sh.hal.queue_response(R"({"time":42})");
     auto req = sh.api.env.defaults().set(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.time == 42);
     }
     SUBCASE("streaming error") {
-        StreamingHarness sh;
+        StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.env.defaults().set(note::string_view("x-name"));
 
         auto rsp = req.execute();
@@ -3145,27 +3146,29 @@ TEST_CASE("note::api::EnvDefault::Set transport equivalence (void)") {
         CHECK(rsp.error().code == note::Error::Notecard);
     }
     SUBCASE("buffered") {
-        BufferedHarness bh(R"({})");
+        BufferedHarness bh(R"({"time":42})");
     auto req = bh.api.env.defaults().set(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.time == 42);
     }
 }
 
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::EnvDefault::Remove transport equivalence (void)") {
+TEST_CASE("note::api::EnvDefault::Remove transport equivalence") {
     SUBCASE("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({})");
+        sh.hal.queue_response(R"({"time":42})");
     auto req = sh.api.env.defaults().remove(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.time == 42);
     }
     SUBCASE("streaming error") {
-        StreamingHarness sh;
+        StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.env.defaults().remove(note::string_view("x-name"));
 
         auto rsp = req.execute();
@@ -3181,11 +3184,12 @@ TEST_CASE("note::api::EnvDefault::Remove transport equivalence (void)") {
         CHECK(rsp.error().code == note::Error::Notecard);
     }
     SUBCASE("buffered") {
-        BufferedHarness bh(R"({})");
+        BufferedHarness bh(R"({"time":42})");
     auto req = bh.api.env.defaults().remove(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.time == 42);
     }
 }
 

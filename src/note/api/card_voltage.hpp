@@ -51,6 +51,7 @@ struct CardVoltage {
             static constexpr char off[] NOTE_FLASH_ATTR = "off";
             static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
             static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char set[] NOTE_FLASH_ATTR = "set";
             static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
             static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
@@ -196,6 +197,15 @@ struct CardVoltage {
             /// Enable historic voltage trend calculations.
             CardVoltage::Read& operator()(bool v);
         } on{};
+        /// Set to `true` to clear a calibration value previously set with `set`
+        /// and `calibration`, restoring the default calibration.
+        struct reset_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            /// Set to `true` to clear a calibration value previously set with
+            /// `set` and `calibration`, restoring the default calibration.
+            CardVoltage::Read& operator()(bool v);
+        } reset{};
         /// Used along with `calibration`, set to `true` to specify a new
         /// calibration value.
         struct set_t : Field<bool> {
@@ -292,6 +302,7 @@ struct CardVoltage {
             if (k_ == "off") return note::dyn_field_for(off);
             if (k_ == "offset") return note::dyn_field_for(offset);
             if (k_ == "on") return note::dyn_field_for(on);
+            if (k_ == "reset") return note::dyn_field_for(reset);
             if (k_ == "set") return note::dyn_field_for(set);
             if (k_ == "sync") return note::dyn_field_for(sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -698,6 +709,10 @@ struct CardVoltage {
                 n += p.print(",\"on\":");
                 n += note::detail::print_json_value(p, *on);
             }
+            if (reset) {
+                n += p.print(",\"reset\":");
+                n += note::detail::print_json_value(p, *reset);
+            }
             if (set) {
                 n += p.print(",\"set\":");
                 n += note::detail::print_json_value(p, *set);
@@ -757,6 +772,7 @@ struct CardVoltage {
             static constexpr char off[] NOTE_FLASH_ATTR = "off";
             static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
             static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
             static constexpr char set[] NOTE_FLASH_ATTR = "set";
             static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
             static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
@@ -902,6 +918,15 @@ struct CardVoltage {
             /// Enable historic voltage trend calculations.
             CardVoltage::Configure& operator()(bool v);
         } on{};
+        /// Set to `true` to clear a calibration value previously set with `set`
+        /// and `calibration`, restoring the default calibration.
+        struct reset_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            /// Set to `true` to clear a calibration value previously set with
+            /// `set` and `calibration`, restoring the default calibration.
+            CardVoltage::Configure& operator()(bool v);
+        } reset{};
         /// Used along with `calibration`, set to `true` to specify a new
         /// calibration value.
         struct set_t : Field<bool> {
@@ -998,6 +1023,7 @@ struct CardVoltage {
             if (k_ == "off") return note::dyn_field_for(off);
             if (k_ == "offset") return note::dyn_field_for(offset);
             if (k_ == "on") return note::dyn_field_for(on);
+            if (k_ == "reset") return note::dyn_field_for(reset);
             if (k_ == "set") return note::dyn_field_for(set);
             if (k_ == "sync") return note::dyn_field_for(sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -1404,6 +1430,10 @@ struct CardVoltage {
                 n += p.print(",\"on\":");
                 n += note::detail::print_json_value(p, *on);
             }
+            if (reset) {
+                n += p.print(",\"reset\":");
+                n += note::detail::print_json_value(p, *reset);
+            }
             if (set) {
                 n += p.print(",\"set\":");
                 n += note::detail::print_json_value(p, *set);
@@ -1496,6 +1526,11 @@ inline CardVoltage::Read& CardVoltage::Read::on_t::operator()(bool v) {
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, on));
 }
+inline CardVoltage::Read& CardVoltage::Read::reset_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, reset));
+}
 inline CardVoltage::Read& CardVoltage::Read::set_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardVoltage::Read*>(
@@ -1568,6 +1603,7 @@ struct request_traits<::note::api::CardVoltage::Read> {
             {::note::api::CardVoltage::Read::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, off)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Read::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, offset)), ::note::ReqFieldType::Int},
             {::note::api::CardVoltage::Read::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Read::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, reset)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Read::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, set)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Read::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, sync)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -1692,6 +1728,11 @@ inline CardVoltage::Configure& CardVoltage::Configure::on_t::operator()(bool v) 
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, on));
 }
+inline CardVoltage::Configure& CardVoltage::Configure::reset_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, reset));
+}
 inline CardVoltage::Configure& CardVoltage::Configure::set_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardVoltage::Configure*>(
@@ -1764,6 +1805,7 @@ struct request_traits<::note::api::CardVoltage::Configure> {
             {::note::api::CardVoltage::Configure::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, off)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Configure::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, offset)), ::note::ReqFieldType::Int},
             {::note::api::CardVoltage::Configure::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Configure::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, reset)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Configure::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, set)), ::note::ReqFieldType::Bool},
             {::note::api::CardVoltage::Configure::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, sync)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)

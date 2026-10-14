@@ -64,7 +64,7 @@ struct CardDfu {
     /// Update. This argument is only supported on Notecards that have `ALT_DFU`
     /// pins, which includes all versions of Notecard Cell+WiFi, non-legacy
     /// versions of Notecard Cellular, and Notecard WiFi v2.
-    // mode: altdfu | aux
+    // mode: altdfu | aux | -
     struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
         constexpr mode_t() = default;
@@ -72,7 +72,7 @@ struct CardDfu {
         consteval mode_t(const char (&s)[N])
             : Field<note::string_view>(note::string_view(s, N - 1)) {
             note::string_view sv(s, N - 1);
-            if (sv != "altdfu" && sv != "aux")
+            if (sv != "altdfu" && sv != "aux" && sv != "-")
                 throw "card.dfu: invalid value for 'mode'";
         }
         template<typename U>
@@ -99,6 +99,7 @@ struct CardDfu {
 #endif
         static constexpr note::string_view altdfu{"altdfu"};
         static constexpr note::string_view aux{"aux"};
+        static constexpr note::string_view _{"-"};
         /// The `mode` argument allows you to control whether a Notecard's `AUX`
         /// pins (default) or `ALT_DFU` pins are used for Notecard Outboard
         /// Firmware Update. This argument is only supported on Notecards that
@@ -214,11 +215,12 @@ struct CardDfu {
     // Valid values for 'mode':
     //   "altdfu" — Enable the Notecard's `ALT_DFU` pins (instead of the `AUX` pins) for ...
     //   "aux" — Return the Notecard's `ALT_DFU` pins to their default state of `AUX`.
+    //   "-" — Resets the mode to the default value (`aux`).
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
-        if (sv != "altdfu" && sv != "aux")
+        if (sv != "altdfu" && sv != "aux" && sv != "-")
             throw "card.dfu: invalid value for 'mode'";
         return sv;
     }

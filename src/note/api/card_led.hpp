@@ -68,7 +68,7 @@ struct CardLed {
 
     /// Used to specify the color of the LED to turn on or off.
     ///
-    /// Note: Notecard LoRa does not support monochromatic LED or RGB modes,
+    /// Note: Notecard for LoRa does not support monochromatic LED or RGB modes,
     /// only NeoPixels.
     // mode: red | green | yellow | blue | cyan | magenta | orange | white | gray
     struct mode_t : Field<note::string_view> {
@@ -114,8 +114,8 @@ struct CardLed {
         static constexpr note::string_view gray{"gray"};
         /// Used to specify the color of the LED to turn on or off.
         ///
-        /// Note: Notecard LoRa does not support monochromatic LED or RGB modes,
-        /// only NeoPixels.
+        /// Note: Notecard for LoRa does not support monochromatic LED or RGB
+        /// modes, only NeoPixels.
         CardLed& operator()(note::string_view v);
     } mode{};
     /// Set to `true` to turn the specified LED or NeoPixel off.

@@ -151,6 +151,8 @@ The table below is auto-generated from the OpenAPI spec — see [`tools/arena_si
 | `CardTemp::Stop` | *(none)* | 64 | **64** |
 | `CardUsageGet` | *(none)* | 64 | **64** |
 | `CardUsageTest` | *(none)* | 64 | **64** |
+| `EnvDefault::Remove` | *(none)* | 64 | **64** |
+| `EnvDefault::Set` | *(none)* | 64 | **64** |
 | `EnvModified` | *(none)* | 64 | **64** |
 | `EnvSet` | *(none)* | 64 | **64** |
 | `EnvTemplate` | *(none)* | 64 | **64** |

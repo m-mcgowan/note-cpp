@@ -4865,6 +4865,9 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req.umin(true);
 #endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    req.uoff(true);
+#endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"allow\":true") != std::string::npos);
@@ -4876,6 +4879,9 @@ TEST_CASE("note::api::CardTransport request builder") {
     REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"umin\":true") != std::string::npos);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"uoff\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; fh.nc.execute(req); }
@@ -4902,6 +4908,9 @@ TEST_CASE("note::api::CardTransport request builder") {
     req["set"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req["umin"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    req["uoff"] = true;
 #endif
     // Cover command()
     req.command();
@@ -5516,6 +5525,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req.off(true);
     req.offset(note::json_int_t(42));
     req.on(true);
+    req.reset(true);
     req.set(true);
     req.sync(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5535,6 +5545,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5568,6 +5579,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req["off"] = true;
     req["offset"] = note::json_int_t(42);
     req["on"] = true;
+    req["reset"] = true;
     req["set"] = true;
     req["sync"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5710,6 +5722,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req.off(true);
     req.offset(note::json_int_t(42));
     req.on(true);
+    req.reset(true);
     req.set(true);
     req.sync(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5729,6 +5742,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5762,6 +5776,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req["off"] = true;
     req["offset"] = note::json_int_t(42);
     req["on"] = true;
+    req["reset"] = true;
     req["set"] = true;
     req["sync"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -6755,6 +6770,55 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvDefault::Set response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("time", note::json_int_t(42));
+    auto rsp = note::api::EnvDefault::Set::Response::parse(std::move(reader));
+    REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::EnvDefault::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvDefault::Set sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::EnvDefault::Set::Response rsp{};
+    note::api::EnvDefault::Set::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Remove request builder") {
     Harness h;
     auto req = h.api.env.defaults().remove(note::string_view("x-name"));
@@ -6790,6 +6854,55 @@ TEST_CASE("note::api::EnvDefault::Remove request builder") {
         auto sreq = sh.api.env.defaults().remove(note::string_view("x-name"));
         sreq.execute();
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvDefault::Remove response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("time", note::json_int_t(42));
+    auto rsp = note::api::EnvDefault::Remove::Response::parse(std::move(reader));
+    REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::EnvDefault::Remove::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvDefault::Remove sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::EnvDefault::Remove::Response rsp{};
+    note::api::EnvDefault::Remove::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------

@@ -55,8 +55,9 @@ struct EnvModified {
 
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    /// Request whether the Notecard has detected an environment variable change
-    /// since a known epoch time.
+    /// The `time` from a previous `env.modified` or `env.get` response. If no
+    /// environment variable has changed since then, the request returns an
+    /// `{env-not-modified}` error instead of a new `time`.
     ///
     /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
@@ -65,8 +66,9 @@ struct EnvModified {
     struct time_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// Request whether the Notecard has detected an environment variable
-        /// change since a known epoch time.
+        /// The `time` from a previous `env.modified` or `env.get` response. If
+        /// no environment variable has changed since then, the request returns
+        /// an `{env-not-modified}` error instead of a new `time`.
         ///
         /// @since{3.4.1}
         EnvModified& operator()(note::json_int_t v);

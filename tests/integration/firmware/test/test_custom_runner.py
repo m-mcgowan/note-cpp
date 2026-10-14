@@ -18,10 +18,13 @@ from importlib import metadata
 
 # Pinned commit on https://github.com/m-mcgowan/embedded-test-runner.
 # Bump intentionally; CI and fresh checkouts auto-reinstall on mismatch.
-# Matches `platformio.ini`'s `#v0.3.1` tag reference (the commit at the
-# v0.3.1 tag is `722e496`); keeping both in lockstep avoids a fresh
+# Matches `platformio.ini`'s `#v0.3.4` tag reference (the commit at the
+# v0.3.4 tag is `d5a5412`); keeping both in lockstep avoids a fresh
 # checkout fighting itself over which version to install.
-_RUNNER_PINNED_SHA = "722e496"
+# NOTE: pin the tag's current commit SHA, not an old one — the upstream
+# repo's history has been rewritten before, orphaning a previously-pinned
+# SHA and breaking fresh installs in CI.
+_RUNNER_PINNED_SHA = "d5a5412"
 
 _RUNNER_DIST = "embedded-test-runner"
 _RUNNER_REPO = "https://github.com/m-mcgowan/embedded-test-runner.git"

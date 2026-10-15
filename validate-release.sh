@@ -13,6 +13,14 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 RESULTS_DIR="$ROOT/.release-validation"
 RESULTS_FILE="$RESULTS_DIR/results.json"
 
+# `include/` is a gitignored symlink to `src/` (Arduino Library Manager rejects
+# symlinked repos). Recreate it BEFORE any step — in particular before the
+# codegen step runs generate.py with `-o include/note/api`, which would
+# otherwise `makedirs` a partial real `include/` dir and defeat the symlink
+# recreation that ci.sh / CMake do later (breaking host-tests on a fresh
+# checkout). Mirrors ci.sh's guard.
+[ -e "$ROOT/include" ] || ln -s src "$ROOT/include"
+
 # ── Step functions ──────────────────────────────────────────────────────────
 # Each returns 0 on success, non-zero on failure.
 # The VERSION variable is set before any step runs.

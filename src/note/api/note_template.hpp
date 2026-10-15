@@ -142,8 +142,8 @@ struct NoteTemplate {
         ///
         /// By providing a `format` of `"compact"` you tell the Notecard to omit
         /// this additional metadata to save on storage and bandwidth. The use
-        /// of `format: "compact"` is required for Notecard LoRa and a Notecard
-        /// paired with Starnote.
+        /// of `format: "compact"` is required for Notecard for LoRa and a
+        /// Notecard paired with Starnote.
         ///
         /// When using `"compact"` templates, you may include the following
         /// keywords in your template to add in fields that would otherwise be
@@ -164,8 +164,8 @@ struct NoteTemplate {
             ///
             /// By providing a `format` of `"compact"` you tell the Notecard to
             /// omit this additional metadata to save on storage and bandwidth.
-            /// The use of `format: "compact"` is required for Notecard LoRa and
-            /// a Notecard paired with Starnote.
+            /// The use of `format: "compact"` is required for Notecard for LoRa
+            /// and a Notecard paired with Starnote.
             ///
             /// When using `"compact"` templates, you may include the following
             /// keywords in your template to add in fields that would otherwise
@@ -189,7 +189,7 @@ struct NoteTemplate {
             /// without specifying the payload length.
             NoteTemplate::Define& operator()(note::json_int_t v);
         } length{};
-        /// This argument is required on Notecard LoRa and a Notecard paired
+        /// This argument is required on Notecard for LoRa and a Notecard paired
         /// with Starnote, but ignored on all other Notecards.
         ///
         /// A port is a unique integer in the range 1–100, where each unique
@@ -202,8 +202,8 @@ struct NoteTemplate {
         struct port_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// This argument is required on Notecard LoRa and a Notecard paired
-            /// with Starnote, but ignored on all other Notecards.
+            /// This argument is required on Notecard for LoRa and a Notecard
+            /// paired with Starnote, but ignored on all other Notecards.
             ///
             /// A port is a unique integer in the range 1–100, where each unique
             /// number represents one Notefile. This argument allows the
@@ -785,8 +785,8 @@ struct NoteTemplate {
         ///
         /// By providing a `format` of `"compact"` you tell the Notecard to omit
         /// this additional metadata to save on storage and bandwidth. The use
-        /// of `format: "compact"` is required for Notecard LoRa and a Notecard
-        /// paired with Starnote.
+        /// of `format: "compact"` is required for Notecard for LoRa and a
+        /// Notecard paired with Starnote.
         ///
         /// When using `"compact"` templates, you may include the following
         /// keywords in your template to add in fields that would otherwise be
@@ -839,8 +839,8 @@ struct NoteTemplate {
             ///
             /// By providing a `format` of `"compact"` you tell the Notecard to
             /// omit this additional metadata to save on storage and bandwidth.
-            /// The use of `format: "compact"` is required for Notecard LoRa and
-            /// a Notecard paired with Starnote.
+            /// The use of `format: "compact"` is required for Notecard for LoRa
+            /// and a Notecard paired with Starnote.
             ///
             /// When using `"compact"` templates, you may include the following
             /// keywords in your template to add in fields that would otherwise
@@ -864,7 +864,7 @@ struct NoteTemplate {
             /// without specifying the payload length.
             NoteTemplate::Remove& operator()(note::json_int_t v);
         } length{};
-        /// This argument is required on Notecard LoRa and a Notecard paired
+        /// This argument is required on Notecard for LoRa and a Notecard paired
         /// with Starnote, but ignored on all other Notecards.
         ///
         /// A port is a unique integer in the range 1–100, where each unique
@@ -877,8 +877,8 @@ struct NoteTemplate {
         struct port_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// This argument is required on Notecard LoRa and a Notecard paired
-            /// with Starnote, but ignored on all other Notecards.
+            /// This argument is required on Notecard for LoRa and a Notecard
+            /// paired with Starnote, but ignored on all other Notecards.
             ///
             /// A port is a unique integer in the range 1–100, where each unique
             /// number represents one Notefile. This argument allows the

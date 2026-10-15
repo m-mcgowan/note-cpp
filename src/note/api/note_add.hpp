@@ -115,8 +115,8 @@ struct NoteAdd {
     } body{};
     /// The name of the Notefile.
     ///
-    /// On Notecard LoRa this argument is required. On all other Notecards this
-    /// field is optional and defaults to `data.qo` if not provided.
+    /// On Notecard for LoRa this argument is required. On all other Notecards
+    /// this field is optional and defaults to `data.qo` if not provided.
     ///
     /// When using this request on the Notecard the Notefile name must end in
     /// one of:
@@ -138,8 +138,9 @@ struct NoteAdd {
         using Field<note::string_view>::operator=;
         /// The name of the Notefile.
         ///
-        /// On Notecard LoRa this argument is required. On all other Notecards
-        /// this field is optional and defaults to `data.qo` if not provided.
+        /// On Notecard for LoRa this argument is required. On all other
+        /// Notecards this field is optional and defaults to `data.qo` if not
+        /// provided.
         ///
         /// When using this request on the Notecard the Notefile name must end
         /// in one of:

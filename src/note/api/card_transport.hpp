@@ -44,6 +44,7 @@ struct CardTransport {
         static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char set[] NOTE_FLASH_ATTR = "set";
         static constexpr char umin[] NOTE_FLASH_ATTR = "umin";
+        static constexpr char uoff[] NOTE_FLASH_ATTR = "uoff";
         static constexpr char rsp_method[] NOTE_FLASH_ATTR = "method";
         static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
         static constexpr char rsp_allow[] NOTE_FLASH_ATTR = "allow";
@@ -176,6 +177,24 @@ struct CardTransport {
         CardTransport& operator()(bool v);
     } umin{};
 #endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    /// Set to `true` to turn off the longer network transport timeout set with
+    /// `umin`.
+    ///
+    /// @since{9.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
+    [[deprecated("requires firmware >= 9.1.1")]]
+#endif
+    struct uoff_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        /// Set to `true` to turn off the longer network transport timeout set
+        /// with `umin`.
+        ///
+        /// @since{9.1.1}
+        CardTransport& operator()(bool v);
+    } uoff{};
+#endif
 
     // Valid values for 'method':
     //   "-" — Resets the transport mode to the device default.
@@ -226,6 +245,9 @@ struct CardTransport {
         if (k_ == "set") return note::dyn_field_for(set);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "umin") return note::dyn_field_for(umin);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "uoff") return note::dyn_field_for(uoff);
 #endif
         if (extras_count_ < NOTE_EXTRAS_MAX) {
             auto& slot = extras_[extras_count_++];
@@ -508,6 +530,12 @@ struct CardTransport {
             n += note::detail::print_json_value(p, *umin);
         }
 #endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+        if (uoff) {
+            n += p.print(",\"uoff\":");
+            n += note::detail::print_json_value(p, *uoff);
+        }
+#endif
         n += p.print("}");
         return n;
     }
@@ -560,6 +588,13 @@ inline CardTransport& CardTransport::umin_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardTransport, umin));
 }
 #endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+inline CardTransport& CardTransport::uoff_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardTransport*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTransport, uoff));
+}
+#endif
 #pragma GCC diagnostic pop
 
 } // namespace note::api
@@ -598,6 +633,9 @@ struct request_traits<::note::api::CardTransport> {
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
             {::note::api::CardTransport::keys_::umin, static_cast<uint16_t>(offsetof(::note::api::CardTransport, umin)), ::note::ReqFieldType::Bool},
 #endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardTransport::keys_::uoff, static_cast<uint16_t>(offsetof(::note::api::CardTransport, uoff)), ::note::ReqFieldType::Bool},
+#endif
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -617,6 +655,8 @@ inline void CardTransport::build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
 #endif

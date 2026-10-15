@@ -10,6 +10,15 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-10-14
+
+### Added
+- New request fields synced from [notecard-schema v1.8.3](https://github.com/blues/notecard-schema/releases/tag/v1.8.3): `card.transport` `uoff`, `card.voltage` `reset`, and the `time` response field on `env.default`.
+- New enum values: `card.aux.serial` `notify,-all`, and a `-` (clear) sentinel on `card.dfu` and `card.voltage`.
+
+### Changed
+- Synced the bundled Notecard API definitions to notecard-schema v1.8.3 (upstream `146e0e4`), regenerating the typed API and the API reference. The update is additive — existing code continues to compile unchanged.
+
 ## [0.3.5] - 2026-10-13
 
 ### Added

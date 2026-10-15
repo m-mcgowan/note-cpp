@@ -82,57 +82,59 @@ struct CardLocationMode {
             CardLocationMode::Get& operator()(bool v);
         } delete_{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// latitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the latitude
         /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the latitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the latitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the latitude location of the device itself,
             /// in degrees.
             CardLocationMode::Get& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// longitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the
         /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the longitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the longitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the longitude location of the device itself,
             /// in degrees.
             CardLocationMode::Get& operator()(double v);
         } lon{};
-        /// Meters from a geofence center. Used to enable geofence location
-        /// tracking.
+        /// Meters from a ringfence center. Used to enable ringfence location
+        /// tracking. If `lat` and `lon` are omitted, the ringfence is centered
+        /// on the Notecard's current location.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// Meters from a geofence center. Used to enable geofence location
-            /// tracking.
+            /// Meters from a ringfence center. Used to enable ringfence
+            /// location tracking. If `lat` and `lon` are omitted, the ringfence
+            /// is centered on the Notecard's current location.
             CardLocationMode::Get& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the debounce period in minutes for
-        /// transitions across the geofence boundary. The Notecard reports a
+        /// When ringfence is enabled, the debounce period in minutes for
+        /// transitions across the ringfence boundary. The Notecard reports a
         /// transition the first time a GPS fix lands on the opposite side of
         /// the boundary from the previous one, then ignores further transitions
         /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the debounce period in minutes for
-            /// transitions across the geofence boundary. The Notecard reports a
-            /// transition the first time a GPS fix lands on the opposite side
+            /// When ringfence is enabled, the debounce period in minutes for
+            /// transitions across the ringfence boundary. The Notecard reports
+            /// a transition the first time a GPS fix lands on the opposite side
             /// of the boundary from the previous one, then ignores further
             /// transitions for this many minutes.
             CardLocationMode::Get& operator()(note::json_int_t v);
@@ -292,15 +294,16 @@ struct CardLocationMode {
             note::ResponseField<note::string_view> mode{};
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
-            /// If geofence is enabled, the geofence center latitude in degrees.
+            /// If ringfence is enabled, the ringfence center latitude in
+            /// degrees.
             note::ResponseField<double> lat{};
-            /// If geofence is enabled, the geofence center longitude in
+            /// If ringfence is enabled, the ringfence center longitude in
             /// degrees.
             note::ResponseField<double> lon{};
-            /// If geofence is enabled, the meters from geofence center.
+            /// If ringfence is enabled, the meters from ringfence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured debounce
-            /// period, in minutes, for transitions across the geofence
+            /// If ringfence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the ringfence
             /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
@@ -317,11 +320,11 @@ struct CardLocationMode {
             note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// `true` if a journey is currently in progress (i.e., the Notecard
-            /// has detected motion and is actively tracking a journey). The
-            /// Notecard tracks journeys when `mode` is set to `continuous` or
-            /// to `periodic` with `seconds` less than 300. See `_track.qo` for
-            /// details on the `journey` and `jcount` fields included in
-            /// tracking Notes.
+            /// has determined that the device is traveling and is actively
+            /// tracking a trip). The Notecard tracks journeys when `mode` is
+            /// set to `continuous` or to `periodic` with `seconds` less than
+            /// 300. See `_track.qo` for details on the `journey` and `jcount`
+            /// fields included in tracking Notes.
             note::ResponseField<bool> journey{};
 
 #if !NOTE_NO_RESPONSE_RAII
@@ -656,57 +659,59 @@ struct CardLocationMode {
             CardLocationMode::Set& operator()(bool v);
         } delete_{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// latitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the latitude
         /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the latitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the latitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the latitude location of the device itself,
             /// in degrees.
             CardLocationMode::Set& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// longitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the
         /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the longitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the longitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the longitude location of the device itself,
             /// in degrees.
             CardLocationMode::Set& operator()(double v);
         } lon{};
-        /// Meters from a geofence center. Used to enable geofence location
-        /// tracking.
+        /// Meters from a ringfence center. Used to enable ringfence location
+        /// tracking. If `lat` and `lon` are omitted, the ringfence is centered
+        /// on the Notecard's current location.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// Meters from a geofence center. Used to enable geofence location
-            /// tracking.
+            /// Meters from a ringfence center. Used to enable ringfence
+            /// location tracking. If `lat` and `lon` are omitted, the ringfence
+            /// is centered on the Notecard's current location.
             CardLocationMode::Set& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the debounce period in minutes for
-        /// transitions across the geofence boundary. The Notecard reports a
+        /// When ringfence is enabled, the debounce period in minutes for
+        /// transitions across the ringfence boundary. The Notecard reports a
         /// transition the first time a GPS fix lands on the opposite side of
         /// the boundary from the previous one, then ignores further transitions
         /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the debounce period in minutes for
-            /// transitions across the geofence boundary. The Notecard reports a
-            /// transition the first time a GPS fix lands on the opposite side
+            /// When ringfence is enabled, the debounce period in minutes for
+            /// transitions across the ringfence boundary. The Notecard reports
+            /// a transition the first time a GPS fix lands on the opposite side
             /// of the boundary from the previous one, then ignores further
             /// transitions for this many minutes.
             CardLocationMode::Set& operator()(note::json_int_t v);
@@ -866,15 +871,16 @@ struct CardLocationMode {
             note::ResponseField<note::string_view> mode{};
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
-            /// If geofence is enabled, the geofence center latitude in degrees.
+            /// If ringfence is enabled, the ringfence center latitude in
+            /// degrees.
             note::ResponseField<double> lat{};
-            /// If geofence is enabled, the geofence center longitude in
+            /// If ringfence is enabled, the ringfence center longitude in
             /// degrees.
             note::ResponseField<double> lon{};
-            /// If geofence is enabled, the meters from geofence center.
+            /// If ringfence is enabled, the meters from ringfence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured debounce
-            /// period, in minutes, for transitions across the geofence
+            /// If ringfence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the ringfence
             /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
@@ -891,11 +897,11 @@ struct CardLocationMode {
             note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// `true` if a journey is currently in progress (i.e., the Notecard
-            /// has detected motion and is actively tracking a journey). The
-            /// Notecard tracks journeys when `mode` is set to `continuous` or
-            /// to `periodic` with `seconds` less than 300. See `_track.qo` for
-            /// details on the `journey` and `jcount` fields included in
-            /// tracking Notes.
+            /// has determined that the device is traveling and is actively
+            /// tracking a trip). The Notecard tracks journeys when `mode` is
+            /// set to `continuous` or to `periodic` with `seconds` less than
+            /// 300. See `_track.qo` for details on the `journey` and `jcount`
+            /// fields included in tracking Notes.
             note::ResponseField<bool> journey{};
 
 #if !NOTE_NO_RESPONSE_RAII
@@ -1537,57 +1543,59 @@ struct CardLocationMode {
 
 
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// latitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the latitude
         /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the latitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the latitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the latitude location of the device itself,
             /// in degrees.
             CardLocationMode::Periodic& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// longitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the
         /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the longitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the longitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the longitude location of the device itself,
             /// in degrees.
             CardLocationMode::Periodic& operator()(double v);
         } lon{};
-        /// Meters from a geofence center. Used to enable geofence location
-        /// tracking.
+        /// Meters from a ringfence center. Used to enable ringfence location
+        /// tracking. If `lat` and `lon` are omitted, the ringfence is centered
+        /// on the Notecard's current location.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// Meters from a geofence center. Used to enable geofence location
-            /// tracking.
+            /// Meters from a ringfence center. Used to enable ringfence
+            /// location tracking. If `lat` and `lon` are omitted, the ringfence
+            /// is centered on the Notecard's current location.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the debounce period in minutes for
-        /// transitions across the geofence boundary. The Notecard reports a
+        /// When ringfence is enabled, the debounce period in minutes for
+        /// transitions across the ringfence boundary. The Notecard reports a
         /// transition the first time a GPS fix lands on the opposite side of
         /// the boundary from the previous one, then ignores further transitions
         /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the debounce period in minutes for
-            /// transitions across the geofence boundary. The Notecard reports a
-            /// transition the first time a GPS fix lands on the opposite side
+            /// When ringfence is enabled, the debounce period in minutes for
+            /// transitions across the ringfence boundary. The Notecard reports
+            /// a transition the first time a GPS fix lands on the opposite side
             /// of the boundary from the previous one, then ignores further
             /// transitions for this many minutes.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
@@ -1688,15 +1696,16 @@ struct CardLocationMode {
             note::ResponseField<note::string_view> mode{};
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
-            /// If geofence is enabled, the geofence center latitude in degrees.
+            /// If ringfence is enabled, the ringfence center latitude in
+            /// degrees.
             note::ResponseField<double> lat{};
-            /// If geofence is enabled, the geofence center longitude in
+            /// If ringfence is enabled, the ringfence center longitude in
             /// degrees.
             note::ResponseField<double> lon{};
-            /// If geofence is enabled, the meters from geofence center.
+            /// If ringfence is enabled, the meters from ringfence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured debounce
-            /// period, in minutes, for transitions across the geofence
+            /// If ringfence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the ringfence
             /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
@@ -2006,32 +2015,32 @@ struct CardLocationMode {
 
 
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// latitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the latitude
         /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the latitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the latitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the latitude location of the device itself,
             /// in degrees.
             CardLocationMode::Fixed& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// longitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the
         /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the longitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the longitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the longitude location of the device itself,
             /// in degrees.
@@ -2081,9 +2090,10 @@ struct CardLocationMode {
 
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
-            /// If geofence is enabled, the geofence center latitude in degrees.
+            /// If ringfence is enabled, the ringfence center latitude in
+            /// degrees.
             note::ResponseField<double> lat{};
-            /// If geofence is enabled, the geofence center longitude in
+            /// If ringfence is enabled, the ringfence center longitude in
             /// degrees.
             note::ResponseField<double> lon{};
 
@@ -2306,57 +2316,59 @@ struct CardLocationMode {
 
 
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// latitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the latitude
         /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the latitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the latitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the latitude location of the device itself,
             /// in degrees.
             CardLocationMode::Remove& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// geofencing. The value you provide for this argument should be the
-        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// ringfencing. The value you provide for this argument should be the
+        /// longitude of the center of the ringfence, in degrees. When in fixed
         /// mode, the value you provide for this argument should be the
         /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             /// When in periodic or continuous mode, providing this value
-            /// enables geofencing. The value you provide for this argument
-            /// should be the longitude of the center of the geofence, in
+            /// enables ringfencing. The value you provide for this argument
+            /// should be the longitude of the center of the ringfence, in
             /// degrees. When in fixed mode, the value you provide for this
             /// argument should be the longitude location of the device itself,
             /// in degrees.
             CardLocationMode::Remove& operator()(double v);
         } lon{};
-        /// Meters from a geofence center. Used to enable geofence location
-        /// tracking.
+        /// Meters from a ringfence center. Used to enable ringfence location
+        /// tracking. If `lat` and `lon` are omitted, the ringfence is centered
+        /// on the Notecard's current location.
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// Meters from a geofence center. Used to enable geofence location
-            /// tracking.
+            /// Meters from a ringfence center. Used to enable ringfence
+            /// location tracking. If `lat` and `lon` are omitted, the ringfence
+            /// is centered on the Notecard's current location.
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } max{};
-        /// When geofence is enabled, the debounce period in minutes for
-        /// transitions across the geofence boundary. The Notecard reports a
+        /// When ringfence is enabled, the debounce period in minutes for
+        /// transitions across the ringfence boundary. The Notecard reports a
         /// transition the first time a GPS fix lands on the opposite side of
         /// the boundary from the previous one, then ignores further transitions
         /// for this many minutes.
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
-            /// When geofence is enabled, the debounce period in minutes for
-            /// transitions across the geofence boundary. The Notecard reports a
-            /// transition the first time a GPS fix lands on the opposite side
+            /// When ringfence is enabled, the debounce period in minutes for
+            /// transitions across the ringfence boundary. The Notecard reports
+            /// a transition the first time a GPS fix lands on the opposite side
             /// of the boundary from the previous one, then ignores further
             /// transitions for this many minutes.
             CardLocationMode::Remove& operator()(note::json_int_t v);
@@ -2515,15 +2527,16 @@ struct CardLocationMode {
             note::ResponseField<note::string_view> mode{};
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
-            /// If geofence is enabled, the geofence center latitude in degrees.
+            /// If ringfence is enabled, the ringfence center latitude in
+            /// degrees.
             note::ResponseField<double> lat{};
-            /// If geofence is enabled, the geofence center longitude in
+            /// If ringfence is enabled, the ringfence center longitude in
             /// degrees.
             note::ResponseField<double> lon{};
-            /// If geofence is enabled, the meters from geofence center.
+            /// If ringfence is enabled, the meters from ringfence center.
             note::ResponseField<note::json_int_t> max{};
-            /// If geofence is enabled, the currently configured debounce
-            /// period, in minutes, for transitions across the geofence
+            /// If ringfence is enabled, the currently configured debounce
+            /// period, in minutes, for transitions across the ringfence
             /// boundary.
             note::ResponseField<note::json_int_t> minutes{};
             /// If specified, the periodic sample interval.
@@ -2540,11 +2553,11 @@ struct CardLocationMode {
             note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// `true` if a journey is currently in progress (i.e., the Notecard
-            /// has detected motion and is actively tracking a journey). The
-            /// Notecard tracks journeys when `mode` is set to `continuous` or
-            /// to `periodic` with `seconds` less than 300. See `_track.qo` for
-            /// details on the `journey` and `jcount` fields included in
-            /// tracking Notes.
+            /// has determined that the device is traveling and is actively
+            /// tracking a trip). The Notecard tracks journeys when `mode` is
+            /// set to `continuous` or to `periodic` with `seconds` less than
+            /// 300. See `_track.qo` for details on the `journey` and `jcount`
+            /// fields included in tracking Notes.
             note::ResponseField<bool> journey{};
 
 #if !NOTE_NO_RESPONSE_RAII

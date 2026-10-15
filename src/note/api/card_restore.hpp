@@ -38,9 +38,9 @@ namespace note::api {
 /// only reset the Notecard's file system, thus forcing a re-sync of all
 /// Notefiles from Notehub.*
 ///
-/// On Notecard LoRa there is no option to retain configuration settings, and
-/// providing `"delete": true` is required. The Notecard LoRa retains LoRaWAN
-/// configuration after factory resets.
+/// On Notecard for LoRa there is no option to retain configuration settings,
+/// and providing `"delete": true` is required. The Notecard for LoRa retains
+/// LoRaWAN configuration after factory resets.
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardRestore {

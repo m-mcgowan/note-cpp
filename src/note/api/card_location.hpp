@@ -38,7 +38,7 @@ namespace note::api {
 /// This request will return the cell tower location or triangulated location of
 /// the most recent session if a GPS/GNSS location is not available.
 ///
-/// On Notecard LoRa this request can only return a location set through the
+/// On Notecard for LoRa this request can only return a location set through the
 /// card.location.mode request's `"fixed"` mode.
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
@@ -121,8 +121,8 @@ struct CardLocation {
         note::ResponseField<double> lat{};
         /// The longitude in degrees of the last known location.
         note::ResponseField<double> lon{};
-        /// If a geofence is enabled by `card.location.mode`, meters from the
-        /// geofence center.
+        /// If a ringfence is enabled by `card.location.mode`, meters from the
+        /// ringfence center.
         note::ResponseField<note::json_int_t> max{};
         /// The time of the location capture.
         note::ResponseField<note::json_int_t> time{};

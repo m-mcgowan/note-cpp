@@ -84,7 +84,7 @@ struct HubSet {
         HubSet& operator()(bool v);
     } align{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    /// When using Notecard LoRa you can use this argument to provide
+    /// When using Notecard for LoRa you can use this argument to provide
     /// information about an alternative LoRaWAN server or service you would
     /// like the Notecard to use. The argument you provide must be a JSON object
     /// with three keys, "deveui", "appeui", and "appkey", all of which are
@@ -105,7 +105,7 @@ struct HubSet {
     struct details_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-        /// When using Notecard LoRa you can use this argument to provide
+        /// When using Notecard for LoRa you can use this argument to provide
         /// information about an alternative LoRaWAN server or service you would
         /// like the Notecard to use. The argument you provide must be a JSON
         /// object with three keys, "deveui", "appeui", and "appkey", all of

@@ -91,8 +91,10 @@ struct EnvGet {
     note::ArrayField<note::string_view, 8> names{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    /// Request a modified environment variable or variables from the Notecard,
-    /// but only if modified after the time provided.
+    /// Use to fetch variables only when something has changed. Pass the `time`
+    /// from a previous `env.get` or `env.modified` response. If no environment
+    /// variable has changed since then, the request returns an `{env-not-
+    /// modified}` error.
     ///
     /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
@@ -101,8 +103,10 @@ struct EnvGet {
     struct time_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
-        /// Request a modified environment variable or variables from the
-        /// Notecard, but only if modified after the time provided.
+        /// Use to fetch variables only when something has changed. Pass the
+        /// `time` from a previous `env.get` or `env.modified` response. If no
+        /// environment variable has changed since then, the request returns an
+        /// `{env-not-modified}` error.
         ///
         /// @since{3.4.1}
         EnvGet& operator()(note::json_int_t v);
@@ -220,7 +224,8 @@ struct EnvGet {
             ::note::detail::arena_cost(129) +
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
-        /// If a `name` was specified, the value of the environment variable.
+        /// If `name` was specified, the value of the environment variable.
+        /// Omitted if the variable is not set.
         note::ResponseField<note::string_view> text{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// The time of the most recent change to any environment variable on

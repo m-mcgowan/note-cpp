@@ -129,8 +129,8 @@ Environment variables: device-, fleet-, and project-scoped configuration shared 
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
-| `env.default` | `env.defaults().set(...)` | [`EnvDefault::Set`](#envdefault) | void |
-|  | `env.defaults().remove(...)` | [`EnvDefault::Remove`](#envdefault) | void |
+| `env.default` | `env.defaults().set(...)` | [`EnvDefault::Set`](#envdefault) | `.time` |
+|  | `env.defaults().remove(...)` | [`EnvDefault::Remove`](#envdefault) | `.time` |
 | `env.get` | `env.get()` | [`EnvGet`](#envget) | `.text`, `.time` |
 | `env.modified` | `env.modified()` | [`EnvModified`](#envmodified) | `.time` |
 | `env.set` | `env.(...)` | [`EnvSet`](#envset) | `.time` |
@@ -1323,7 +1323,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.mode` | `note::string_view` | no | Used to specify the color of the LED to turn on or off.  Note: Notecard LoRa... |
+| `.mode` | `note::string_view` | no | Used to specify the color of the LED to turn on or off.  Note: Notecard for... |
 | `.off` | `bool` | no | Set to `true` to turn the specified LED or NeoPixel off. |
 | `.on` | `bool` | no | Set to `true` to turn the specified LED or NeoPixel on. |
 
@@ -1364,7 +1364,7 @@ auto rsp = nc.execute(req);
 | `.dop` | `double` | The "Dilution of Precision" value from the latest GPS/GNSS reading. The... |
 | `.lat` | `double` | The latitude in degrees of the last known location. |
 | `.lon` | `double` | The longitude in degrees of the last known location. |
-| `.max` | `note::json_int_t` | If a geofence is enabled by `card.location.mode`, meters from the geofence center. |
+| `.max` | `note::json_int_t` | If a ringfence is enabled by `card.location.mode`, meters from the ringfence center. |
 | `.time` | `note::json_int_t` | The time of the location capture. |
 
 
@@ -1405,8 +1405,8 @@ auto rsp = nc.execute(req);
 | `.delete_` | `bool` | no | Set to `true` to delete the last known location stored in the Notecard. |
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the debounce period in minutes for transitions... |
+| `.max` | `note::json_int_t` | no | Meters from a ringfence center. Used to enable ringfence location tracking.... |
+| `.minutes` | `note::json_int_t` | no | When ringfence is enabled, the debounce period in minutes for transitions... |
 | `.mode` | `note::string_view` | no | Sets the location mode. |
 | `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
 | `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
@@ -1418,13 +1418,13 @@ auto rsp = nc.execute(req);
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current location mode. |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
-| `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
-| `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured debounce period, in... |
+| `.lat` | `double` | If ringfence is enabled, the ringfence center latitude in degrees. |
+| `.lon` | `double` | If ringfence is enabled, the ringfence center longitude in degrees. |
+| `.max` | `note::json_int_t` | If ringfence is enabled, the meters from ringfence center. |
+| `.minutes` | `note::json_int_t` | If ringfence is enabled, the currently configured debounce period, in... |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
-| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
+| `.journey` | `bool` | `true` if a [journey](/api-reference/glossary/#journey) is currently in... |
 
 
 #### card.location.mode — set()
@@ -1461,8 +1461,8 @@ auto rsp = nc.execute(req);
 | `.delete_` | `bool` | no | Set to `true` to delete the last known location stored in the Notecard. |
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the debounce period in minutes for transitions... |
+| `.max` | `note::json_int_t` | no | Meters from a ringfence center. Used to enable ringfence location tracking.... |
+| `.minutes` | `note::json_int_t` | no | When ringfence is enabled, the debounce period in minutes for transitions... |
 | `.mode` | `note::string_view` | no | Sets the location mode. |
 | `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
 | `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
@@ -1474,13 +1474,13 @@ auto rsp = nc.execute(req);
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current location mode. |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
-| `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
-| `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured debounce period, in... |
+| `.lat` | `double` | If ringfence is enabled, the ringfence center latitude in degrees. |
+| `.lon` | `double` | If ringfence is enabled, the ringfence center longitude in degrees. |
+| `.max` | `note::json_int_t` | If ringfence is enabled, the meters from ringfence center. |
+| `.minutes` | `note::json_int_t` | If ringfence is enabled, the currently configured debounce period, in... |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
-| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
+| `.journey` | `bool` | `true` if a [journey](/api-reference/glossary/#journey) is currently in... |
 
 
 #### card.location.mode — continuous()
@@ -1559,8 +1559,8 @@ auto rsp = nc.execute(req);
 |-------|------|----------|-------------|
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the debounce period in minutes for transitions... |
+| `.max` | `note::json_int_t` | no | Meters from a ringfence center. Used to enable ringfence location tracking.... |
+| `.minutes` | `note::json_int_t` | no | When ringfence is enabled, the debounce period in minutes for transitions... |
 | `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
 | `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | no | In `periodic` mode, overrides `seconds` with a voltage-variable value. |
@@ -1571,10 +1571,10 @@ auto rsp = nc.execute(req);
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current location mode. |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
-| `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
-| `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured debounce period, in... |
+| `.lat` | `double` | If ringfence is enabled, the ringfence center latitude in degrees. |
+| `.lon` | `double` | If ringfence is enabled, the ringfence center longitude in degrees. |
+| `.max` | `note::json_int_t` | If ringfence is enabled, the meters from ringfence center. |
+| `.minutes` | `note::json_int_t` | If ringfence is enabled, the currently configured debounce period, in... |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 
@@ -1618,8 +1618,8 @@ auto rsp = nc.execute(req);
 | Field | Type | Description |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current location mode. |
-| `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
-| `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
+| `.lat` | `double` | If ringfence is enabled, the ringfence center latitude in degrees. |
+| `.lon` | `double` | If ringfence is enabled, the ringfence center longitude in degrees. |
 
 
 #### card.location.mode — remove()
@@ -1656,8 +1656,8 @@ auto rsp = nc.execute(req);
 | `.delete_` | `bool` | no | Set to `true` to delete the last known location stored in the Notecard. |
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the debounce period in minutes for transitions... |
+| `.max` | `note::json_int_t` | no | Meters from a ringfence center. Used to enable ringfence location tracking.... |
+| `.minutes` | `note::json_int_t` | no | When ringfence is enabled, the debounce period in minutes for transitions... |
 | `.mode` | `note::string_view` | no | Sets the location mode. |
 | `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
 | `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
@@ -1669,13 +1669,13 @@ auto rsp = nc.execute(req);
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current location mode. |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
-| `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
-| `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured debounce period, in... |
+| `.lat` | `double` | If ringfence is enabled, the ringfence center latitude in degrees. |
+| `.lon` | `double` | If ringfence is enabled, the ringfence center longitude in degrees. |
+| `.max` | `note::json_int_t` | If ringfence is enabled, the meters from ringfence center. |
+| `.minutes` | `note::json_int_t` | If ringfence is enabled, the currently configured debounce period, in... |
 | `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
-| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
+| `.journey` | `bool` | `true` if a [journey](/api-reference/glossary/#journey) is currently in... |
 
 
 ### card.location.track
@@ -1726,7 +1726,7 @@ auto rsp = nc.execute(req);
 | `.minutes` | `note::json_int_t` | The configured heartbeat interval in minutes. Only returned when the... |
 | `.seconds` | `note::json_int_t` | If tracking is enabled and no heartbeat interval is configured, the periodic... |
 | `.heartbeat` | `bool` | `true` if heartbeat is enabled. |
-| `.journey` | `bool` | `true` if a journey is currently in progress (i.e., the Notecard has... |
+| `.journey` | `bool` | `true` if a [journey](/api-reference/glossary/#journey) is currently in... |
 | `.start` | `bool` | `true` if tracking is enabled. |
 | `.stop` | `bool` | `true` if tracking is disabled. |
 
@@ -2533,6 +2533,7 @@ auto rsp = nc.execute(req);
 | `.seconds` | `note::json_int_t` | no | The amount of time (in seconds) a Notecard will spend on any fallback... |
 | `.set` | `bool` | no | Set to `true` to apply the `allow` argument without also changing the... |
 | `.umin` | `bool` | no | Set to `true` to force a longer network transport timeout when using... |
+| `.uoff` | `bool` | no | Set to `true` to turn off the longer network transport timeout set with `umin`. |
 
 **Response fields:**
 
@@ -2777,6 +2778,7 @@ auto rsp = nc.execute(req);
 | `.off` | `bool` | no | Disable historic voltage trend calculations. |
 | `.offset` | `note::json_int_t` | no | Number of hours to move into the past before starting analysis. |
 | `.on` | `bool` | no | Enable historic voltage trend calculations. |
+| `.reset` | `bool` | no | Set to `true` to clear a calibration value previously set with `set` and... |
 | `.set` | `bool` | no | Used along with `calibration`, set to `true` to specify a new calibration value. |
 | `.sync` | `bool` | no | When enabled and the `usb` argument is set to `true`, the Notecard will... |
 | `.usb` | `bool` | no | When enabled, the Notecard will monitor for changes to USB power state. |
@@ -2844,6 +2846,7 @@ auto rsp = nc.execute(req);
 | `.off` | `bool` | no | Disable historic voltage trend calculations. |
 | `.offset` | `note::json_int_t` | no | Number of hours to move into the past before starting analysis. |
 | `.on` | `bool` | no | Enable historic voltage trend calculations. |
+| `.reset` | `bool` | no | Set to `true` to clear a calibration value previously set with `set` and... |
 | `.set` | `bool` | no | Used along with `calibration`, set to `true` to specify a new calibration value. |
 | `.sync` | `bool` | no | When enabled and the `usb` argument is set to `true`, the Notecard will... |
 | `.usb` | `bool` | no | When enabled, the Notecard will monitor for changes to USB power state. |
@@ -3244,6 +3247,11 @@ auto rsp = nc.execute(req);
 | `.sync` | `bool` | no | Set to `true` to trigger an immediate sync. |
 | `.text` | `note::string_view` | no | The value of the variable. Pass `""` or omit from the request to delete it. |
 
+**Response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.time` | `note::json_int_t` | The time the Notecard's environment variables were last modified. Omitted if... |
 
 **Aliases on `api.env`:**
 
@@ -3283,6 +3291,11 @@ auto rsp = nc.execute(req);
 | `.name` | `note::string_view` | yes | The name of the environment variable (case-insensitive). |
 | `.sync` | `bool` | no | Set to `true` to trigger an immediate sync. |
 
+**Response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.time` | `note::json_int_t` | The time the Notecard's environment variables were last modified. Omitted if... |
 
 **Aliases on `api.env`:**
 
@@ -3321,13 +3334,13 @@ auto rsp = nc.execute(req);
 |-------|------|----------|-------------|
 | `.name` | `note::string_view` | no | The name of the environment variable (case-insensitive). Omit to return all... |
 | `.names` | `note::string_view` | no | A list of one or more variables to retrieve, by name (case-insensitive). |
-| `.time` | `note::json_int_t` | no | Request a modified environment variable or variables from the Notecard, but... |
+| `.time` | `note::json_int_t` | no | Use to fetch variables only when something has changed. Pass the `time` from... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.text` | `note::string_view` | If a `name` was specified, the value of the environment variable. |
+| `.text` | `note::string_view` | If `name` was specified, the value of the environment variable. Omitted if... |
 | `.time` | `note::json_int_t` | The time of the most recent change to any environment variable on the... |
 
 
@@ -3362,7 +3375,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.time` | `note::json_int_t` | no | Request whether the Notecard has detected an environment variable change... |
+| `.time` | `note::json_int_t` | no | The `time` from a previous `env.modified` or `env.get` response. If no... |
 
 **Response fields:**
 
@@ -3409,7 +3422,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.time` | `note::json_int_t` | The logged time of the variable change. |
+| `.time` | `note::json_int_t` | The time the Notecard's environment variables were last modified. |
 
 
 ### env.template
@@ -3763,7 +3776,7 @@ auto rsp = nc.execute(req);
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.align` | `bool` | no | Use `true` to align syncs on a regular time-periodic cycle. The cycle is... |
-| `.details` | `note::string_view` | no | When using Notecard LoRa you can use this argument to provide information... |
+| `.details` | `note::string_view` | no | When using Notecard for LoRa you can use this argument to provide... |
 | `.duration` | `note::json_int_t` | no | When in `continuous` mode, the amount of time, in minutes, of each session... |
 | `.host` | `note::string_view` | no | The URL of the Notehub service. Use `"-"` to reset to the default value. |
 | `.inbound` | `note::json_int_t` | no | The max wait time, in minutes, to sync inbound data from Notehub. Explicit... |
@@ -3978,7 +3991,7 @@ auto rsp = nc.execute(req);
 |-------|------|----------|-------------|
 | `.binary` | `bool` | no | If `true`, the Notecard will send all the data in the binary buffer to... |
 | `.body` | `note::string_view` | no | A JSON object to be enqueued. A Note must have either a `body` or a... |
-| `.file` | `note::string_view` | no | The name of the Notefile.  On Notecard LoRa this argument is required. On... |
+| `.file` | `note::string_view` | no | The name of the Notefile.  On Notecard for LoRa this argument is required.... |
 | `.full` | `bool` | no | If set to `true`, and the Note is using a [Notefile... |
 | `.key` | `note::string_view` | no | The name of an environment variable in your Notehub project that contains... |
 | `.limit` | `bool` | no | If set to `true`, the Note will not be created if Notecard is in a [penalty... |
@@ -4278,7 +4291,7 @@ auto rsp = nc.execute(req);
 | `.file` | `note::string_view` | yes | The name of the Notefile to which the template will be applied. |
 | `.format` | `note::string_view` | no | By default all Note templates automatically include metadata, including a... |
 | `.length` | `note::json_int_t` | no | The maximum length of a `payload` (in bytes) that can be sent in Notes for... |
-| `.port` | `note::json_int_t` | no | This argument is required on Notecard LoRa and a Notecard paired with... |
+| `.port` | `note::json_int_t` | no | This argument is required on Notecard for LoRa and a Notecard paired with... |
 | `.verify` | `bool` | no | If `true`, returns the current template set on a given Notefile. |
 
 **Response fields:**
@@ -4329,7 +4342,7 @@ auto rsp = nc.execute(req);
 | `.file` | `note::string_view` | yes | The name of the Notefile to which the template will be applied. |
 | `.format` | `note::string_view` | no | By default all Note templates automatically include metadata, including a... |
 | `.length` | `note::json_int_t` | no | The maximum length of a `payload` (in bytes) that can be sent in Notes for... |
-| `.port` | `note::json_int_t` | no | This argument is required on Notecard LoRa and a Notecard paired with... |
+| `.port` | `note::json_int_t` | no | This argument is required on Notecard for LoRa and a Notecard paired with... |
 | `.verify` | `bool` | no | If `true`, returns the current template set on a given Notefile. |
 
 **Response fields:**
@@ -4459,7 +4472,7 @@ auto rsp = nc.execute(req);
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.off` | `bool` | Returned and `true` if the Notecard does not supply its location to a paired... |
+| `.off` | `bool` | Returned and `true` if the Notecard does not supply its location to the NTN... |
 | `.on` | `bool` | Returned and `true` if the Notecard supplies a location it already knows to... |
 
 
@@ -4780,10 +4793,10 @@ auto rsp = nc.execute(req);
 | `.body` | `note::string_view` | no | The JSON body to send with the request. |
 | `.content` | `note::string_view` | no | The MIME type of the body or payload of the response. Default is `application/json`. |
 | `.file` | `note::string_view` | no | The name of a local-only Database Notefile (.dbx) where the response will be... |
-| `.max` | `note::json_int_t` | no | Used along with `binary:true` and `offset`, sent as a URL parameter to the... |
+| `.max` | `note::json_int_t` | no | Used along with `binary:true` and `offset`. Represents the number of bytes... |
 | `.name` | `note::string_view` | no | A web URL endpoint relative to the host configured in the Proxy Route. URL... |
 | `.noteId` | `note::string_view` | no | The unique Note ID within the local-only Database Notefile (.dbx) specified... |
-| `.offset` | `note::json_int_t` | no | Used along with `binary:true` and `max`, sent as a URL parameter to the... |
+| `.offset` | `note::json_int_t` | no | Used along with `binary:true` and `max`. Represents the number of bytes to... |
 | `.route` | `note::string_view` | no | Alias for a Proxy Route in Notehub. |
 | `.seconds` | `note::json_int_t` | no | If specified, overrides the default 90 second timeout. |
 

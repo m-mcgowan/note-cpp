@@ -1260,8 +1260,8 @@ public:
         /// location of the most recent session if a GPS/GNSS location is not
         /// available.
         ///
-        /// On Notecard LoRa this request can only return a location set through
-        /// the card.location.mode request's `"fixed"` mode.
+        /// On Notecard for LoRa this request can only return a location set
+        /// through the card.location.mode request's `"fixed"` mode.
         auto operator()() { return create_<api::CardLocation>(); }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
@@ -1680,8 +1680,8 @@ public:
         /// location of the most recent session if a GPS/GNSS location is not
         /// available.
         ///
-        /// On Notecard LoRa this request can only return a location set through
-        /// the card.location.mode request's `"fixed"` mode.
+        /// On Notecard for LoRa this request can only return a location set
+        /// through the card.location.mode request's `"fixed"` mode.
 #if NOTE_SINGLETON
         CardLocationFactory location;
 #else
@@ -1995,9 +1995,9 @@ public:
         /// will only reset the Notecard's file system, thus forcing a re-sync
         /// of all Notefiles from Notehub.*
         ///
-        /// On Notecard LoRa there is no option to retain configuration
+        /// On Notecard for LoRa there is no option to retain configuration
         /// settings, and providing `"delete": true` is required. The Notecard
-        /// LoRa retains LoRaWAN configuration after factory resets.
+        /// for LoRa retains LoRaWAN configuration after factory resets.
         auto restore() { return create_<api::CardRestore>(); }
 
 #if __cplusplus >= 202002L
@@ -3114,10 +3114,11 @@ public:
         /// satellite use. It does not, by default.
         ///
         /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part
-        /// of the same module. This request controls whether the Notecard uses
-        /// a known location (typically a fixed location set with
-        /// `card.location.mode`), instead of acquiring a new location for NTN
-        /// use.
+        /// of the same module, and by default that module gets its own GPS/GNSS
+        /// fix while it registers. This request controls whether the Notecard
+        /// instead passes the module a location it already knows (typically a
+        /// fixed location set with `card.location.mode`), which lets the module
+        /// skip its own fix and register faster.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::NtnGps>())
         auto gps() { return create_<api::NtnGps>(); }
@@ -3127,10 +3128,11 @@ public:
         /// satellite use. It does not, by default.
         ///
         /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part
-        /// of the same module. This request controls whether the Notecard uses
-        /// a known location (typically a fixed location set with
-        /// `card.location.mode`), instead of acquiring a new location for NTN
-        /// use.
+        /// of the same module, and by default that module gets its own GPS/GNSS
+        /// fix while it registers. This request controls whether the Notecard
+        /// instead passes the module a location it already knows (typically a
+        /// fixed location set with `card.location.mode`), which lets the module
+        /// skip its own fix and register faster.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::NtnGps>() && !T_::strict)
         [[deprecated("ntn.gps is not available on this target")]]
@@ -3141,10 +3143,11 @@ public:
         /// satellite use. It does not, by default.
         ///
         /// On Notecard for Skylo, the satellite radio and the GPS/GNSS are part
-        /// of the same module. This request controls whether the Notecard uses
-        /// a known location (typically a fixed location set with
-        /// `card.location.mode`), instead of acquiring a new location for NTN
-        /// use.
+        /// of the same module, and by default that module gets its own GPS/GNSS
+        /// fix while it registers. This request controls whether the Notecard
+        /// instead passes the module a location it already knows (typically a
+        /// fixed location set with `card.location.mode`), which lets the module
+        /// skip its own fix and register faster.
         auto gps() { return create_<api::NtnGps>(); }
 #endif
 

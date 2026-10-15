@@ -231,11 +231,11 @@ struct CardLocationTrack {
         /// `true` if heartbeat is enabled.
         note::ResponseField<bool> heartbeat{};
         /// `true` if a journey is currently in progress (i.e., the Notecard has
-        /// detected motion and is actively tracking a journey). The Notecard
-        /// tracks journeys when `card.location.mode` is set to `continuous` or
-        /// to `periodic` with `seconds` less than 300. See `_track.qo` for
-        /// details on the `journey` and `jcount` fields included in tracking
-        /// Notes.
+        /// determined that the device is traveling and is actively tracking a
+        /// trip). The Notecard tracks journeys when `card.location.mode` is set
+        /// to `continuous` or to `periodic` with `seconds` less than 300. See
+        /// `_track.qo` for details on the `journey` and `jcount` fields
+        /// included in tracking Notes.
         note::ResponseField<bool> journey{};
         /// `true` if tracking is enabled.
         note::ResponseField<bool> start{};

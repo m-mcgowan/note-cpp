@@ -13,7 +13,7 @@
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
     },
     "x-schema-source": {
-      "commit": "03c5498"
+      "commit": "146e0e4"
     }
   },
   "paths": {
@@ -421,6 +421,11 @@
             "title": "Disarm all Modes",
             "description": "Disarm all interrupts.",
             "json": "{\"req\":\"card.attn\",\"mode\":\"disarm,-all\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Including `start` also returns and clears any retained `payload`. On Notecard for LoRa, which doesn't support `start`, send `{\"req\": \"card.attn\", \"mode\": \"disarm,-all\"}` instead.",
+            "json": "{\"req\": \"card.attn\", \"mode\": \"disarm,-all\", \"on\": true, \"start\": true}"
           }
         ],
         "responses": {
@@ -483,7 +488,7 @@
                         },
                         {
                           "const": "journey",
-                          "description": "Indicates that the ATTN pin fired due to the start or end of a journey (a period of sustained motion).",
+                          "description": "Indicates that the ATTN pin fired due to the start or end of a [journey](/api-reference/glossary/#journey) (a discrete trip during which the device's location is changing).",
                           "x-skus": [
                             "CELL",
                             "CELL+WIFI",
@@ -1307,6 +1312,11 @@
             "title": "Track Mode",
             "description": "Enhance Notes with temperature, pressure, and humidity readings from a connected BME280 sensor.",
             "json": "{\"req\": \"card.aux\", \"mode\": \"track\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Settings used only in `gpio` mode (`max`, `ms`, `connected`, and on Notecard for LoRa, `usage`) or `neo-monitor` mode (`count`, `offset`, `sensitivity`) are kept until that mode is next configured. If AUX GPS was enabled with the deprecated `gps` argument, also reset `card.aux.serial` as shown in its Reset All Arguments example.",
+            "json": "{\"req\": \"card.aux\", \"mode\": \"-\", \"rate\": -1}"
           }
         ],
         "responses": {
@@ -1500,7 +1510,7 @@
                   "mode": {
                     "description": "The AUX mode. Must be one of the following:",
                     "type": "string",
-                    "pattern": "^(?:req|gps|notify(?:,(?:accel|signals|env|dfu)(?:,(?:accel|signals|env|dfu))*)?)$",
+                    "pattern": "^(?:req|gps|notify(?:,(?:-all|accel|signals|env|dfu)(?:,(?:-all|accel|signals|env|dfu))*)?)$",
                     "x-sub-descriptions": [
                       {
                         "const": "req",
@@ -1529,6 +1539,10 @@
                       {
                         "const": "notify,dfu",
                         "description": "Used to notify the host that the Notecard has downloaded updated host firmware."
+                      },
+                      {
+                        "const": "notify,-all",
+                        "description": "Clears all existing notification settings. Any `notify` options listed after `-all` are then applied."
                       }
                     ]
                   },
@@ -1581,6 +1595,11 @@
             "title": "Multiple Mode",
             "description": "Subscribe to multiple notifications at once.",
             "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel,env\", \"duration\": 500}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Send this sequence over USB or I2C, because `notify` mode stops the AUX port from accepting requests: first `{\"req\": \"card.aux.serial\", \"mode\": \"gps\"}` to reset `limit`, then `{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel,dfu,-all\"}` to reset `duration`, `minutes`, and any `notify` settings, and finally this request.",
+            "json": "{\"req\": \"card.aux.serial\", \"max\": -1, \"mode\": \"req\", \"ms\": -1, \"rate\": -1}"
           }
         ],
         "responses": {
@@ -2075,6 +2094,11 @@
             "title": "Enable Charging Mode",
             "description": "Set the `AUX_CHARGING` mode to charging.",
             "json": "{\"req\": \"card.carrier\", \"mode\": \"charging\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.carrier\", \"mode\": \"-\"}"
           }
         ],
         "responses": {
@@ -2184,6 +2208,11 @@
             "title": "Retrieve Contact Information",
             "description": "Retrieve the currently stored contact information by issuing the request with no arguments.",
             "json": "{\"req\": \"card.contact\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.contact\", \"email\": \"-\", \"name\": \"-\", \"org\": \"-\", \"role\": \"-\"}"
           }
         ],
         "responses": {
@@ -2294,6 +2323,11 @@
             "title": "Retrieve Contact Information",
             "description": "Retrieve the currently stored contact information by issuing the request with no arguments.",
             "json": "{\"req\": \"card.contact\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.contact\", \"email\": \"-\", \"name\": \"-\", \"org\": \"-\", \"role\": \"-\"}"
           }
         ],
         "responses": {
@@ -2377,7 +2411,8 @@
                     "type": "string",
                     "enum": [
                       "altdfu",
-                      "aux"
+                      "aux",
+                      "-"
                     ],
                     "x-sub-descriptions": [
                       {
@@ -2387,6 +2422,10 @@
                       {
                         "const": "aux",
                         "description": "Return the Notecard's `ALT_DFU` pins to their default state of `AUX`."
+                      },
+                      {
+                        "const": "-",
+                        "description": "Resets the mode to the default value (`aux`)."
                       }
                     ]
                   },
@@ -2486,6 +2525,11 @@
             "title": "Disable DFU Temporarily",
             "description": "Disable DFU for 3600 seconds.",
             "json": "{\"req\": \"card.dfu\", \"off\": true, \"seconds\": 3600}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.dfu\", \"mode\": \"-\", \"name\": \"-\", \"on\": true, \"seconds\": -1, \"start\": true}"
           }
         ],
         "responses": {
@@ -2699,6 +2743,11 @@
             "title": "Force Fallback Mode For Starnote.",
             "description": "Force the Notecard to enter fallback mode (cellular/WiFi automatically failed over to NTN).",
             "json": "{\"req\": \"card.io\", \"mode\": \"+fallback\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Only one `mode` value is accepted per request, so also send `{\"req\": \"card.io\", \"mode\": \"-fallback\"}`, `{\"req\": \"card.io\", \"mode\": \"usb\"}`, and `{\"req\": \"card.io\", \"mode\": \"i2c-master-enable\"}` as separate requests.",
+            "json": "{\"req\": \"card.io\", \"i2c\": -1, \"mode\": \"-busy\"}"
           }
         ],
         "responses": {
@@ -2742,7 +2791,7 @@
                 "type": "object",
                 "properties": {
                   "mode": {
-                    "description": "Used to specify the color of the LED to turn on or off.\n\n**Note:** Notecard LoRa does not support monochromatic **LED** or **RGB** modes, only **NeoPixels**.",
+                    "description": "Used to specify the color of the LED to turn on or off.\n\n**Note:** Notecard for LoRa does not support monochromatic **LED** or **RGB** modes, only **NeoPixels**.",
                     "type": "string",
                     "x-sub-descriptions": [
                       {
@@ -2853,7 +2902,7 @@
     "/card/location": {
       "get": {
         "operationId": "card_location",
-        "summary": "Retrieves the last known location of the Notecard and the time at which it was acquired. Use [card.location.mode](/api-reference/notecard-api/card-requests#card-location-mode) to configure location settings.\n\nThis request will return the cell tower location or triangulated location of the most recent session if a GPS/GNSS location is not available.\n\nOn Notecard LoRa this request can only return a location set through the [card.location.mode](/api-reference/notecard-api/card-requests#card-location-mode) request's `\"fixed\"` mode.",
+        "summary": "Retrieves the last known location of the Notecard and the time at which it was acquired. Use [card.location.mode](/api-reference/notecard-api/card-requests#card-location-mode) to configure location settings.\n\nThis request will return the cell tower location or triangulated location of the most recent session if a GPS/GNSS location is not available.\n\nOn Notecard for LoRa this request can only return a location set through the [card.location.mode](/api-reference/notecard-api/card-requests#card-location-mode) request's `\"fixed\"` mode.",
         "x-safety": "readonly",
         "x-notecard-request": "card.location",
         "x-supports-cmd": true,
@@ -2899,7 +2948,7 @@
                       "type": "number"
                     },
                     "max": {
-                      "description": "If a geofence is enabled by `card.location.mode`, meters from the geofence center.",
+                      "description": "If a ringfence is enabled by `card.location.mode`, meters from the ringfence center.",
                       "type": "integer"
                     },
                     "mode": {
@@ -2993,7 +3042,7 @@
               "type": "number",
               "default": "last known latitude"
             },
-            "description": "When in periodic or continuous mode, providing this value enables [geofencing](/notecard/notecard-walkthrough/time-and-location-requests#geofencing-with-the-notecard). The value you provide for this argument should be the latitude of the center of the geofence, in degrees. When in fixed mode, the value you provide for this argument should be the latitude location of the device itself, in degrees."
+            "description": "When in periodic or continuous mode, providing this value enables [ringfencing](/notecard/notecard-walkthrough/time-and-location-requests#ringfencing-with-the-notecard). The value you provide for this argument should be the latitude of the center of the ringfence, in degrees. When in fixed mode, the value you provide for this argument should be the latitude location of the device itself, in degrees."
           },
           {
             "name": "lon",
@@ -3002,7 +3051,7 @@
               "type": "number",
               "default": "last known longitude"
             },
-            "description": "When in periodic or continuous mode, providing this value enables [geofencing](/notecard/notecard-walkthrough/time-and-location-requests#geofencing-with-the-notecard). The value you provide for this argument should be the longitude of the center of the geofence, in degrees. When in fixed mode, the value you provide for this argument should be the longitude location of the device itself, in degrees."
+            "description": "When in periodic or continuous mode, providing this value enables [ringfencing](/notecard/notecard-walkthrough/time-and-location-requests#ringfencing-with-the-notecard). The value you provide for this argument should be the longitude of the center of the ringfence, in degrees. When in fixed mode, the value you provide for this argument should be the longitude location of the device itself, in degrees."
           },
           {
             "name": "max",
@@ -3010,7 +3059,7 @@
             "schema": {
               "type": "integer"
             },
-            "description": "Meters from a geofence center. Used to enable geofence location tracking."
+            "description": "Meters from a ringfence center. Used to enable ringfence location tracking. If `lat` and `lon` are omitted, the ringfence is centered on the Notecard's current location."
           },
           {
             "name": "minutes",
@@ -3019,7 +3068,7 @@
               "type": "integer",
               "default": 5
             },
-            "description": "When geofence is enabled, the debounce period in minutes for transitions across the geofence boundary. The Notecard reports a transition the first time a GPS fix lands on the opposite side of the boundary from the previous one, then ignores further transitions for this many minutes."
+            "description": "When ringfence is enabled, the debounce period in minutes for transitions across the ringfence boundary. The Notecard reports a transition the first time a GPS fix lands on the opposite side of the boundary from the previous one, then ignores further transitions for this many minutes."
           },
           {
             "name": "mode",
@@ -3053,7 +3102,7 @@
                 },
                 {
                   "const": "fixed",
-                  "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                  "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard for LoRa."
                 },
                 {
                   "const": "-",
@@ -3110,14 +3159,19 @@
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}"
           },
           {
-            "title": "Geofence Mode",
-            "description": "Enable geofencing with specific location and radius.",
+            "title": "Ringfence Mode",
+            "description": "Enable ringfencing with specific location and radius.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}"
           },
           {
             "title": "Fixed Mode",
             "description": "Set a fixed location for the device.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. On Notecard for LoRa, send `{\"req\": \"card.location.mode\", \"delete\": true}` instead.",
+            "json": "{\"req\": \"card.location.mode\", \"delete\": true, \"max\": -1, \"minutes\": -1, \"mode\": \"-\", \"seconds\": -1, \"threshold\": -1, \"vseconds\": \"-\"}"
           }
         ],
         "responses": {
@@ -3129,23 +3183,23 @@
                   "type": "object",
                   "properties": {
                     "journey": {
-                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "description": "`true` if a [journey](/api-reference/glossary/#journey) is currently in progress (i.e., the Notecard has determined that the device is traveling and is actively tracking a trip). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
                       "type": "boolean"
                     },
                     "lat": {
-                      "description": "If geofence is enabled, the geofence center latitude in degrees.",
+                      "description": "If ringfence is enabled, the ringfence center latitude in degrees.",
                       "type": "number"
                     },
                     "lon": {
-                      "description": "If geofence is enabled, the geofence center longitude in degrees.",
+                      "description": "If ringfence is enabled, the ringfence center longitude in degrees.",
                       "type": "number"
                     },
                     "max": {
-                      "description": "If geofence is enabled, the meters from geofence center.",
+                      "description": "If ringfence is enabled, the meters from ringfence center.",
                       "type": "integer"
                     },
                     "minutes": {
-                      "description": "If geofence is enabled, the currently configured debounce period, in minutes, for transitions across the geofence boundary.",
+                      "description": "If ringfence is enabled, the currently configured debounce period, in minutes, for transitions across the ringfence boundary.",
                       "type": "integer"
                     },
                     "mode": {
@@ -3172,7 +3226,7 @@
                         },
                         {
                           "const": "fixed",
-                          "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                          "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard for LoRa."
                         }
                       ]
                     },
@@ -3248,21 +3302,21 @@
                     "type": "boolean"
                   },
                   "lat": {
-                    "description": "When in periodic or continuous mode, providing this value enables [geofencing](/notecard/notecard-walkthrough/time-and-location-requests#geofencing-with-the-notecard). The value you provide for this argument should be the latitude of the center of the geofence, in degrees. When in fixed mode, the value you provide for this argument should be the latitude location of the device itself, in degrees.",
+                    "description": "When in periodic or continuous mode, providing this value enables [ringfencing](/notecard/notecard-walkthrough/time-and-location-requests#ringfencing-with-the-notecard). The value you provide for this argument should be the latitude of the center of the ringfence, in degrees. When in fixed mode, the value you provide for this argument should be the latitude location of the device itself, in degrees.",
                     "type": "number",
                     "default": "last known latitude"
                   },
                   "lon": {
-                    "description": "When in periodic or continuous mode, providing this value enables [geofencing](/notecard/notecard-walkthrough/time-and-location-requests#geofencing-with-the-notecard). The value you provide for this argument should be the longitude of the center of the geofence, in degrees. When in fixed mode, the value you provide for this argument should be the longitude location of the device itself, in degrees.",
+                    "description": "When in periodic or continuous mode, providing this value enables [ringfencing](/notecard/notecard-walkthrough/time-and-location-requests#ringfencing-with-the-notecard). The value you provide for this argument should be the longitude of the center of the ringfence, in degrees. When in fixed mode, the value you provide for this argument should be the longitude location of the device itself, in degrees.",
                     "type": "number",
                     "default": "last known longitude"
                   },
                   "max": {
-                    "description": "Meters from a geofence center. Used to enable geofence location tracking.",
+                    "description": "Meters from a ringfence center. Used to enable ringfence location tracking. If `lat` and `lon` are omitted, the ringfence is centered on the Notecard's current location.",
                     "type": "integer"
                   },
                   "minutes": {
-                    "description": "When geofence is enabled, the debounce period in minutes for transitions across the geofence boundary. The Notecard reports a transition the first time a GPS fix lands on the opposite side of the boundary from the previous one, then ignores further transitions for this many minutes.",
+                    "description": "When ringfence is enabled, the debounce period in minutes for transitions across the ringfence boundary. The Notecard reports a transition the first time a GPS fix lands on the opposite side of the boundary from the previous one, then ignores further transitions for this many minutes.",
                     "type": "integer",
                     "default": 5
                   },
@@ -3296,7 +3350,7 @@
                       },
                       {
                         "const": "fixed",
-                        "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                        "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard for LoRa."
                       },
                       {
                         "const": "-",
@@ -3343,14 +3397,19 @@
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}"
           },
           {
-            "title": "Geofence Mode",
-            "description": "Enable geofencing with specific location and radius.",
+            "title": "Ringfence Mode",
+            "description": "Enable ringfencing with specific location and radius.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}"
           },
           {
             "title": "Fixed Mode",
             "description": "Set a fixed location for the device.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. On Notecard for LoRa, send `{\"req\": \"card.location.mode\", \"delete\": true}` instead.",
+            "json": "{\"req\": \"card.location.mode\", \"delete\": true, \"max\": -1, \"minutes\": -1, \"mode\": \"-\", \"seconds\": -1, \"threshold\": -1, \"vseconds\": \"-\"}"
           }
         ],
         "responses": {
@@ -3362,23 +3421,23 @@
                   "type": "object",
                   "properties": {
                     "journey": {
-                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "description": "`true` if a [journey](/api-reference/glossary/#journey) is currently in progress (i.e., the Notecard has determined that the device is traveling and is actively tracking a trip). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
                       "type": "boolean"
                     },
                     "lat": {
-                      "description": "If geofence is enabled, the geofence center latitude in degrees.",
+                      "description": "If ringfence is enabled, the ringfence center latitude in degrees.",
                       "type": "number"
                     },
                     "lon": {
-                      "description": "If geofence is enabled, the geofence center longitude in degrees.",
+                      "description": "If ringfence is enabled, the ringfence center longitude in degrees.",
                       "type": "number"
                     },
                     "max": {
-                      "description": "If geofence is enabled, the meters from geofence center.",
+                      "description": "If ringfence is enabled, the meters from ringfence center.",
                       "type": "integer"
                     },
                     "minutes": {
-                      "description": "If geofence is enabled, the currently configured debounce period, in minutes, for transitions across the geofence boundary.",
+                      "description": "If ringfence is enabled, the currently configured debounce period, in minutes, for transitions across the ringfence boundary.",
                       "type": "integer"
                     },
                     "mode": {
@@ -3405,7 +3464,7 @@
                         },
                         {
                           "const": "fixed",
-                          "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                          "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard for LoRa."
                         }
                       ]
                     },
@@ -3538,21 +3597,21 @@
                     "type": "boolean"
                   },
                   "lat": {
-                    "description": "When in periodic or continuous mode, providing this value enables [geofencing](/notecard/notecard-walkthrough/time-and-location-requests#geofencing-with-the-notecard). The value you provide for this argument should be the latitude of the center of the geofence, in degrees. When in fixed mode, the value you provide for this argument should be the latitude location of the device itself, in degrees.",
+                    "description": "When in periodic or continuous mode, providing this value enables [ringfencing](/notecard/notecard-walkthrough/time-and-location-requests#ringfencing-with-the-notecard). The value you provide for this argument should be the latitude of the center of the ringfence, in degrees. When in fixed mode, the value you provide for this argument should be the latitude location of the device itself, in degrees.",
                     "type": "number",
                     "default": "last known latitude"
                   },
                   "lon": {
-                    "description": "When in periodic or continuous mode, providing this value enables [geofencing](/notecard/notecard-walkthrough/time-and-location-requests#geofencing-with-the-notecard). The value you provide for this argument should be the longitude of the center of the geofence, in degrees. When in fixed mode, the value you provide for this argument should be the longitude location of the device itself, in degrees.",
+                    "description": "When in periodic or continuous mode, providing this value enables [ringfencing](/notecard/notecard-walkthrough/time-and-location-requests#ringfencing-with-the-notecard). The value you provide for this argument should be the longitude of the center of the ringfence, in degrees. When in fixed mode, the value you provide for this argument should be the longitude location of the device itself, in degrees.",
                     "type": "number",
                     "default": "last known longitude"
                   },
                   "max": {
-                    "description": "Meters from a geofence center. Used to enable geofence location tracking.",
+                    "description": "Meters from a ringfence center. Used to enable ringfence location tracking. If `lat` and `lon` are omitted, the ringfence is centered on the Notecard's current location.",
                     "type": "integer"
                   },
                   "minutes": {
-                    "description": "When geofence is enabled, the debounce period in minutes for transitions across the geofence boundary. The Notecard reports a transition the first time a GPS fix lands on the opposite side of the boundary from the previous one, then ignores further transitions for this many minutes.",
+                    "description": "When ringfence is enabled, the debounce period in minutes for transitions across the ringfence boundary. The Notecard reports a transition the first time a GPS fix lands on the opposite side of the boundary from the previous one, then ignores further transitions for this many minutes.",
                     "type": "integer",
                     "default": 5
                   },
@@ -3586,7 +3645,7 @@
                       },
                       {
                         "const": "fixed",
-                        "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                        "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard for LoRa."
                       },
                       {
                         "const": "-",
@@ -3633,14 +3692,19 @@
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}"
           },
           {
-            "title": "Geofence Mode",
-            "description": "Enable geofencing with specific location and radius.",
+            "title": "Ringfence Mode",
+            "description": "Enable ringfencing with specific location and radius.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}"
           },
           {
             "title": "Fixed Mode",
             "description": "Set a fixed location for the device.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. On Notecard for LoRa, send `{\"req\": \"card.location.mode\", \"delete\": true}` instead.",
+            "json": "{\"req\": \"card.location.mode\", \"delete\": true, \"max\": -1, \"minutes\": -1, \"mode\": \"-\", \"seconds\": -1, \"threshold\": -1, \"vseconds\": \"-\"}"
           }
         ],
         "responses": {
@@ -3652,23 +3716,23 @@
                   "type": "object",
                   "properties": {
                     "journey": {
-                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "description": "`true` if a [journey](/api-reference/glossary/#journey) is currently in progress (i.e., the Notecard has determined that the device is traveling and is actively tracking a trip). The Notecard tracks journeys when `mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
                       "type": "boolean"
                     },
                     "lat": {
-                      "description": "If geofence is enabled, the geofence center latitude in degrees.",
+                      "description": "If ringfence is enabled, the ringfence center latitude in degrees.",
                       "type": "number"
                     },
                     "lon": {
-                      "description": "If geofence is enabled, the geofence center longitude in degrees.",
+                      "description": "If ringfence is enabled, the ringfence center longitude in degrees.",
                       "type": "number"
                     },
                     "max": {
-                      "description": "If geofence is enabled, the meters from geofence center.",
+                      "description": "If ringfence is enabled, the meters from ringfence center.",
                       "type": "integer"
                     },
                     "minutes": {
-                      "description": "If geofence is enabled, the currently configured debounce period, in minutes, for transitions across the geofence boundary.",
+                      "description": "If ringfence is enabled, the currently configured debounce period, in minutes, for transitions across the ringfence boundary.",
                       "type": "integer"
                     },
                     "mode": {
@@ -3695,7 +3759,7 @@
                         },
                         {
                           "const": "fixed",
-                          "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                          "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard for LoRa."
                         }
                       ]
                     },
@@ -3830,6 +3894,11 @@
             "title": "Heartbeat",
             "description": "Start tracking with heartbeat mode and immediate sync.",
             "json": "{\"req\": \"card.location.track\", \"start\": true, \"sync\": true, \"heartbeat\": true, \"hours\": 2}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `start` and `stop` together resets `heartbeat` and `sync` to `false` and leaves tracking stopped. If a custom `file` was set, `\"-\"` can't reset it; setting `file` to `\"_track.qo\"` restores the default destination, although the Notecard still treats it as a custom Notefile when creating its template.",
+            "json": "{\"req\": \"card.location.track\", \"hours\": -1, \"start\": true, \"stop\": true}"
           }
         ],
         "responses": {
@@ -3853,7 +3922,7 @@
                       "type": "integer"
                     },
                     "journey": {
-                      "description": "`true` if a journey is currently in progress (i.e., the Notecard has detected motion and is actively tracking a journey). The Notecard tracks journeys when `card.location.mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
+                      "description": "`true` if a [journey](/api-reference/glossary/#journey) is currently in progress (i.e., the Notecard has determined that the device is traveling and is actively tracking a trip). The Notecard tracks journeys when `card.location.mode` is set to `continuous` or to `periodic` with `seconds` less than 300. See [`_track.qo`](/api-reference/system-notefiles/#track-qo) for details on the `journey` and `jcount` fields included in tracking Notes.",
                       "type": "boolean"
                     },
                     "minutes": {
@@ -4210,6 +4279,11 @@
             "title": "Configure Motion Status Change",
             "description": "Set motion threshold for status change detection.",
             "json": "{\"req\": \"card.motion.mode\", \"motion\": 5, \"seconds\": 60}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `seconds` without `motion` also resets `motion` to `0`.",
+            "json": "{\"req\": \"card.motion.mode\", \"seconds\": -1, \"sensitivity\": -1, \"start\": true}"
           }
         ],
         "responses": {
@@ -4341,6 +4415,11 @@
             "title": "Orientation Change Only",
             "description": "Configure sync to trigger only on orientation changes.",
             "json": "{\"req\": \"card.motion.sync\", \"start\": true, \"threshold\": 0, \"minutes\": 10}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `start` and `stop` together restores the default parameters and leaves motion sync disabled.",
+            "json": "{\"req\": \"card.motion.sync\", \"start\": true, \"stop\": true}"
           }
         ],
         "responses": {
@@ -4444,6 +4523,11 @@
             "title": "Enable Immediate Orientation Changes",
             "description": "Configure motion tracking with immediate orientation change capture.",
             "json": "{\"req\": \"card.motion.track\", \"start\": true, \"now\": true, \"minutes\": 15}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `start` and `stop` together restores the default parameters and leaves motion tracking disabled.",
+            "json": "{\"req\": \"card.motion.track\", \"start\": true, \"stop\": true}"
           }
         ],
         "responses": {
@@ -4521,6 +4605,11 @@
             "title": "Reset Counters",
             "description": "Reset power consumption counters back to 0.",
             "json": "{\"cmd\": \"card.power\", \"reset\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.power\", \"hours\": -1, \"minutes\": -1}"
           }
         ],
         "responses": {
@@ -4629,6 +4718,11 @@
             "title": "Reset Counters",
             "description": "Reset power consumption counters back to 0.",
             "json": "{\"cmd\": \"card.power\", \"reset\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.power\", \"hours\": -1, \"minutes\": -1}"
           }
         ],
         "responses": {
@@ -4737,6 +4831,11 @@
             "title": "Reset Counters",
             "description": "Reset power consumption counters back to 0.",
             "json": "{\"cmd\": \"card.power\", \"reset\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.power\", \"hours\": -1, \"minutes\": -1}"
           }
         ],
         "responses": {
@@ -4930,7 +5029,7 @@
     "/card/restore": {
       "delete": {
         "operationId": "card_restore",
-        "summary": "Performs a factory reset on the Notecard and restarts.\n\n*Sending this request without either of the optional arguments below will only reset the Notecard's file system, thus forcing a re-sync of all Notefiles from Notehub.*\n\nOn Notecard LoRa there is no option to retain configuration settings, and providing `\"delete\": true` is required. The Notecard LoRa retains LoRaWAN configuration after factory resets.",
+        "summary": "Performs a factory reset on the Notecard and restarts.\n\n*Sending this request without either of the optional arguments below will only reset the Notecard's file system, thus forcing a re-sync of all Notefiles from Notehub.*\n\nOn Notecard for LoRa there is no option to retain configuration settings, and providing `\"delete\": true` is required. The Notecard for LoRa retains LoRaWAN configuration after factory resets.",
         "x-safety": "destructive",
         "x-notecard-request": "card.restore",
         "x-supports-cmd": true,
@@ -5082,6 +5181,11 @@
             "title": "Disable Sleep Mode",
             "description": "Disable sleep mode functionality.",
             "json": "{\"cmd\": \"card.sleep\", \"off\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.sleep\", \"mode\": \"-accel\", \"off\": true, \"seconds\": -1}"
           }
         ],
         "responses": {
@@ -5307,6 +5411,11 @@
             "title": "Sync Temperature Notes",
             "description": "Immediately sync pending temperature notes.",
             "json": "{\"cmd\": \"card.temp\", \"sync\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.temp\", \"minutes\": -1, \"status\": \"-\"}"
           }
         ],
         "responses": {
@@ -5449,6 +5558,11 @@
             "title": "Sync Temperature Notes",
             "description": "Immediately sync pending temperature notes.",
             "json": "{\"cmd\": \"card.temp\", \"sync\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.temp\", \"minutes\": -1, \"status\": \"-\"}"
           }
         ],
         "responses": {
@@ -5589,6 +5703,11 @@
             "title": "Sync Temperature Notes",
             "description": "Immediately sync pending temperature notes.",
             "json": "{\"cmd\": \"card.temp\", \"sync\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.temp\", \"minutes\": -1, \"status\": \"-\"}"
           }
         ],
         "responses": {
@@ -5979,6 +6098,12 @@
                     "type": "boolean",
                     "default": false,
                     "x-min-api-version": "9.1.1"
+                  },
+                  "uoff": {
+                    "description": "Set to `true` to turn off the longer network transport timeout set with `umin`.",
+                    "type": "boolean",
+                    "default": false,
+                    "x-min-api-version": "9.1.1"
                   }
                 }
               }
@@ -6015,6 +6140,11 @@
             "title": "WiFi-Cell-NTN Priority",
             "description": "Configure triple fallback: WiFi \u2192 cellular \u2192 NTN with custom timeout.",
             "json": "{\"req\": \"card.transport\", \"method\": \"wifi-cell-ntn\", \"seconds\": 1800}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Including `set` ensures `allow` is also reset.",
+            "json": "{\"req\": \"card.transport\", \"allow\": false, \"method\": \"-\", \"seconds\": -1, \"set\": true, \"uoff\": true}"
           }
         ],
         "responses": {
@@ -6265,6 +6395,11 @@
             "title": "Clear Triangulation Mode",
             "description": "Clear the device-configured triangulation mode and revert to the default for the Notecard type.",
             "json": "{\"req\":\"card.triangulate\",\"mode\":\"-\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `set` without `on` or `usb` resets both to `false`.",
+            "json": "{\"req\": \"card.triangulate\", \"minutes\": -1, \"mode\": \"-\", \"set\": true, \"text\": \"-\"}"
           }
         ],
         "responses": {
@@ -6816,7 +6951,8 @@
                     "alkaline",
                     "tad",
                     "lic",
-                    "?"
+                    "?",
+                    "-"
                   ]
                 },
                 {
@@ -6852,6 +6988,10 @@
                 {
                   "const": "?",
                   "description": "Query the Notecard for its currently-set thresholds."
+                },
+                {
+                  "const": "-",
+                  "description": "Resets the mode to the default value (`default`)."
                 }
               ]
             },
@@ -6907,6 +7047,15 @@
               }
             },
             "description": "Enable historic voltage trend calculations."
+          },
+          {
+            "name": "reset",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set to `true` to clear a calibration value previously set with `set` and `calibration`, restoring the default calibration."
           },
           {
             "name": "set",
@@ -6985,6 +7134,11 @@
             "title": "Enable Historic Voltage Trends",
             "description": "Enable historic voltage trends tracking.",
             "json": "{\"req\": \"card.voltage\", \"on\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `usb` without `alert` or `sync` resets both to `false`.",
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"-\", \"off\": true, \"reset\": true, \"usb\": true}"
           }
         ],
         "responses": {
@@ -7160,7 +7314,8 @@
                           "alkaline",
                           "tad",
                           "lic",
-                          "?"
+                          "?",
+                          "-"
                         ]
                       },
                       {
@@ -7196,6 +7351,10 @@
                       {
                         "const": "?",
                         "description": "Query the Notecard for its currently-set thresholds."
+                      },
+                      {
+                        "const": "-",
+                        "description": "Resets the mode to the default value (`default`)."
                       }
                     ]
                   },
@@ -7229,6 +7388,11 @@
                       "method": "enableTrend",
                       "combined": "enableTrend"
                     }
+                  },
+                  "reset": {
+                    "description": "Set to `true` to clear a calibration value previously set with `set` and `calibration`, restoring the default calibration.",
+                    "type": "boolean",
+                    "default": false
                   },
                   "set": {
                     "description": "Used along with `calibration`, set to `true` to specify a new calibration value.",
@@ -7291,6 +7455,11 @@
             "title": "Enable Historic Voltage Trends",
             "description": "Enable historic voltage trends tracking.",
             "json": "{\"req\": \"card.voltage\", \"on\": true}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. Passing `usb` without `alert` or `sync` resets both to `false`.",
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"-\", \"off\": true, \"reset\": true, \"usb\": true}"
           }
         ],
         "responses": {
@@ -7486,6 +7655,11 @@
             "title": "Configure Multiple Access Points",
             "description": "Set up multiple WiFi access points for fallback connectivity.",
             "json": "{\"req\":\"card.wifi\",\"text\":\"[\\\"FIRST-SSID\\\",\\\"FIRST-PASSWORD\\\"],[\\\"SECOND-SSID\\\",\\\"SECOND-PASSWORD\\\"]\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values. To also remove networks added with `text`, send `{\"req\": \"card.wifi\", \"text\": \"[\\\"\\\"]\"}`, which replaces them with a single empty entry.",
+            "json": "{\"req\": \"card.wifi\", \"name\": \"-\", \"org\": \"-\", \"password\": \"-\", \"ssid\": \"-\"}"
           }
         ],
         "responses": {
@@ -7689,6 +7863,11 @@
             "title": "Failover to External SIM",
             "description": "Configure dual SIM failover with external SIM priority.",
             "json": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\",\"method\":\"dual-primary-secondary\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"card.wireless\", \"apn\": \"-\", \"method\": \"-\", \"mode\": \"-\"}"
           }
         ],
         "responses": {
@@ -8495,6 +8674,11 @@
             "title": "Set Version Information",
             "description": "Provide version information for host firmware.",
             "json": "{\"req\": \"dfu.status\", \"version\": \"1.2.4\"}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"dfu.status\", \"on\": true, \"vvalue\": \"-\"}"
           }
         ],
         "responses": {
@@ -8671,11 +8855,6 @@
             "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\"}"
           },
           {
-            "title": "Set Empty String Default",
-            "description": "Set an environment variable default to an empty string.",
-            "json": "{\"req\": \"env.default\", \"name\": \"debug-mode\", \"text\": \"\"}"
-          },
-          {
             "title": "Set Numeric Default",
             "description": "Set a default value for a numeric environment variable.",
             "json": "{\"req\": \"env.default\", \"name\": \"sample-rate\", \"text\": \"60\"}"
@@ -8688,12 +8867,33 @@
         ],
         "responses": {
           "200": {
-            "description": "Empty response confirming successful execution of the environment variable default setting or deletion.",
+            "description": "Response confirming the environment variable default was set or deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "time": {
+                      "description": "The time the Notecard's environment variables were last modified. Omitted if they have never been modified.",
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            },
             "x-title": "env.default Response Application Programming Interface (API) Schema",
+            "x-samples": [
+              {
+                "title": "Environment Variable Default Response",
+                "description": "Response containing the time the environment variables were last modified.",
+                "json": "{\"time\": 1605814493}"
+              }
+            ],
             "x-skus": [
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -8763,11 +8963,6 @@
             "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\"}"
           },
           {
-            "title": "Set Empty String Default",
-            "description": "Set an environment variable default to an empty string.",
-            "json": "{\"req\": \"env.default\", \"name\": \"debug-mode\", \"text\": \"\"}"
-          },
-          {
             "title": "Set Numeric Default",
             "description": "Set a default value for a numeric environment variable.",
             "json": "{\"req\": \"env.default\", \"name\": \"sample-rate\", \"text\": \"60\"}"
@@ -8780,12 +8975,33 @@
         ],
         "responses": {
           "200": {
-            "description": "Empty response confirming successful execution of the environment variable default setting or deletion.",
+            "description": "Response confirming the environment variable default was set or deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "time": {
+                      "description": "The time the Notecard's environment variables were last modified. Omitted if they have never been modified.",
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            },
             "x-title": "env.default Response Application Programming Interface (API) Schema",
+            "x-samples": [
+              {
+                "title": "Environment Variable Default Response",
+                "description": "Response containing the time the environment variables were last modified.",
+                "json": "{\"time\": 1605814493}"
+              }
+            ],
             "x-skus": [
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -8858,7 +9074,7 @@
               "type": "integer",
               "x-min-api-version": "3.4.1"
             },
-            "description": "Request a modified environment variable or variables from the Notecard, but only if modified after the time provided."
+            "description": "Use to fetch variables only when something has changed. Pass the `time` from a previous `env.get` or `env.modified` response. If no environment variable has changed since then, the request returns an `{env-not-modified}` error."
           }
         ],
         "x-samples": [
@@ -8869,7 +9085,7 @@
           },
           {
             "title": "Get Single Variable With Modified Time",
-            "description": "Retrieve a variable only if modified after the specified time.",
+            "description": "Retrieve a variable only if the environment has changed since the specified time.",
             "json": "{\"req\": \"env.get\", \"name\": \"monitor-pump-one\", \"time\": 1656315835}"
           },
           {
@@ -8892,11 +9108,11 @@
                   "type": "object",
                   "properties": {
                     "body": {
-                      "description": "If a `name` was not specified, an object with `name` and `value` pairs for all environment variables.",
+                      "description": "If `name` was not specified, an object containing the requested variables (those listed in `names`, or all variables) as name/value pairs.",
                       "type": "object"
                     },
                     "text": {
-                      "description": "If a `name` was specified, the value of the environment variable.",
+                      "description": "If `name` was specified, the value of the environment variable. Omitted if the variable is not set.",
                       "type": "string"
                     },
                     "time": {
@@ -8933,6 +9149,7 @@
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -8964,9 +9181,15 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "x-min-api-version": "3.4.1"
+              "x-min-api-version": "3.4.1",
+              "x-skus": [
+                "CELL",
+                "CELL+WIFI",
+                "SKYLO",
+                "WIFI"
+              ]
             },
-            "description": "Request whether the Notecard has detected an environment variable change since a known epoch time."
+            "description": "The `time` from a previous `env.modified` or `env.get` response. If no environment variable has changed since then, the request returns an `{env-not-modified}` error instead of a new `time`."
           }
         ],
         "x-samples": [
@@ -9013,6 +9236,7 @@
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -9069,11 +9293,6 @@
             "title": "Clear Environment Variable",
             "description": "Clear a local environment variable by omitting text.",
             "json": "{\"req\": \"env.set\", \"name\": \"monitor-pump\"}"
-          },
-          {
-            "title": "Set Empty String",
-            "description": "Set an environment variable to an empty string.",
-            "json": "{\"req\": \"env.set\", \"name\": \"debug-mode\", \"text\": \"\"}"
           }
         ],
         "responses": {
@@ -9085,7 +9304,7 @@
                   "type": "object",
                   "properties": {
                     "time": {
-                      "description": "The logged time of the variable change.",
+                      "description": "The time the Notecard's environment variables were last modified.",
                       "type": "integer",
                       "x-min-api-version": "3.4.1"
                     }
@@ -9107,6 +9326,7 @@
             "x-skus": [
               "CELL",
               "CELL+WIFI",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -9176,10 +9396,7 @@
                       "description": "The maximum number of bytes that will be used when environment variables are communicated or stored, so long as the variables do not include variable-length strings.",
                       "type": "integer"
                     }
-                  },
-                  "required": [
-                    "bytes"
-                  ]
+                  }
                 }
               }
             },
@@ -9195,6 +9412,7 @@
               "CELL",
               "CELL+WIFI",
               "LORA",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -9891,7 +10109,7 @@
                     "type": "boolean"
                   },
                   "details": {
-                    "description": "When using Notecard LoRa you can use this argument to provide information about an alternative LoRaWAN server or service you would like the Notecard to use. The argument you provide must be a JSON object with three keys, \"deveui\", \"appeui\", and \"appkey\", all of which are hexadecimal strings with no leading 0x. For example:\n\n`{\"deveui\":\"0080E11500088B37\",\"appeui\":\"6E6F746563617264\",\"appkey\":\"00088B37\"}`\n\nThe LoRaWAN details you send to a Notecard become part of its permanent configuration, and survive factory resets. You can reset a Notecard's LoRaWAN details to its default values by providing a `\"-\"` for the details argument.",
+                    "description": "When using Notecard for LoRa you can use this argument to provide information about an alternative LoRaWAN server or service you would like the Notecard to use. The argument you provide must be a JSON object with three keys, \"deveui\", \"appeui\", and \"appkey\", all of which are hexadecimal strings with no leading 0x. For example:\n\n`{\"deveui\":\"0080E11500088B37\",\"appeui\":\"6E6F746563617264\",\"appkey\":\"00088B37\"}`\n\nThe LoRaWAN details you send to a Notecard become part of its permanent configuration, and survive factory resets. You can reset a Notecard's LoRaWAN details to its default values by providing a `\"-\"` for the details argument.",
                     "x-skus": [
                       "LORA"
                     ],
@@ -10166,7 +10384,7 @@
           },
           {
             "title": "Configure LoRaWAN Details",
-            "description": "Set alternative LoRaWAN server details for Notecard LoRa.",
+            "description": "Set alternative LoRaWAN server details for Notecard for LoRa.",
             "json": "{\"req\": \"hub.set\", \"details\": {\"deveui\": \"0080E11500088B37\", \"appeui\": \"6E6F746563617264\", \"appkey\": \"00088B3700112233445566778899AABB\"}}"
           },
           {
@@ -10183,6 +10401,11 @@
             "title": "Web Transaction Control",
             "description": "Temporarily switch to continuous mode for web transactions.",
             "json": "{\"req\": \"hub.set\", \"on\": true, \"seconds\": 300}"
+          },
+          {
+            "title": "Reset All Arguments",
+            "description": "Reset all arguments to their default values.",
+            "json": "{\"req\": \"hub.set\", \"duration\": -1, \"host\": \"-\", \"inbound\": -1, \"mode\": \"-\", \"outbound\": -1, \"product\": \"-\", \"seconds\": -1, \"sn\": \"-\", \"vinbound\": \"-\", \"voutbound\": \"-\"}"
           }
         ],
         "responses": {
@@ -10855,7 +11078,7 @@
                     "type": "object"
                   },
                   "file": {
-                    "description": "The name of the Notefile.\n\nOn Notecard LoRa this argument is required. On all other Notecards this field is optional and defaults to `data.qo` if not provided.\n\nWhen using this request on the Notecard the Notefile name must end in one of:\n\n`.qo` for a queue outgoing (Notecard to Notehub) with plaintext transport\n\n`.qos` for a queue outgoing with encrypted transport\n\n`.db` for a bidirectionally synchronized database with plaintext transport\n\n`.dbs` for a bidirectionally synchronized database with encrypted transport\n\n`.dbx` for a local-only database",
+                    "description": "The name of the Notefile.\n\nOn Notecard for LoRa this argument is required. On all other Notecards this field is optional and defaults to `data.qo` if not provided.\n\nWhen using this request on the Notecard the Notefile name must end in one of:\n\n`.qo` for a queue outgoing (Notecard to Notehub) with plaintext transport\n\n`.qos` for a queue outgoing with encrypted transport\n\n`.db` for a bidirectionally synchronized database with plaintext transport\n\n`.dbs` for a bidirectionally synchronized database with encrypted transport\n\n`.dbx` for a local-only database",
                     "type": "string",
                     "default": "data.qo",
                     "pattern": "\\.(qo|qos|db|dbs|dbx)$",
@@ -11798,7 +12021,7 @@
                     "type": "string"
                   },
                   "format": {
-                    "description": "By default all Note templates automatically include metadata, including a timestamp for when the Note was created, various fields about a device's location, as well as a timestamp for when the device's location was determined.\n\nBy providing a `format` of `\"compact\"` you tell the Notecard to omit this additional metadata to save on storage and bandwidth. The use of `format: \"compact\"` is required for Notecard LoRa and a Notecard paired with Starnote.\n\nWhen using `\"compact\"` templates, you may include the following keywords in your template to add in fields that would otherwise be omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#creating-compact-templates) to learn more.",
+                    "description": "By default all Note templates automatically include metadata, including a timestamp for when the Note was created, various fields about a device's location, as well as a timestamp for when the device's location was determined.\n\nBy providing a `format` of `\"compact\"` you tell the Notecard to omit this additional metadata to save on storage and bandwidth. The use of `format: \"compact\"` is required for Notecard for LoRa and a Notecard paired with Starnote.\n\nWhen using `\"compact\"` templates, you may include the following keywords in your template to add in fields that would otherwise be omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#creating-compact-templates) to learn more.",
                     "type": "string",
                     "x-min-api-version": "6.2.3"
                   },
@@ -11808,7 +12031,7 @@
                     "minimum": -1
                   },
                   "port": {
-                    "description": "This argument is required on Notecard LoRa and a Notecard paired with Starnote, but ignored on all other Notecards.\n\nA port is a unique integer in the range 1\u2013100, where each unique number represents one Notefile. This argument allows the Notecard to send a numerical reference to the Notefile over the air, rather than the full Notefile name.\n\nThe port you provide is also used in the \"frame port\" field on LoRaWAN gateways.",
+                    "description": "This argument is required on Notecard for LoRa and a Notecard paired with Starnote, but ignored on all other Notecards.\n\nA port is a unique integer in the range 1\u2013100, where each unique number represents one Notefile. This argument allows the Notecard to send a numerical reference to the Notefile over the air, rather than the full Notefile name.\n\nThe port you provide is also used in the \"frame port\" field on LoRaWAN gateways.",
                     "type": "integer",
                     "anyOf": [
                       {
@@ -11972,7 +12195,7 @@
                     "type": "string"
                   },
                   "format": {
-                    "description": "By default all Note templates automatically include metadata, including a timestamp for when the Note was created, various fields about a device's location, as well as a timestamp for when the device's location was determined.\n\nBy providing a `format` of `\"compact\"` you tell the Notecard to omit this additional metadata to save on storage and bandwidth. The use of `format: \"compact\"` is required for Notecard LoRa and a Notecard paired with Starnote.\n\nWhen using `\"compact\"` templates, you may include the following keywords in your template to add in fields that would otherwise be omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#creating-compact-templates) to learn more.",
+                    "description": "By default all Note templates automatically include metadata, including a timestamp for when the Note was created, various fields about a device's location, as well as a timestamp for when the device's location was determined.\n\nBy providing a `format` of `\"compact\"` you tell the Notecard to omit this additional metadata to save on storage and bandwidth. The use of `format: \"compact\"` is required for Notecard for LoRa and a Notecard paired with Starnote.\n\nWhen using `\"compact\"` templates, you may include the following keywords in your template to add in fields that would otherwise be omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#creating-compact-templates) to learn more.",
                     "type": "string",
                     "x-min-api-version": "6.2.3"
                   },
@@ -11982,7 +12205,7 @@
                     "minimum": -1
                   },
                   "port": {
-                    "description": "This argument is required on Notecard LoRa and a Notecard paired with Starnote, but ignored on all other Notecards.\n\nA port is a unique integer in the range 1\u2013100, where each unique number represents one Notefile. This argument allows the Notecard to send a numerical reference to the Notefile over the air, rather than the full Notefile name.\n\nThe port you provide is also used in the \"frame port\" field on LoRaWAN gateways.",
+                    "description": "This argument is required on Notecard for LoRa and a Notecard paired with Starnote, but ignored on all other Notecards.\n\nA port is a unique integer in the range 1\u2013100, where each unique number represents one Notefile. This argument allows the Notecard to send a numerical reference to the Notefile over the air, rather than the full Notefile name.\n\nThe port you provide is also used in the \"frame port\" field on LoRaWAN gateways.",
                     "type": "integer",
                     "anyOf": [
                       {
@@ -12376,7 +12599,7 @@
     "/ntn/gps": {
       "put": {
         "operationId": "ntn_gps",
-        "summary": "On a Notecard paired with a Starnote, this controls whether the Notecard supplies a location it already knows to the Starnote for satellite use. It does not, by default.\n\nOn Notecard for Skylo, the satellite radio and the GPS/GNSS are part of the same module. This request controls whether the Notecard uses a known location (typically a fixed location set with `card.location.mode`), instead of acquiring a new location for NTN use.",
+        "summary": "On a Notecard paired with a Starnote, this controls whether the Notecard supplies a location it already knows to the Starnote for satellite use. It does not, by default.\n\nOn Notecard for Skylo, the satellite radio and the GPS/GNSS are part of the same module, and by default that module gets its own GPS/GNSS fix while it registers. This request controls whether the Notecard instead passes the module a location it already knows (typically a fixed location set with `card.location.mode`), which lets the module skip its own fix and register faster.",
         "x-safety": "idempotent",
         "x-notecard-request": "ntn.gps",
         "x-supports-cmd": true,
@@ -12436,18 +12659,18 @@
         ],
         "responses": {
           "200": {
-            "description": "Response indicating current Starnote GPS/GNSS location configuration.",
+            "description": "Response indicating current NTN GPS/GNSS location configuration.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "off": {
-                      "description": "Returned and `true` if the Notecard does not supply its location to a paired Starnote. Starnote relies solely on its own GPS/GNSS module.",
+                      "description": "Returned and `true` if the Notecard does not supply its location to the NTN module (a paired Starnote, or Notecard for Skylo's satellite module). The module relies solely on its own GPS/GNSS.",
                       "type": "boolean"
                     },
                     "on": {
-                      "description": "Returned and `true` if the Notecard supplies a location it already knows to a paired Starnote.",
+                      "description": "Returned and `true` if the Notecard supplies a location it already knows to the NTN module (a paired Starnote, or Notecard for Skylo's satellite module).",
                       "type": "boolean"
                     }
                   }
@@ -12458,18 +12681,19 @@
             "x-samples": [
               {
                 "title": "Notecard Location Not Supplied",
-                "description": "Response indicating the Notecard does not supply its location, so Starnote relies solely on its own GPS/GNSS module (default).",
+                "description": "Response indicating the Notecard does not supply its location, so the NTN module relies solely on its own GPS/GNSS (default).",
                 "json": "{\"off\": true}"
               },
               {
                 "title": "Notecard Location Supplied",
-                "description": "Response indicating the Notecard supplies a location it already knows to the paired Starnote.",
+                "description": "Response indicating the Notecard supplies a location it already knows to the NTN module.",
                 "json": "{\"on\": true}"
               }
             ],
             "x-skus": [
               "CELL",
               "CELL+WIFI",
+              "SKYLO",
               "WIFI"
             ],
             "x-schema-version": "1.1.2",
@@ -13193,7 +13417,7 @@
             "schema": {
               "type": "integer"
             },
-            "description": "Used along with `binary:true` and `offset`, sent as a URL parameter to the remote endpoint. Represents the number of bytes to retrieve from the binary payload segment."
+            "description": "Used along with `binary:true` and `offset`. Represents the number of bytes to retrieve from the binary payload segment. Notehub requests this byte range from the remote endpoint with an HTTP `Range` header (`Range: bytes=<offset>-<offset+max-1>`), so the endpoint must support range requests."
           },
           {
             "name": "name",
@@ -13217,7 +13441,7 @@
             "schema": {
               "type": "integer"
             },
-            "description": "Used along with `binary:true` and `max`, sent as a URL parameter to the remote endpoint. Represents the number of bytes to offset the binary payload from 0 when retrieving binary data from the remote endpoint."
+            "description": "Used along with `binary:true` and `max`. Represents the number of bytes to offset the binary payload from 0 when retrieving binary data from the remote endpoint. Notehub sends `offset` and `max` to the endpoint as an HTTP `Range` header, not as URL parameters."
           },
           {
             "name": "route",

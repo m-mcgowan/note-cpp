@@ -120,7 +120,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'examples/arduino/migration/platformio.ini', 'examples/arduino/note-arduino-bridge/platformio.ini', 'tools/binary-size-comparison/platformio.ini') }}
+          key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'tests/integration/softcard/platformio.ini', 'examples/arduino/migration/platformio.ini', 'examples/arduino/note-arduino-bridge/platformio.ini', 'tools/binary-size-comparison/platformio.ini') }}
           restore-keys: pio-
 
       - name: Install PlatformIO
@@ -140,6 +140,18 @@ jobs:
         run: |
           NOTECARD_I2C_SDA=14 NOTECARD_I2C_SCL=21 \
           pio test -d tests/integration/firmware -e i2c \
+              --without-uploading --without-testing
+
+      # Softcard integration build (compile-only). Exercises the note-emu
+      # virtual-Notecard transport path (WiFi + HTTP to softcard.blues.com),
+      # which no other CI build covers. Credentials are dummy placeholders —
+      # the build only needs them as -D macros; it never connects. This guard
+      # catches drift against note-emu / embedded-test-runner pins before the
+      # hardware-less firmware builds would.
+      - name: Build softcard integration firmware
+        run: |
+          WIFI_SSID=x WIFI_PASS=x NOTEHUB_PAT=x \
+          pio test -d tests/integration/softcard -e softcard \
               --without-uploading --without-testing
 
       - name: Build Arduino migration example

@@ -1,28 +1,32 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 
+// Arduino networking / TLS headers must precede the note-cpp headers (pulled
+// in transitively by the fixture below) so the ESP32 mbedtls/PSA config is
+// established before note-cpp's md5.hpp includes <mbedtls/md5.h>. Otherwise
+// PSA's crypto_builtin_primitives.h can't resolve mbedtls_md5_context.
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+
 #include "../include/notecard_api_fixture.hpp"
 #include "../../firmware/include/firmware_version.hpp"
 
 #include <note/notecard.hpp>
 #include <note/api.hpp>
-#include <note/backends/cjson.hpp>
 #include <note/link/serial.hpp>
 
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include "note_emu_arduino.h"
-#include "note_emu_serial_hal.hpp"
+#include <note/emu/arduino.hpp>
+#include <note/emu/serial_hal.hpp>
 
 // Globals for shared tests.
 note::Api<>* g_api = nullptr;
+note::Protocol* g_streaming_transport = nullptr;
 int g_fw_version = 0;
 static std::string g_fw_excludes;
 
 // Persistent objects.
 static WiFiClientSecure g_wifi_client;
-static NoteEmuArduino* g_note_emu = nullptr;
-static note_emu_t* g_emu = nullptr;
+static note::emu::Arduino* g_softcard = nullptr;
 
 static bool connect_wifi(Print& log) {
     WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -40,11 +44,21 @@ static bool connect_wifi(Print& log) {
     return true;
 }
 
+static note::emu::SerialHal& emu_hal() {
+    static note::emu::SerialHal hal(*g_softcard->instance(), millis, delay);
+    return hal;
+}
+static note::link::SerialFramer<>& emu_transport() {
+    static note::link::SerialFramer<> t{emu_hal()};
+    return t;
+}
+static note::Protocol& emu_streaming() {
+    static note::Protocol st{emu_transport()};
+    return st;
+}
+
 static note::Notecard& get_notecard() {
-    static noteemu::SoftcardSerialHal hal(*g_emu, millis, delay);
-    static note::link::SerialFramer<> transport(hal);
-    static note::backends::CjsonBackend backend;
-    static note::Notecard nc(backend, transport);
+    static note::Notecard nc(emu_streaming());
     return nc;
 }
 
@@ -63,18 +77,19 @@ static bool board_init(Print& log) {
     g_wifi_client.setInsecure();
 
     // Create note-emu instance (resolves account UID from PAT).
-    static NoteEmuArduino note_emu(NOTEHUB_PAT, g_wifi_client);
-    g_note_emu = &note_emu;
+    static note::emu::Arduino softcard(NOTEHUB_PAT);
+    g_softcard = &softcard;
 
-    note_emu_err_t err = note_emu.create(&g_emu);
+    note_emu_err_t err = softcard.begin(g_wifi_client);
     if (err != NOTE_EMU_OK) {
-        log.printf("  FATAL: note_emu_create: %s\n", note_emu_strerror(err));
+        log.printf("  FATAL: note_emu begin: %s\n", note_emu_strerror(err));
         return false;
     }
     log.println("  Softcard: connected");
 
-    // Initialize global Api for shared tests.
+    // Initialize globals for shared tests.
     g_api = &get_api();
+    g_streaming_transport = &emu_streaming();
 
     // Probe firmware version.
     auto rsp = get_notecard().request("card.version");
@@ -95,16 +110,17 @@ static bool board_init(Print& log) {
     return true;
 }
 
-#define PTR_BOARD_INIT board_init
-
 static void configure_context(doctest::Context& ctx) {
     if (!g_fw_excludes.empty()) {
         ctx.setOption("test-suite-exclude", g_fw_excludes.c_str());
     }
 }
-#define PTR_CONFIGURE_CONTEXT configure_context
 
-#include <pio_test_runner/doctest_runner.h>
+#include <etst/doctest/runner.h>
 
-void setup() { DOCTEST_SETUP(); }
+void setup() {
+    etst::config.board_init = board_init;
+    etst::doctest::config.configure = configure_context;
+    DOCTEST_SETUP();
+}
 void loop()  { DOCTEST_LOOP(); }

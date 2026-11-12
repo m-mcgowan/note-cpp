@@ -10,6 +10,11 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-11-12
+
+### Fixed
+- `note::template_of<T>()` now registers each template field at its correct Notecard storage width and signedness. Previously `int32_t` and `int64_t` registered as a 2-byte signed integer, unsigned types registered as signed, and `double` registered as a 32-bit float — so a `note.add` carrying an out-of-range value was rejected by the Notecard (`number out of range of 2-byte int`) and doubles lost precision. Signed integers now use the `11`/`12`/`14`/`18` hints (1/2/4/8 bytes), unsigned use `21`/`22`/`24`, and `float`/`double` use `14.1`/`18.1`. Applies to both scalar and `std::array` fields, and was verified end-to-end against Notecard firmware. (`uint64_t` has no 8-byte unsigned hint on the Notecard, so it widens to the signed 8-byte hint — see [body-values.md](docs/body-values.md).)
+
 ## [0.3.6] - 2026-10-14
 
 ### Added

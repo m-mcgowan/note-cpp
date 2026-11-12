@@ -144,6 +144,30 @@ struct Int64Only {
     bool operator==(const Int64Only& o) const { return value == o.value; }
 };
 
+struct Uint8Only {
+    std::uint8_t value;
+    NOTE_FIELDS(value)
+    bool operator==(const Uint8Only& o) const { return value == o.value; }
+};
+
+struct Uint16Only {
+    std::uint16_t value;
+    NOTE_FIELDS(value)
+    bool operator==(const Uint16Only& o) const { return value == o.value; }
+};
+
+struct Uint32Only {
+    std::uint32_t value;
+    NOTE_FIELDS(value)
+    bool operator==(const Uint32Only& o) const { return value == o.value; }
+};
+
+struct Uint64Only {
+    std::uint64_t value;
+    NOTE_FIELDS(value)
+    bool operator==(const Uint64Only& o) const { return value == o.value; }
+};
+
 struct FloatOnly {
     float value;
     NOTE_FIELDS(value)
@@ -214,6 +238,20 @@ struct IntArrayField {
     std::array<int32_t, 3> ints;
     NOTE_FIELDS(ints)
     bool operator==(const IntArrayField& o) const { return ints == o.ints; }
+};
+
+// std::array of unsigned primitives — exercises the unsigned array-element hint.
+struct UintArrayField {
+    std::array<uint16_t, 3> vals;
+    NOTE_FIELDS(vals)
+    bool operator==(const UintArrayField& o) const { return vals == o.vals; }
+};
+
+// std::array of double — exercises the 8-byte float array-element hint.
+struct DoubleArrayField {
+    std::array<double, 3> vals;
+    NOTE_FIELDS(vals)
+    bool operator==(const DoubleArrayField& o) const { return vals == o.vals; }
 };
 
 // std::array of NOTE_FIELDS structs — exercises begin_element_object path.
@@ -310,39 +348,76 @@ TEST_CASE("symmetry: bool field") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int8_t field") {
+TEST_CASE("symmetry: int8_t field → TINT8 hint 11") {
     Harness h;
     Int8Only s{-42};
     REQUIRE(h.ser_body(s) == R"("body":{"value":-42})");
-    REQUIRE(h.template_body<Int8Only>() == R"("body":{"value":1})");
+    REQUIRE(h.template_body<Int8Only>() == R"("body":{"value":11})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int16_t field") {
+TEST_CASE("symmetry: int16_t field → TINT16 hint 12") {
     Harness h;
     Int16Only s{-1000};
     REQUIRE(h.ser_body(s) == R"("body":{"value":-1000})");
-    REQUIRE(h.template_body<Int16Only>() == R"("body":{"value":11})");
+    REQUIRE(h.template_body<Int16Only>() == R"("body":{"value":12})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int32_t field") {
+TEST_CASE("symmetry: int32_t field → TINT32 hint 14") {
     Harness h;
     Int32Only s{100000};
     REQUIRE(h.ser_body(s) == R"("body":{"value":100000})");
-    REQUIRE(h.template_body<Int32Only>() == R"("body":{"value":12})");
+    REQUIRE(h.template_body<Int32Only>() == R"("body":{"value":14})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int64_t field") {
+TEST_CASE("symmetry: int64_t field → TINT64 hint 18") {
     Harness h;
     Int64Only s{1LL << 33};
     REQUIRE(h.ser_body(s) == R"("body":{"value":8589934592})");
-    REQUIRE(h.template_body<Int64Only>() == R"("body":{"value":12})");
+    REQUIRE(h.template_body<Int64Only>() == R"("body":{"value":18})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: float field") {
+TEST_CASE("symmetry: uint8_t field → TUINT8 hint 21") {
+    Harness h;
+    Uint8Only s{200};
+    REQUIRE(h.ser_body(s) == R"("body":{"value":200})");
+    REQUIRE(h.template_body<Uint8Only>() == R"("body":{"value":21})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: uint16_t field → TUINT16 hint 22") {
+    Harness h;
+    Uint16Only s{50000};
+    REQUIRE(h.ser_body(s) == R"("body":{"value":50000})");
+    REQUIRE(h.template_body<Uint16Only>() == R"("body":{"value":22})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: uint32_t field → TUINT32 hint 24") {
+    Harness h;
+    Uint32Only s{4000000000u};
+    REQUIRE(h.ser_body(s) == R"("body":{"value":4000000000})");
+    REQUIRE(h.template_body<Uint32Only>() == R"("body":{"value":24})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: uint64_t field → no unsigned 8-byte hint, widens to TINT64 18") {
+    // The Notecard type table has no 8-byte unsigned hint (unsigned stops at
+    // 24 / 4 bytes). We widen to the signed 8-byte hint (18): all 8 bytes are
+    // stored, and values up to INT64_MAX round-trip exactly. Values above
+    // INT64_MAX are read back by Notehub as negative — use int64_t when the
+    // full unsigned range isn't needed.
+    Harness h;
+    Uint64Only s{1ULL << 33};
+    REQUIRE(h.ser_body(s) == R"("body":{"value":8589934592})");
+    REQUIRE(h.template_body<Uint64Only>() == R"("body":{"value":18})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: float field → TFLOAT32 hint 14.1") {
     Harness h;
     FloatOnly s{3.25f};
     REQUIRE(h.ser_body(s) == R"("body":{"value":3.25})");
@@ -350,11 +425,11 @@ TEST_CASE("symmetry: float field") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: double field") {
+TEST_CASE("symmetry: double field → TFLOAT64 hint 18.1") {
     Harness h;
     DoubleOnly s{2.5};
     REQUIRE(h.ser_body(s) == R"("body":{"value":2.5})");
-    REQUIRE(h.template_body<DoubleOnly>() == R"("body":{"value":14.1})");
+    REQUIRE(h.template_body<DoubleOnly>() == R"("body":{"value":18.1})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
@@ -371,19 +446,19 @@ TEST_CASE("symmetry: char[N] field emits TSTRING(N) template hint") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: string_view field") {
+TEST_CASE("symmetry: string_view field → TSTRINGV hint \"-\"") {
     Harness h;
     StringViewOnly s{"view"};
     REQUIRE(h.ser_body(s) == R"("body":{"sv":"view"})");
-    REQUIRE(h.template_body<StringViewOnly>() == R"("body":{"sv":"1"})");
+    REQUIRE(h.template_body<StringViewOnly>() == R"("body":{"sv":"-"})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: std::string field") {
+TEST_CASE("symmetry: std::string field → TSTRINGV hint \"-\"") {
     Harness h;
     StdStringOnly s{"std-value"};
     REQUIRE(h.ser_body(s) == R"("body":{"text":"std-value"})");
-    REQUIRE(h.template_body<StdStringOnly>() == R"("body":{"text":"1"})");
+    REQUIRE(h.template_body<StdStringOnly>() == R"("body":{"text":"-"})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
@@ -392,7 +467,7 @@ TEST_CASE("symmetry: Arduino-String-like field (c_str ser, ptr-len deser)") {
     ArduinoStringLike s{};
     s.name = FakeArduinoString("arduino");
     REQUIRE(h.ser_body(s) == R"("body":{"name":"arduino"})");
-    REQUIRE(h.template_body<ArduinoStringLike>() == R"("body":{"name":"1"})");
+    REQUIRE(h.template_body<ArduinoStringLike>() == R"("body":{"name":"-"})");
     REQUIRE(roundtrip(h, s) == s);
 }
 
@@ -405,20 +480,36 @@ TEST_CASE("symmetry: nested NOTE_FIELDS struct") {
         R"("body":{"nested":{"x":1.5,"y":42}})");
     if constexpr (note::detail::notecard_supports_nested_templates_v) {
         REQUIRE(h.template_body<WithNestedFields>() ==
-            R"("body":{"nested":{"x":14.1,"y":11}})");
+            R"("body":{"nested":{"x":14.1,"y":12}})");
     }
     REQUIRE(roundtrip(h, s) == s);
 }
 
 // ── Array of primitives ─────────────────────────────────────────────────────
 
-TEST_CASE("symmetry: std::array<int32_t,3> field") {
+TEST_CASE("symmetry: std::array<int32_t,3> field → element hint [14]") {
     Harness h;
     IntArrayField s{{1, 2, 3}};
     REQUIRE(h.ser_body(s) == R"("body":{"ints":[1,2,3]})");
     // Template: Notecard convention is a single-element hint array
-    // describing the per-element type.
-    REQUIRE(h.template_body<IntArrayField>() == R"("body":{"ints":[12]})");
+    // describing the per-element type (int32 → TINT32 = 14).
+    REQUIRE(h.template_body<IntArrayField>() == R"("body":{"ints":[14]})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: std::array<uint16_t,3> field → element hint [22]") {
+    Harness h;
+    UintArrayField s{{10, 20, 30}};
+    REQUIRE(h.ser_body(s) == R"("body":{"vals":[10,20,30]})");
+    REQUIRE(h.template_body<UintArrayField>() == R"("body":{"vals":[22]})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: std::array<double,3> field → element hint [18.1]") {
+    Harness h;
+    DoubleArrayField s{{1.5, 2.5, 3.5}};
+    REQUIRE(h.ser_body(s) == R"("body":{"vals":[1.5,2.5,3.5]})");
+    REQUIRE(h.template_body<DoubleArrayField>() == R"("body":{"vals":[18.1]})");
     REQUIRE(roundtrip(h, s) == s);
 }
 

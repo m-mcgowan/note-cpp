@@ -410,11 +410,21 @@ struct is_body_schema : has_note_fields_trait<T> {};
 #endif
 
 // ── Template type hints ─────────────────────────────────────────────────────
-// Notecard templates use sample values to infer types:
-//   float/double  → 14.1  (TFLOAT)
-//   integer types → 1     (TINT8/16/32 depending on size)
-//   bool          → true  (TBOOL)
-//   string-like   → "1"   (TSTRING — value is max length as string)
+// Notecard templates use sample values to infer each field's type and width.
+// The hint magic numbers come from the Blues type table (see
+// https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#understanding-template-data-types):
+//
+//   bool             → true
+//   signed integer   → 11 / 12 / 14 / 18   (1 / 2 / 4 / 8 bytes)   TINT8/16/32/64
+//   unsigned integer → 21 / 22 / 24        (1 / 2 / 4 bytes)       TUINT8/16/32
+//                      (no 8-byte unsigned hint exists — uint64 widens to 18)
+//   float            → 12.1 / 14.1 / 18.1  (2 / 4 / 8 bytes)       TFLOAT16/32/64
+//   string-like      → "-"                 variable-length (TSTRINGV)
+//   char[N]          → N × 'x'             legacy TSTRING(N); still accepted,
+//                      preserved so older firmware registers the max length
+//
+// The hint is selected from the C++ type's size and signedness, so each field
+// is stored at its true width — e.g. int32_t registers as 4 bytes (14), not 2.
 
 // Pending-verification flag: does the Notecard accept templates that
 // themselves contain nested objects (nested schema-struct fields or
@@ -464,15 +474,38 @@ void write_template_hint_for(JsonBuilder& b, string_view name) {
     if constexpr (std::is_same_v<V, bool>) {
         b.add(name, true);
     } else if constexpr (std::is_floating_point_v<V>) {
-        b.add(name, 14.1);
-    } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
-        // Use a representative value that hints at the storage size.
-        if constexpr (sizeof(V) <= 1)
-            b.add(name, json_int_t{1});        // TINT8
-        else if constexpr (sizeof(V) <= 2)
-            b.add(name, json_int_t{11});       // TINT16
+        // IEEE float hint by width: 2→12.1, 4→14.1, 8→18.1.
+        if constexpr (sizeof(V) <= 2)
+            b.add(name, 12.1);                 // TFLOAT16
+        else if constexpr (sizeof(V) <= 4)
+            b.add(name, 14.1);                 // TFLOAT32 (float)
         else
-            b.add(name, json_int_t{12});       // TINT32
+            b.add(name, 18.1);                 // TFLOAT64 (double)
+    } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
+        // Integer hint by signedness and width.
+        if constexpr (std::is_signed_v<V>) {
+            if constexpr (sizeof(V) <= 1)
+                b.add(name, json_int_t{11});   // TINT8
+            else if constexpr (sizeof(V) <= 2)
+                b.add(name, json_int_t{12});   // TINT16
+            else if constexpr (sizeof(V) <= 4)
+                b.add(name, json_int_t{14});   // TINT32
+            else
+                b.add(name, json_int_t{18});   // TINT64
+        } else {
+            if constexpr (sizeof(V) <= 1)
+                b.add(name, json_int_t{21});   // TUINT8
+            else if constexpr (sizeof(V) <= 2)
+                b.add(name, json_int_t{22});   // TUINT16
+            else if constexpr (sizeof(V) <= 4)
+                b.add(name, json_int_t{24});   // TUINT32
+            else
+                // No 8-byte unsigned hint exists. Widen to signed 8-byte
+                // (18): all 8 bytes are stored and values up to INT64_MAX
+                // round-trip; larger values read back signed. Use int64_t
+                // when the full unsigned range isn't required.
+                b.add(name, json_int_t{18});
+        }
     } else if constexpr (is_char_array_v<V>) {
         // TSTRING(N): emit an N-char string so the Notecard registers
         // the correct maximum length for the field.
@@ -481,9 +514,9 @@ void write_template_hint_for(JsonBuilder& b, string_view name) {
                       || has_c_str_v<V>
                       || std::is_convertible_v<V, const char*>) {
         // Unbounded string-like types. No max length available at the
-        // type level; default to TSTRING(1). Users needing a larger
-        // registration should switch to char[N].
-        b.add(name, string_view("1"));
+        // type level; emit the documented variable-length string hint "-"
+        // (TSTRINGV). Users needing a fixed max length should use char[N].
+        b.add(name, string_view("-"));
     } else if constexpr (is_schema_struct_v<V>) {
         // Nested schema struct hint — emit only when the Notecard is
         // known to accept nested templates. Otherwise fall through to
@@ -516,20 +549,32 @@ void write_template_hint_for(JsonBuilder& b, string_view name) {
         // Notecard array template: single-element hint array describes
         // the per-element type.
         b.begin_array(name);
+        // Per-element hint mirrors the scalar mapping above (see the type
+        // table in the header comment).
         if constexpr (std::is_same_v<Elem, bool>) {
             b.add_element(true);
         } else if constexpr (std::is_floating_point_v<Elem>) {
-            b.add_element(14.1);
+            if constexpr (sizeof(Elem) <= 2) b.add_element(12.1);
+            else if constexpr (sizeof(Elem) <= 4) b.add_element(14.1);
+            else b.add_element(18.1);
         } else if constexpr (std::is_integral_v<Elem> && !std::is_same_v<Elem, bool>) {
-            if constexpr (sizeof(Elem) <= 1) b.add_element(json_int_t{1});
-            else if constexpr (sizeof(Elem) <= 2) b.add_element(json_int_t{11});
-            else b.add_element(json_int_t{12});
+            if constexpr (std::is_signed_v<Elem>) {
+                if constexpr (sizeof(Elem) <= 1) b.add_element(json_int_t{11});
+                else if constexpr (sizeof(Elem) <= 2) b.add_element(json_int_t{12});
+                else if constexpr (sizeof(Elem) <= 4) b.add_element(json_int_t{14});
+                else b.add_element(json_int_t{18});
+            } else {
+                if constexpr (sizeof(Elem) <= 1) b.add_element(json_int_t{21});
+                else if constexpr (sizeof(Elem) <= 2) b.add_element(json_int_t{22});
+                else if constexpr (sizeof(Elem) <= 4) b.add_element(json_int_t{24});
+                else b.add_element(json_int_t{18});  // no 8-byte unsigned hint
+            }
         } else if constexpr (is_char_array_v<Elem>) {
             b.add_element(char_array_template_filler<sizeof(Elem)>());
         } else if constexpr (std::is_convertible_v<Elem, string_view>
                           || has_c_str_v<Elem>
                           || std::is_convertible_v<Elem, const char*>) {
-            b.add_element(string_view("1"));
+            b.add_element(string_view("-"));
         } else if constexpr (is_schema_struct_v<Elem>) {
             // Nested struct element — emit a single object with per-field
             // hints. Gated on notecard_supports_nested_templates_v until

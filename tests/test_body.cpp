@@ -289,7 +289,7 @@ TEST_CASE("template_of generates type hints") {
     req.body = note::template_of<Readings>();
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"temperature":14.1,"humidity":11}})");
+        R"({"req":"test.req","body":{"temperature":14.1,"humidity":12}})");
 }
 
 TEST_CASE("template_of with mixed types") {
@@ -298,25 +298,25 @@ TEST_CASE("template_of with mixed types") {
     req.body = note::template_of<SensorData>();
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"voltage":14.1,"active":true,"count":12}})");
+        R"({"req":"test.req","body":{"voltage":18.1,"active":true,"count":14}})");
 }
 
-TEST_CASE("template_of integer size hints: int8→1, int16→11, int32→12, int64→12") {
+TEST_CASE("template_of integer size hints: int8→11, int16→12, int32→14, int64→18") {
     TestHarness h;
     TestRequest req;
     req.body = note::template_of<AllIntSizes>();
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"tiny":1,"small_field":11,"medium":12,"large":12}})");
+        R"({"req":"test.req","body":{"tiny":11,"small_field":12,"medium":14,"large":18}})");
 }
 
-TEST_CASE("template_of string field hint → \"1\"") {
+TEST_CASE("template_of string field hint → \"-\"") {
     TestHarness h;
     TestRequest req;
     req.body = note::template_of<WithStringField>();
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"value":14.1,"label":"1"}})");
+        R"({"req":"test.req","body":{"value":14.1,"label":"-"}})");
 }
 
 TEST_CASE("BodyValue from reflected aggregate with nested aggregate field") {
@@ -340,7 +340,7 @@ TEST_CASE("note.template verify:true includes verify field in request") {
     // table; body sits in the table alongside other optionals so it follows
     // file. JSON key order is not semantically significant.
     REQUIRE(h.last_request ==
-        R"({"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":11},"verify":true})");
+        R"({"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":12},"verify":true})");
 }
 
 #endif // C++20
@@ -391,7 +391,7 @@ TEST_CASE("note.template with template_of") {
         .body(note::template_of<Readings>())
         .execute();
     REQUIRE(h.last_request ==
-        R"({"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":11}})");
+        R"({"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":12}})");
 }
 
 TEST_CASE("note.add with builder body") {

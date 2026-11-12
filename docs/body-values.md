@@ -280,17 +280,33 @@ api.note.templates().define("sensors.qo")
     .execute();
 ```
 
-`template_of(Readings())` produces the Notecard type hints: `14.1` (TFLOAT32) for `float`, `11` (TINT16) for `int16_t`. The mapping is:
+`template_of(Readings())` produces the Notecard type hints: `14.1` (TFLOAT32) for `float`, `12` (TINT16) for `int16_t`. Each hint is chosen from the C++ type's size and signedness, so every field is stored at its true width. The mapping is:
 
 | C++ type | Notecard type | Template value |
 |----------|--------------|----------------|
 | `bool` | TBOOL | `true` |
-| `int8_t` | TINT8 | `1` |
-| `int16_t` | TINT16 | `11` |
-| `int32_t` | TINT32 | `12` |
+| `int8_t` | TINT8 | `11` |
+| `int16_t` | TINT16 | `12` |
+| `int32_t` | TINT32 | `14` |
+| `int64_t` | TINT64 | `18` |
+| `uint8_t` | TUINT8 | `21` |
+| `uint16_t` | TUINT16 | `22` |
+| `uint32_t` | TUINT32 | `24` |
+| `uint64_t` | TINT64 | `18` (no 8-byte unsigned hint — widens to signed; see note) |
 | `float` | TFLOAT32 | `14.1` |
-| `double` | TFLOAT64 | `14.1` (same wire format) |
-| `char[N]` | TSTRING(N) | `"Nnn"` (length string) |
+| `double` | TFLOAT64 | `18.1` |
+| `char[N]` | TSTRING(N) | `"x…"` (N characters) |
+| `std::string`, `string_view`, Arduino `String` | TSTRINGV | `"-"` |
+
+The hint magic numbers come from the [Blues type table](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#understanding-template-data-types).
+
+For a `std::array<T, N>` field, the hint is a single-element array describing the per-element type — e.g. `std::array<int32_t, 3>` registers as `[14]`. (On Notecard firmware ≥ 9.1.1 a single integer/float element also declares a variable-length array.)
+
+> **`uint64_t` has no exact hint.** The Notecard type table has no 8-byte
+> unsigned type (unsigned stops at 4 bytes / `24`). A `uint64_t` field widens
+> to the signed 8-byte hint `18`: all eight bytes are stored and values up to
+> `INT64_MAX` round-trip exactly, but larger values are read back by Notehub as
+> negative. Use `int64_t` when the full unsigned range isn't required.
 
 ## NOTE_FIELDS macro
 

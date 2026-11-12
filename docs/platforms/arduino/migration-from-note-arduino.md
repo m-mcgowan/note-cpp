@@ -137,6 +137,54 @@ nc.note.templates().define("sensors.qo")
 The compiler catches what `note-c` defers to runtime: wrong field names, wrong types, wrong enum values, missing required fields. The rest of this guide covers each pattern in detail.
 
 
+- [Migrating from note-arduino (note-c) to note-cpp](#migrating-from-note-arduino-note-c-to-note-cpp)
+  - [Overview](#overview)
+  - [Setup](#setup)
+  - [Configuring the Hub (hub.set)](#configuring-the-hub-hubset)
+  - [API Styles](#api-styles)
+    - [Fluent chain](#fluent-chain)
+    - [Direct assignment](#direct-assignment)
+    - [Designated initializers (C++20)](#designated-initializers-c20)
+    - [Why three ways?](#why-three-ways)
+  - [Sending sensor data (note.add)](#sending-sensor-data-noteadd)
+  - [Registering templates](#registering-templates)
+  - [Reading temperature (card.temp)](#reading-temperature-cardtemp)
+  - [Reading device info (card.version)](#reading-device-info-cardversion)
+  - [ATTN pin — arming for interrupts](#attn-pin--arming-for-interrupts)
+  - [ATTN pin — sleep with state](#attn-pin--sleep-with-state)
+  - [Environment variables (env.get)](#environment-variables-envget)
+  - [Polymorphic APIs](#polymorphic-apis)
+    - [note.get — read vs pop](#noteget--read-vs-pop)
+    - [card.temp — read vs configure](#cardtemp--read-vs-configure)
+    - [Single-behavior requests](#single-behavior-requests)
+  - [Convenience shortcuts](#convenience-shortcuts)
+  - [Receiving data (into)](#receiving-data-into)
+  - [Type-safe units](#type-safe-units)
+  - [Named constants](#named-constants)
+  - [Multi-segment request names](#multi-segment-request-names)
+  - [Error handling](#error-handling)
+    - [Retry safety](#retry-safety)
+  - [Fire-and-forget commands](#fire-and-forget-commands)
+  - [Raw JSON passthrough](#raw-json-passthrough)
+  - [Binary data transfers (card.binary)](#binary-data-transfers-cardbinary)
+    - [High-level](#high-level)
+    - [Low-level](#low-level)
+  - [Firmware version and SKU safety](#firmware-version-and-sku-safety)
+  - [What to expect](#what-to-expect)
+    - [What you gain from C++](#what-you-gain-from-c)
+    - [Binary size](#binary-size)
+    - [Memory allocation](#memory-allocation)
+    - [What note-cpp doesn't support (yet)](#what-note-cpp-doesnt-support-yet)
+    - [AVR support](#avr-support)
+  - [Gradual migration](#gradual-migration)
+    - [Running note-cpp alongside note-c](#running-note-cpp-alongside-note-c)
+  - [Migration checklist](#migration-checklist)
+  - [Common migration pitfalls](#common-migration-pitfalls)
+    - [Printing response values](#printing-response-values)
+    - [`noteId` vs `note` field name](#noteid-vs-note-field-name)
+    - [`hub.sync()` vs `hub.sync.status()`](#hubsync-vs-hubsyncstatus)
+    - [Debug output](#debug-output)
+    - [Missing response fields](#missing-response-fields)
 
 
 ## Setup
@@ -1432,7 +1480,10 @@ letting you migrate one request at a time:
 1. **Replace the library and setup.** Swap `note-arduino` for `note-cpp`
    in your dependencies. Replace the `Notecard` constructor and `begin()`
    call — see the setup section above. This is the only step that must
-   happen all at once (both libraries can't share the same transport).
+   happen all at once — note-arduino and note-cpp can't both own the
+   Notecard connection at the same time. (If a large codebase needs a
+   longer overlap, the [bridge below](#running-note-cpp-alongside-note-c)
+   is the exception: note-c keeps the transport and note-cpp rides on top.)
 
 2. **Keep existing request patterns temporarily.** Use `nc.request()` with
    lambda builders for requests you haven't ported yet:
@@ -1465,7 +1516,7 @@ transfers, body structs) when you're comfortable.
 
 For projects too large to swap all at once, note-cpp can sit on top of note-c's existing transport via a bridge `ITransact` that delegates each request to `NoteRequestResponseJSON()`. Both libraries share the same Notecard connection — existing `NoteNewRequest` / `J*` code keeps working while you migrate request sites one at a time, then cut the bridge over to a native note-cpp transport when you're done.
 
-The full bridge transport implementation (NoteCTransport class, no-op Hal stub, wiring example, and the cut-over migration arc) lives in [migration-from-note-c.md § Bridge mode](../host/migration-from-note-c.md#bridge-mode-incremental-migration) — that doc is the canonical home for the pattern since the bridge is host-side regardless of which library you're migrating *from*. Runnable example: [`examples/stdcpp/note-c-bridge.cpp`](../../../examples/stdcpp/note-c-bridge.cpp).
+The full bridge transport implementation (NoteCTransport class, no-op Hal stub, wiring example, and the cut-over migration arc) lives in [migration-from-note-c.md § Bridge mode](../host/migration-from-note-c.md#bridge-mode-incremental-migration) — that doc is the canonical home for the pattern, which works the same on any platform regardless of which library you're migrating *from*. Runnable example: [`examples/stdcpp/note-c-bridge.cpp`](../../../examples/stdcpp/note-c-bridge.cpp).
 
 ## Migration checklist
 

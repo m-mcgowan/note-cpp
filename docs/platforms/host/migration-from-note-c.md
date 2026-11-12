@@ -1,8 +1,26 @@
-# Migrating from note-c (host)
+# Migrating from note-c
 
-This guide is for projects running [note-c](https://github.com/blues/note-c) directly on a Linux/macOS host or an embedded RTOS — i.e. **not** through note-arduino. (If you're on Arduino, use [migration-from-note-arduino.md](../arduino/migration-from-note-arduino.md) instead — note-arduino wraps note-c, so the patterns there cover that case.) Each section pairs a representative note-c snippet with the `note-cpp` equivalent, ending at the bridge transport that lets you migrate one request at a time.
+This guide is for projects built on [note-c](https://github.com/blues/note-c) — Blues' portable C library — that talks to the Notecard through its C API (`NoteSetFn*` to register transport, `NoteNewRequest`/`NoteRequest` with `J*` trees for requests). note-c runs everywhere `note-cpp` does: ESP-IDF, Zephyr, FreeRTOS, bare-metal MCUs, and Linux/macOS hosts. **Embedded is the common case, and the patterns below are identical across all of them** — only transport setup is platform-specific (see [`getting-started.md`](../../getting-started.md)), and the one host-only convenience is called out in [Host (POSIX)](#host-posix) at the end.
 
-`note-cpp` and note-c can coexist on the same wire — there's a [bridge transport](#bridge-mode-incremental-migration) (`examples/stdcpp/note-c-bridge.cpp`) that lets `note-cpp`'s typed API ride on note-c's existing serial/I2C link, so you can adopt the typed API without rewriting your transport setup. Many migration patterns are platform-agnostic; rather than re-explain them here, this doc cross-links to the [Arduino migration guide](../arduino/migration-from-note-arduino.md) which has the deeper side-by-side coverage.
+> **Coming from [note-arduino](https://github.com/blues/note-arduino) instead?** That's the Arduino-specific C++ wrapper around note-c, set up with `notecard.begin()` rather than `NoteSetFn*`. If that's your starting point, use [migration-from-note-arduino.md](../arduino/migration-from-note-arduino.md) — it maps that library's setup directly and carries the most side-by-side examples. This guide is for code that drives **raw note-c** (`NoteSetFn*` + `NoteRequest`/`J*`) on any platform — including Arduino sketches that use note-c without note-arduino.
+
+`note-cpp` and note-c can coexist on the same wire — there's a [bridge transport](#bridge-mode-incremental-migration) (`examples/stdcpp/note-c-bridge.cpp`) that lets `note-cpp`'s typed API ride on note-c's existing serial/I2C link, so you can adopt the typed API without rewriting your transport. Each section below pairs a representative note-c snippet with its `note-cpp` equivalent, ending at that bridge. Many patterns are shared with the [Arduino migration guide](../arduino/migration-from-note-arduino.md), which has additional side-by-side coverage.
+
+- [Migrating from note-c](#migrating-from-note-c)
+  - [Setup](#setup)
+  - [Bridge mode (incremental migration)](#bridge-mode-incremental-migration)
+  - [Request mapping](#request-mapping)
+    - [hub.set — configure sync mode](#hubset--configure-sync-mode)
+    - [note.add — send sensor data](#noteadd--send-sensor-data)
+    - [note.get / note.pop — read by ID vs queue drain](#noteget--notepop--read-by-id-vs-queue-drain)
+    - [card.attn — arm for interrupts](#cardattn--arm-for-interrupts)
+    - [env.get — read an environment variable](#envget--read-an-environment-variable)
+  - [Response handling](#response-handling)
+  - [Build setup](#build-setup)
+  - [What's deliberately different](#whats-deliberately-different)
+  - [Host (POSIX)](#host-posix)
+  - [See also](#see-also)
+
 
 ## Setup
 
@@ -22,7 +40,7 @@ JAddStringToObject(req, "mode", "periodic");
 NoteRequest(req);
 ```
 
-In `note-cpp` on a host, you instantiate a HAL, a transport, a JSON backend, and a `Notecard`/`Api` pair:
+In `note-cpp`, you instantiate a HAL, a transport, a JSON backend, and a `Notecard`/`Api` pair. This wiring is the same on ESP-IDF, Zephyr, bare-metal, or a host — only the HAL (your byte-level serial/I2C driver) is platform-specific:
 
 ```cpp
 #include <note/notecard.hpp>
@@ -42,9 +60,9 @@ note::Api api(nc);
 api.hub.set().product("com.example.app").mode("periodic").execute();
 ```
 
-There are no global function pointers — every Notecard owns its transport and backend. See [`docs/getting-started.md` § stdcpp / CMake host](../../getting-started.md#stdcpp--cmake-host) for the canonical setup walkthrough.
+There are no global function pointers — every Notecard owns its transport and backend. See [`getting-started.md`](../../getting-started.md) for per-platform transport setup: the ESP-IDF, bare-metal, and stdcpp-host paths all use this same manual wiring, differing only in the HAL and how the library is added to the build.
 
-> **POSIX shortcut.** On Linux/macOS/BSD, `#include <note/posix.hpp>` collapses the four-object setup to `note::posix::Notecard nc; nc.begin("/dev/ttyUSB0", 9600);` — see [`examples/stdcpp/posix-hardware.cpp`](../../../examples/stdcpp/posix-hardware.cpp) for a runnable example that talks to real hardware over USB-serial or I2C.
+> On a POSIX host (Linux/macOS/BSD), a one-line shortcut collapses this four-object setup — see [Host (POSIX)](#host-posix) below.
 
 ## Bridge mode (incremental migration)
 
@@ -311,7 +329,7 @@ See [working-with-responses.md](../../working-with-responses.md) for the full pi
 
 ## Build setup
 
-`note-cpp` is header-only and ships a CMake config. Add it as a subdirectory and link:
+`note-cpp` is header-only. On PlatformIO or ESP-IDF, add it the usual way for your framework (see [`getting-started.md`](../../getting-started.md)). For a plain CMake project, it ships a CMake config — add it as a subdirectory and link:
 
 ```cmake
 add_subdirectory(third_party/note-cpp)
@@ -342,6 +360,18 @@ A migrator's "things that aren't 1:1" list. None of these are bugs — they're s
 - **Templates are derived from your struct.** note-c asks you to register `note.template` separately and keep `TFLOAT32`/`TINT16` constants in sync with your fields. note-cpp derives the template from the same struct you use for `body()`/`into()` — `note::template_of(Readings())`.
 
 Beyond this list, most behavioural differences are platform-agnostic and live in the [Arduino migration guide](../arduino/migration-from-note-arduino.md) — the API surface is the same.
+
+## Host (POSIX)
+
+Everything above applies unchanged on a Linux/macOS/BSD host — the migration patterns don't vary by platform. The one host-specific convenience is the POSIX layer: `#include <note/posix.hpp>` collapses the four-object HAL/transport/backend setup into a couple of lines.
+
+```cpp
+note::posix::Notecard nc;
+nc.begin("/dev/ttyUSB0", 9600);              // serial over USB
+// or: nc.begin(note::posix::serial{"/dev/ttyUSB0"});
+```
+
+See [`examples/stdcpp/posix-hardware.cpp`](../../../examples/stdcpp/posix-hardware.cpp) for a runnable example that drives real Notecard hardware over USB-serial or I2C, and the [stdcpp / CMake host walkthrough](../../getting-started.md#stdcpp--cmake-host) in getting-started for the full setup.
 
 ## See also
 

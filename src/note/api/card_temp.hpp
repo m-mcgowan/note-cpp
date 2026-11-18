@@ -227,13 +227,21 @@ struct CardTemp {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -242,6 +250,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
@@ -250,6 +259,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };
@@ -573,13 +583,21 @@ struct CardTemp {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -588,6 +606,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
@@ -596,6 +615,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };
@@ -903,13 +923,21 @@ struct CardTemp {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -918,6 +946,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
@@ -926,6 +955,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };

@@ -3,6 +3,7 @@
 #include <note/note_config.hpp>
 
 #include <note/body.hpp>
+#include <note/diag.hpp>
 #include <note/struct_sink.hpp>
 // NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
@@ -323,7 +324,15 @@ struct Web {
         /// when the Notecard ran in streaming mode (no JSON tree was
         /// built). The two cases look identical to the caller — prefer
         /// `body_or_error()` for explicit handling of the streaming case.
-        [[nodiscard]] const JsonReader* body() const { return body_.get(); }
+        [[nodiscard]] const JsonReader* body() const {
+            // A null body here can mean "no body on the wire" OR "streaming
+            // mode, no tree built". When a body WAS present but dropped
+            // (streaming, no .into() wired), report the misuse (soft log by
+            // default; abort under NOTE_STREAMING_BODY_STRICT).
+            if (body_.get() == nullptr && streaming_parse_used_ && body_seen_on_wire_)
+                ::note::detail::report_streaming_body_misuse();
+            return body_.get();
+        }
 
         /// Safe variant of `body()`: returns an explicit error when the
         /// Notecard ran in streaming mode (body tree unavailable by
@@ -402,7 +411,13 @@ struct Web {
                     if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
                     return;
                 }
-                if (k_ == "body") { body_depth_ = 1; return; }
+                if (k_ == "body") {
+                    body_depth_ = 1;
+#if !NOTE_NO_JSON_TREE
+                    if (!body_handler_) rsp.body_seen_on_wire_ = true;
+#endif
+                    return;
+                }
             }
             NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) {
                 if (body_depth_ > 0) {
@@ -491,6 +506,10 @@ struct Web {
         /// `body_or_error()` reads this to surface an explicit error
         /// instead of a silent nullptr.
         bool streaming_parse_used_ = false;
+        /// Set by the streaming Sink when a top-level `body` object appeared
+        /// on the wire but was not captured (no `.into()`/`.body(sink)`
+        /// wired). `body()` reads it to report the streaming-body misuse.
+        bool body_seen_on_wire_ = false;
         friend struct Sink;
         friend struct Web;
 #endif

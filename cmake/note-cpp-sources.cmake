@@ -149,6 +149,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_setup.cpp
     test_streaming_builder.cpp
     test_streaming_errors.cpp
+    test_streaming_nested_body.cpp
     test_struct_field_symmetry.cpp
     test_sync.cpp
     test_templates.cpp
@@ -187,6 +188,7 @@ set(NOTE_CPP_TEST_SOURCES_JSON_WIRE
     test_static_notecard.cpp
     test_streaming_builder.cpp
     test_streaming_errors.cpp
+    test_streaming_nested_body.cpp
     test_struct_field_symmetry.cpp
     test_sync.cpp
     test_templates.cpp

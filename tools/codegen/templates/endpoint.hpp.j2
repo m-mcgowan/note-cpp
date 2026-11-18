@@ -6,6 +6,7 @@
 #include <note/body.hpp>
 {% endif %}
 {% if has_body_response %}
+#include <note/diag.hpp>
 #include <note/struct_sink.hpp>
 {% endif %}
 // NOTE_EXTRAS default is set in note_config.hpp.
@@ -616,7 +617,15 @@ namespace note::api {
 {{ indent }}    /// when the Notecard ran in streaming mode (no JSON tree was
 {{ indent }}    /// built). The two cases look identical to the caller — prefer
 {{ indent }}    /// `body_or_error()` for explicit handling of the streaming case.
-{{ indent }}    [[nodiscard]] const JsonReader* body() const { return body_.get(); }
+{{ indent }}    [[nodiscard]] const JsonReader* body() const {
+{{ indent }}        // A null body here can mean "no body on the wire" OR "streaming
+{{ indent }}        // mode, no tree built". When a body WAS present but dropped
+{{ indent }}        // (streaming, no .into() wired), report the misuse (soft log by
+{{ indent }}        // default; abort under NOTE_STREAMING_BODY_STRICT).
+{{ indent }}        if (body_.get() == nullptr && streaming_parse_used_ && body_seen_on_wire_)
+{{ indent }}            ::note::detail::report_streaming_body_misuse();
+{{ indent }}        return body_.get();
+{{ indent }}    }
 
 {{ indent }}    /// Safe variant of `body()`: returns an explicit error when the
 {{ indent }}    /// Notecard ran in streaming mode (body tree unavailable by
@@ -705,6 +714,11 @@ namespace note::api {
 {% if op.response.has_body %}
 {{ indent }}        ::note::BodyHandler body_handler_{};
 {{ indent }}        int body_depth_ = 0;
+{% else %}
+{{ indent }}        // Object-nesting depth (the root response object is depth 1). Keys
+{{ indent }}        // inside any nested object (depth > 1) are ignored, so a nested
+{{ indent }}        // object's key cannot overwrite a same-named top-level field.
+{{ indent }}        int obj_depth_ = 0;
 {% endif %}
 {{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
 {% if op.response.has_body %}
@@ -739,6 +753,8 @@ namespace note::api {
 {{ indent }}        NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {% for prop in array_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -749,6 +765,8 @@ namespace note::api {
 {{ indent }}        NOTE_SINK_NOINLINE void on_array_end(::note::string_view k_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {{ indent }}            (void)k_; array_ctx_ = ArrayCtx_::none;
 {{ indent }}        }
@@ -767,7 +785,13 @@ namespace note::api {
 {{ indent }}                if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
 {{ indent }}                return;
 {{ indent }}            }
-{{ indent }}            if (k_ == "body") { body_depth_ = 1; return; }
+{{ indent }}            if (k_ == "body") {
+{{ indent }}                body_depth_ = 1;
+#if !NOTE_NO_JSON_TREE
+{{ indent }}                if (!body_handler_) rsp.body_seen_on_wire_ = true;
+#endif
+{{ indent }}                return;
+{{ indent }}            }
 {{ indent }}        }
 {{ indent }}        NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0) {
@@ -777,11 +801,16 @@ namespace note::api {
 {{ indent }}            }
 {{ indent }}        }
 {{ indent }}        NOTE_SINK_NOINLINE void on_null(::note::string_view k_) { (void)k_; }
+{% else %}
+{{ indent }}        NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+{{ indent }}        NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
 {% endif %}
 {% if string_props or array_string_props %}
 {{ indent }}        NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {{ indent }}            v_ = pool_.intern(v_);
 {% if not string_props %}
@@ -813,6 +842,8 @@ namespace note::api {
 {{ indent }}        NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -829,6 +860,8 @@ namespace note::api {
 {{ indent }}        NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -845,6 +878,8 @@ namespace note::api {
 {{ indent }}        NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -865,6 +900,8 @@ namespace note::api {
 {{ indent }}        NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_)); return; }
+{% else %}
+{{ indent }}            if (obj_depth_ > 1) return;
 {% endif %}
 {% for prop in double_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -892,6 +929,8 @@ namespace note::api {
 {% if op.response.has_body %}
 {{ indent }}            body_depth_ = 0;
 {{ indent }}            if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
+{% else %}
+{{ indent }}            obj_depth_ = 0;
 {% endif %}
 {{ indent }}            rsp = Response{};
 {% if op.response.has_body %}
@@ -973,6 +1012,10 @@ namespace note::api {
 {{ indent }}    /// `body_or_error()` reads this to surface an explicit error
 {{ indent }}    /// instead of a silent nullptr.
 {{ indent }}    bool streaming_parse_used_ = false;
+{{ indent }}    /// Set by the streaming Sink when a top-level `body` object appeared
+{{ indent }}    /// on the wire but was not captured (no `.into()`/`.body(sink)`
+{{ indent }}    /// wired). `body()` reads it to report the streaming-body misuse.
+{{ indent }}    bool body_seen_on_wire_ = false;
 {{ indent }}    friend struct Sink;
 {{ indent }}    friend struct {{ op.struct_name }};
 {% endif %}

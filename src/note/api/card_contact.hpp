@@ -213,9 +213,16 @@ struct CardContact {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
+                    if (obj_depth_ > 1) return;
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_email) == k_) { rsp.email = v_; return; }
                     if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
@@ -223,6 +230,7 @@ struct CardContact {
                     if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };
@@ -520,9 +528,16 @@ struct CardContact {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
+                    if (obj_depth_ > 1) return;
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_email) == k_) { rsp.email = v_; return; }
                     if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
@@ -530,6 +545,7 @@ struct CardContact {
                     if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };

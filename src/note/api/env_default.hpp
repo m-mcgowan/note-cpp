@@ -149,15 +149,24 @@ struct EnvDefault {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };
@@ -357,15 +366,24 @@ struct EnvDefault {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };

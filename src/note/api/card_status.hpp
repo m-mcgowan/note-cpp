@@ -239,13 +239,21 @@ struct CardStatus {
         struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
+            // Object-nesting depth (the root response object is depth 1). Keys
+            // inside any nested object (depth > 1) are ignored, so a nested
+            // object's key cannot overwrite a same-named top-level field.
+            int obj_depth_ = 0;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
             }
+            NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+            NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
             NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
+                if (obj_depth_ > 1) return;
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
+                if (obj_depth_ > 1) return;
                 if (note::flash(keys_::rsp_cell) == k_) { rsp.cell = v_; return; }
                 if (note::flash(keys_::rsp_connected) == k_) { rsp.connected = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -258,18 +266,21 @@ struct CardStatus {
                 if (note::flash(keys_::rsp_wifi) == k_) { rsp.wifi = v_; return; }
             }
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                if (obj_depth_ > 1) return;
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_storage) == k_) { rsp.storage = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
             NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                if (obj_depth_ > 1) return;
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = v_; return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = v_; return; }
                 if (note::flash(keys_::rsp_storage) == k_) { rsp.storage = v_; return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
             }
             NOTE_SINK_NOINLINE void reset() {
+                obj_depth_ = 0;
                 rsp = Response{};
             }
         };

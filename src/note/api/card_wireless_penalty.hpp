@@ -274,13 +274,21 @@ struct CardWirelessPenalty {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
+                    if (obj_depth_ > 1) return;
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -288,6 +296,7 @@ struct CardWirelessPenalty {
 #endif
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -295,6 +304,7 @@ struct CardWirelessPenalty {
 #endif
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };
@@ -655,13 +665,21 @@ struct CardWirelessPenalty {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
+                    if (obj_depth_ > 1) return;
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -669,6 +687,7 @@ struct CardWirelessPenalty {
 #endif
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -676,6 +695,7 @@ struct CardWirelessPenalty {
 #endif
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };
@@ -1027,13 +1047,21 @@ struct CardWirelessPenalty {
             struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
+                // Object-nesting depth (the root response object is depth 1). Keys
+                // inside any nested object (depth > 1) are ignored, so a nested
+                // object's key cannot overwrite a same-named top-level field.
+                int obj_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {
                 }
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) { (void)k_; ++obj_depth_; }
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) { (void)k_; if (obj_depth_ > 0) --obj_depth_; }
                 NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
+                    if (obj_depth_ > 1) return;
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -1041,6 +1069,7 @@ struct CardWirelessPenalty {
 #endif
                 }
                 NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
+                    if (obj_depth_ > 1) return;
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -1048,6 +1077,7 @@ struct CardWirelessPenalty {
 #endif
                 }
                 NOTE_SINK_NOINLINE void reset() {
+                    obj_depth_ = 0;
                     rsp = Response{};
                 }
             };

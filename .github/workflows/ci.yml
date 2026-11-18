@@ -123,6 +123,13 @@ jobs:
           key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'tests/integration/softcard/platformio.ini', 'examples/arduino/migration/platformio.ini', 'examples/arduino/note-arduino-bridge/platformio.ini', 'tools/binary-size-comparison/platformio.ini') }}
           restore-keys: pio-
 
+      # PlatformIO supports Python 3.10–3.13; the ubuntu-latest runner now ships
+      # 3.14, which pio refuses. Pin a supported interpreter.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Install PlatformIO
         run: pip install platformio
 

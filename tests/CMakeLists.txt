@@ -153,6 +153,14 @@ set(BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
 set(CMAKE_POLICY_VERSION_MINIMUM "3.5")
 FetchContent_MakeAvailable(cJSON)
 
+# cJSON is third-party C. The global add_compile_options() above leaks note-cpp's
+# strict C++ warning flags onto it, and a newer gcc (Ubuntu 26 runners) errors on
+# -Wzero-as-null-pointer-constant inside cJSON.c. Silence warnings for the dep —
+# we don't audit its sources — without weakening note-cpp's own flags.
+if(TARGET cjson)
+    target_compile_options(cjson PRIVATE -w)
+endif()
+
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git

@@ -10,6 +10,12 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-11-18
+
+### Fixed
+- Streaming response parsing no longer lets a key inside a nested `body` object overwrite a same-named top-level response field. For example, `dfu.get`'s top-level `length` (the chunk size) was being overwritten by the body's `length` (the full image size). Affects body-less responses parsed on the streaming (SAX) path.
+- `Response::body()` no longer fails silently in streaming mode. When a body was present on the wire but not captured (no `.into()`/`.body(sink)` wired), `body()` now reports the misuse — a log by default, or an abort when built with `NOTE_STREAMING_BODY_STRICT=1` (useful in CI/test builds). To read a body on the streaming path, wire `.into(MyStruct&)` / `.body(JsonSink&)`, or use `body_or_error()`.
+
 ## [0.3.7] - 2026-11-12
 
 ### Fixed

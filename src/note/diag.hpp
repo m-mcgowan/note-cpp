@@ -58,5 +58,16 @@ inline StreamingBodyWarnFn& streaming_body_warn_hook() {
 #endif
 }
 
+// ── Compile-time error carriers for generated API validators ────────────────
+// The generated consteval validators (enum-value and flag checks) report an
+// invalid compile-time literal by calling one of these undefined, non-constexpr
+// functions. Calling a non-constexpr function during constant evaluation is
+// ill-formed, so the check fails to compile — WITHOUT a `throw`, so the headers
+// build under -fno-exceptions (the common exception-free embedded config). The
+// compile error points at the exact generated validator; these are never
+// defined and never odr-used at runtime.
+void note_api_invalid_field_value();
+void note_api_invalid_flag();
+
 } // namespace detail
 } // namespace note

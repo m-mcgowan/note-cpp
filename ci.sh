@@ -168,6 +168,10 @@ NFEOF
     # calling an undefined non-constexpr function instead.
     ci_stage "Public API headers (-fno-exceptions -fno-rtti)"
     $CXX $CXXFLAGS -fno-exceptions -fno-rtti $INCLUDE -fsyntax-only -x c++ - <<'NXEOF'
+// note/api.hpp pulls in every generated endpoint header, whose consteval
+// validators (validate_flags / enum-value checks) are NON-template functions —
+// their bodies compile on include, so a stray `throw` fails here immediately.
+#include <note/api.hpp>
 #include <note/body.hpp>
 #include <note/json_buf.hpp>
 #if __cplusplus >= 202002L

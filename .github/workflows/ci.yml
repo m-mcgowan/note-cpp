@@ -44,7 +44,7 @@ jobs:
   # target filtering, and example builds — the full set that any
   # contributor can reproduce locally.
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
       || inputs.build-type == 'full'
@@ -108,7 +108,7 @@ jobs:
   # example. Also runs tools/verify-docs.sh to flag documentation drift
   # against generated snippets.
   pio-build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
       || inputs.build-type == 'full'
@@ -123,8 +123,17 @@ jobs:
           key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'tests/integration/softcard/platformio.ini', 'examples/arduino/migration/platformio.ini', 'examples/arduino/note-arduino-bridge/platformio.ini', 'tools/binary-size-comparison/platformio.ini') }}
           restore-keys: pio-
 
+      # PlatformIO supports Python 3.10-3.13; ubuntu-latest (Ubuntu 26) ships
+      # 3.14, which pio refuses. Pin a supported interpreter. littlefs-python
+      # provides the `littlefs` module the ESP32 filesystem-image build imports
+      # (present in the old runner's Python, absent in a fresh setup-python env).
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install platformio littlefs-python
 
       # Use `pio test --without-uploading --without-testing` rather than
       # `pio run`: `pio run` only compiles src/, so test/*.cpp (the actual
@@ -177,7 +186,7 @@ jobs:
   # produces an LCOV tracefile; reporting is a GitHub-specific overlay
   # (PR comment + Codecov upload) that stays in the workflow.
   coverage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
       || inputs.build-type == 'full'
@@ -233,7 +242,7 @@ jobs:
   # enforcing this here catches regressions that a single-compiler host
   # build misses.
   embedded-compat:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
       || inputs.build-type == 'full'
@@ -259,7 +268,7 @@ jobs:
   # because arduino-cli exercises the Arduino IDE's include-path rules,
   # which differ from raw PlatformIO builds and have surfaced real bugs.
   arduino-cli:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
       || inputs.build-type == 'full'

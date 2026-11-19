@@ -317,10 +317,19 @@ public:
 // GCC (--coverage) correctly excludes these from coverage metrics.
 // Clang source-based coverage shows false-positive misses for consteval
 // functions — use GCC for coverage reports on this codebase.
+namespace detail {
+// Compile-time error carrier. Calling this undefined, non-constexpr function
+// during constant evaluation is ill-formed, so it reports a clear compile
+// error WITHOUT a `throw` — which lets the headers build under -fno-exceptions
+// (the common embedded configuration). Never defined; never odr-used at
+// runtime (the call lives only in a compile-time-only branch).
+void json_buffer_overflowed_increase_the_buffer_size();
+}
+
 template<typename Fn>
 consteval auto json_const(Fn fn) {
     auto result = fn();
-    if (result.overflow()) throw "JsonBuf overflow: increase buffer size";
+    if (result.overflow()) detail::json_buffer_overflowed_increase_the_buffer_size();
     return result;
 }
 

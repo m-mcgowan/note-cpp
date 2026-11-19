@@ -160,6 +160,29 @@ NFEOF
         export CPP17_DONE=1
     fi
 
+    # Headers must build with exceptions AND RTTI disabled — the common
+    # embedded configuration. note-cpp's consteval validators must not use
+    # `throw` (GCC rejects the keyword under -fno-exceptions, even in a
+    # never-taken compile-time-only branch). Instantiate those consteval
+    # functions so the guard has teeth; they report compile-time errors by
+    # calling an undefined non-constexpr function instead.
+    ci_stage "Public API headers (-fno-exceptions -fno-rtti)"
+    $CXX $CXXFLAGS -fno-exceptions -fno-rtti $INCLUDE -fsyntax-only -x c++ - <<'NXEOF'
+#include <note/body.hpp>
+#include <note/json_buf.hpp>
+#if __cplusplus >= 202002L
+static constexpr auto note_nx_jc = note::json_const([] {
+    note::JsonBuf<64> b; b.add("req", "hub.set"); b.close(); return b;
+});
+const void* note_nx_jc_use() { return &note_nx_jc; }
+#if !defined(__clang__) && __GNUC__ >= 14
+static constexpr note::BodyValue note_nx_bv{R"({"x":1})"};
+const void* note_nx_bv_use() { return &note_nx_bv; }
+#endif
+#endif
+NXEOF
+    echo "  -fno-exceptions -fno-rtti public headers OK"
+
     # GCC build matrix — mirrors the GH `build` matrix (g++-12/-13/-14)
     # so warning-as-error rot that Apple Clang accepts (e.g. static_arena
     # `-Werror=uninitialized`) surfaces locally before push.

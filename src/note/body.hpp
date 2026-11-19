@@ -44,6 +44,13 @@ namespace note {
 // This is naturally satisfied by expression chains like:
 //   api.noteAdd().set_body(readings).execute();
 
+namespace detail {
+// Compile-time error carrier (see json_buf.hpp). Reports an invalid body
+// literal as a clear compile error WITHOUT a `throw`, so the headers build
+// under -fno-exceptions. Never defined; never odr-used at runtime.
+void body_literal_is_invalid_json_or_not_a_top_level_object();
+}
+
 class BodyValue {
 public:
     using WriteFn = void(*)(const void* ctx, string_view str, JsonBuilder& b);
@@ -74,7 +81,7 @@ public:
     consteval BodyValue(const char (&s)[N])
         : str_(string_view(s, N - 1)), write_fn_(&write_string) {
         if (!json_valid(string_view(s, N - 1)))
-            throw "body: invalid JSON or not a top-level object";
+            detail::body_literal_is_invalid_json_or_not_a_top_level_object();
     }
 
     // Runtime string_view (no validation — for dynamic/forwarded JSON).

@@ -10,6 +10,13 @@ details belong in git commit messages and design docs, not here.
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-11-19
+
+### Fixed
+- Completes the `-fno-exceptions` build fix. In 0.3.8 the *generated* per-endpoint consteval validators (`validate_flags` and enum-value checks) still used `throw`, so `note/api.hpp` still failed to build under `-fno-exceptions`. All generated validators now report their compile-time errors without exceptions (an invalid flag/enum literal still fails to compile with a clear message), and the CI guard now compiles the full `note/api.hpp` under `-fno-exceptions` so it can't regress.
+
+Published so the PlatformIO registry carries the complete 0.3.8 fixes: registry versions are immutable, so the corrected 0.3.8 (re-cut on GitHub) could not replace the already-published PlatformIO 0.3.8. 0.3.9 is otherwise identical to the final 0.3.8.
+
 ## [0.3.8] - 2026-11-18
 
 ### Fixed
